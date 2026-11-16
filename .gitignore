@@ -26,3 +26,7 @@ build/
 *.iml
 *.apk
 local.properties
+
+# 部署运行时产物（deploy/）：APK 的版本信息、数据库备份
+deploy/apk/version.json
+deploy/backups/

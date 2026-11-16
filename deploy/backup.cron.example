@@ -1,0 +1,8 @@
+# 每日定时备份的示例（v7 第 9 章第 10 条）。服务器上执行 `crontab -e`，加入下面这一行，
+# 把 /opt/egg 换成仓库在服务器上的实际目录；每天 02:30 备份一次，日志追加到备份目录里。
+# 备份目录默认是 deploy/backups/，保留天数默认 14 天，要改就在命令前面加
+# EGG_BACKUP_DIR=... EGG_BACKUP_KEEP_DAYS=...（详见 deploy/backup.sh 开头）。
+30 2 * * * /opt/egg/deploy/backup.sh >> /opt/egg/deploy/backups/backup.log 2>&1
+#
+# 用 systemd 的话，等价的做法是一个 oneshot 服务加一个 OnCalendar=*-*-* 02:30:00 的定时器，执行同一个脚本即可。
+# 备份目录第一次要先存在，日志才写得进去：mkdir -p /opt/egg/deploy/backups
