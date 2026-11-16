@@ -1,0 +1,3 @@
+-keep class com.gainscha.jzint.JzintSymbol {*;}
+-keep class com.gainscha.jzint.BitmapResult {*;}
+-keep class com.gainscha.jzint.JzInt {encodeBarcode();}

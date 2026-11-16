@@ -28,9 +28,9 @@ import java.io.IOException
  * - 位图（print.render=bitmap）：PNG 转 1 位点阵，拼成 TSPL 的 BITMAP 指令，不依赖打印机字库与编码。
  * 每次发送前把 TSPL 指令文本打到 logcat（标签 [TAG]），供人工对照 TSPL 手册查语法（P8-2 验收）。
  *
- * 没做的事：与 SDK 的实际调用在 [GainschaSdk] 的实现里；开发包缺失时用的是 [GainschaSdkMissing]，什么也连不上。
+ * 没做的事：与 SDK 的实际调用在 [GainschaSdk] 的实现（[SdkGainschaSdk]）里。
  *
- * 未经实物验证：没有真打印机，也没有 SDK 开发包里的 aar。蓝牙连接方式（T-01）、状态位、一票一控是否可用，都留给 H-2。
+ * 未经实物验证：没有真打印机，SDK 一层只在编译层面对过 aar 的签名。蓝牙连接方式（T-01）、状态位、一票一控是否可用，都留给 H-2。
  */
 class GainschaPrinter(
     private val sdk: GainschaSdk,

@@ -1,0 +1,71 @@
+// 佳博 SDK2 开发包原文。改动：删去对 publish.gradle 的引用（开发包里没有该文件）；compileSdk 34 改 35（本机只装了 35）。
+// 16KB 对齐配置（FLEXIBLE_PAGE_SIZES 参数、CMake 链接器标志）是开发包自带的，与 sdk/ 里的 16KB 对齐说明一致。
+// 另两处改动：cppFlags 加 -std=c++14、cFlags 加 -DHAVE_UNISTD_H（原因见各行注释），都是为了让 NDK 27 的 clang 编得过。
+// 已删去与构建无关的内容：FreeImage 的 Windows 工程文件、Makefile、.NET/C++ 包装、示例与测试代码、发行包目录。
+plugins {
+    id 'com.android.library'
+}
+
+version = '1.0.0'
+group = 'com.gainscha'
+description = 'freeimage'
+
+android {
+    namespace 'com.gainscha.fimage'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+        externalNativeBuild {
+            cmake {
+                // 本仓库改动：NDK 27 默认 C++17，其中 LibRawLite 用的 std::auto_ptr、register 已被移除，改回 C++14 才编得过
+                cppFlags "-std=c++14"
+                // 本仓库改动：新版 clang 不再允许隐式函数声明，ZLib 的 gz*.c 要靠 zconf.h 引入 unistd.h（zlib 自己的 configure 会定义它）
+                cFlags "-DHAVE_UNISTD_H"
+                // 16KB 页面大小支持：添加链接器标志
+                arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+            }
+        }
+        
+        // 16KB 页面大小支持
+        ndk {
+            // 暂时只构建 arm64-v8a，armeabi-v7a 编译有问题
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+    
+    // 16KB 页面大小支持配置
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+}

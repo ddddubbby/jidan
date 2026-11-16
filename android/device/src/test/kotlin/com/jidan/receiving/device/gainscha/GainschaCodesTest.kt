@@ -48,6 +48,7 @@ class GainschaCodesTest {
         assertEquals(PrintOutcome.Failure("缺纸"), GainschaCodes.outcomeOf(0x23))
         assertEquals(PrintOutcome.Failure("开盖"), GainschaCodes.outcomeOf(0x24))
         assertEquals(PrintOutcome.Failure("过热"), GainschaCodes.outcomeOf(0x25))
+        assertEquals(PrintOutcome.Failure("卡切刀"), GainschaCodes.outcomeOf(0x26)) // aar 的 STATUS_CUTTER_JAM
         val unknown = GainschaCodes.outcomeOf(0x7F) as PrintOutcome.Failure
         assertTrue(unknown.reason.contains("0x7F"), unknown.reason)
     }
