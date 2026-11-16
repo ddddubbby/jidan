@@ -7,6 +7,7 @@ import com.jidan.receiving.data.AuthRepository
 import com.jidan.receiving.data.CatalogRepository
 import com.jidan.receiving.data.OrderDraftStore
 import com.jidan.receiving.data.Prefs
+import com.jidan.receiving.data.SessionStore
 import com.jidan.receiving.data.SessionUser
 import com.jidan.receiving.data.TokenStore
 import com.jidan.receiving.device.LabelPrinter
@@ -60,6 +61,7 @@ class AppContainer(context: Context) {
     val auth = AuthRepository(apiClient)
     val catalog = CatalogRepository(apiClient)
     val orderDraft = OrderDraftStore()
+    val sessionStore = SessionStore(appContext)
 
     val scale: Scale = DeviceFactory.createScale(
         scope,
@@ -100,6 +102,7 @@ class AppContainer(context: Context) {
         _session.value = null
         _options.value = AppOptions.defaults()
         orderDraft.clear()
+        // 退出登录不清称重草稿：重登后可恢复（开发规格 9.4）
     }
 
     fun applyOptions(options: AppOptions) {

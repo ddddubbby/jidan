@@ -83,18 +83,26 @@ class ReceivingViewModel(
     private var machine: WeighingMachine? = null
     private var tickJob: Job? = null
     private var eventClearJob: Job? = null
+    private var scaleBound = false
 
     val roundRule: RoundRule
         get() = runCatching {
             RoundRule.fromWire(container.options.value.get("round.mode"))
         }.getOrDefault(RoundRule.DEFAULT)
 
+    /** 有本地草稿时恢复；否则从建单 OrderDraft 开新单。 */
     fun startFromDraft() {
-        val h = container.orderDraft.header.value
-        if (!h.ready || session != null) {
-            if (session != null) publish()
+        if (session != null) {
+            publish()
             return
         }
+        val saved = container.sessionStore.load()
+        if (saved != null) {
+            restoreSession(saved)
+            return
+        }
+        val h = container.orderDraft.header.value
+        if (!h.ready) return
         viewModelScope.launch {
             _ui.update { it.copy(loading = true, error = "") }
             try {
@@ -111,7 +119,6 @@ class ReceivingViewModel(
                 )
                 session = s
                 machine = WeighingMachine(opts, std)
-                // 沿用上一单皮重
                 val lastTareId = container.prefs.lastTareId
                 val last = tares.firstOrNull { it.id == lastTareId }
                 if (last != null) {
@@ -131,6 +138,7 @@ class ReceivingViewModel(
                         recordByButton = opts.recordBy == RecordBy.BUTTON,
                     )
                 }
+                persist()
                 publish()
                 bindScale()
             } catch (e: Throwable) {
@@ -139,7 +147,108 @@ class ReceivingViewModel(
         }
     }
 
+    private fun restoreSession(s: Session) {
+        viewModelScope.launch {
+            val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
+            val std = Kg(
+                container.orderDraft.header.value.stdNetCents
+                    ?: s.spec.let { Kg.of(36.0).cents },
+            )
+            val opts = container.options.value.weighOptions()
+            session = s
+            machine = WeighingMachine(opts, std).also { m ->
+                s.tare?.let { m.setTare(it) }
+            }
+            // 把表头写回 OrderDraft，便于返回建单页仍可见
+            container.orderDraft.update {
+                it.copy(
+                    farmer = s.farmer,
+                    product = s.product,
+                    spec = s.spec,
+                    warehouse = s.warehouse,
+                )
+            }
+            _ui.update {
+                it.copy(
+                    loading = false,
+                    ready = true,
+                    farmerName = s.farmer.name,
+                    productName = s.product.name,
+                    specName = s.spec.name,
+                    batchNo = s.batchNo,
+                    warehouseName = s.warehouse.name,
+                    tares = tares,
+                    showTarePicker = s.tare == null,
+                    recordByButton = opts.recordBy == RecordBy.BUTTON,
+                )
+            }
+            publish()
+            bindScale()
+        }
+    }
+
+    fun hasBoxes(): Boolean = (session?.boxes?.isNotEmpty() == true)
+
+    fun editManual(seq: Int, netKg: Double) {
+        val s = session ?: return
+        session = s.editManual(seq, Kg.of(netKg))
+        flash("第 $seq 箱已手录", ok = true)
+        persist()
+        publish()
+    }
+
+    fun addManual(netKg: Double) {
+        val s = session ?: return
+        session = s.addManual(Kg.of(netKg))
+        flash("已手工加一箱", ok = true)
+        persist()
+        publish()
+    }
+
+    fun deleteBox(seq: Int) {
+        val s = session ?: return
+        session = s.delete(seq)
+        flash("已删除", ok = true)
+        persist()
+        publish()
+    }
+
+    fun regroup(seq: Int, k: Int) {
+        val s = session ?: return
+        if (!s.canRegroup(seq)) return
+        session = s.regroup(seq, k)
+        flash("已改成 $k 箱", ok = true)
+        persist()
+        publish()
+    }
+
+    fun canRegroup(seq: Int): Boolean = session?.canRegroup(seq) == true
+
+    fun box(seq: Int): Box? = try {
+        session?.box(seq)
+    } catch (_: Throwable) {
+        null
+    }
+
+    fun groupOf(seq: Int): List<Box> {
+        val s = session ?: return emptyList()
+        val g = try {
+            s.box(seq).group
+        } catch (_: Throwable) {
+            return emptyList()
+        }
+        return s.boxes.filter { it.group == g }
+    }
+
+    /** 放弃整单：清草稿与内存，回到建单。 */
+    fun abandon() {
+        container.sessionStore.clear()
+        clear()
+    }
+
     private fun bindScale() {
+        if (scaleBound) return
+        scaleBound = true
         viewModelScope.launch {
             container.scale.linkStatus.collect { st ->
                 val connected = st == LinkStatus.CONNECTED
@@ -181,6 +290,7 @@ class ReceivingViewModel(
         viewModelScope.launch {
             applyTare(Tare(Kg.of(dto.tareKg), dto.name), dto.id, persistOnly = false)
             _ui.update { it.copy(showTarePicker = false) }
+            persist()
             publish()
         }
     }
@@ -224,6 +334,7 @@ class ReceivingViewModel(
         session = null
         machine = null
         tickJob?.cancel()
+        scaleBound = false
         container.orderDraft.clear()
         _ui.value = WeighUiState()
     }
@@ -232,6 +343,7 @@ class ReceivingViewModel(
         if (outcome == null) return
         val s = session ?: return
         session = s.apply(outcome)
+        persist()
         val text = when (outcome) {
             is WeighOutcome.Recorded -> {
                 val k = outcome.weighing.k
@@ -240,6 +352,10 @@ class ReceivingViewModel(
             is WeighOutcome.Replaced -> "第 ${outcome.seq} 箱已重称"
         }
         flash(text, ok = true)
+    }
+
+    private fun persist() {
+        session?.let { container.sessionStore.save(it) }
     }
 
     private fun flash(text: String, ok: Boolean) {

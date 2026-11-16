@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -21,7 +22,9 @@ import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.databinding.FragmentWeighBinding
+import com.jidan.receiving.ui.sheets.BoxSheet
 import com.jidan.receiving.ui.sheets.DevicesSheet
+import com.jidan.receiving.ui.sheets.LedgerSheet
 import kotlinx.coroutines.launch
 
 class WeighFragment : Fragment() {
@@ -52,6 +55,9 @@ class WeighFragment : Fragment() {
         b.changeTare.setOnClickListener { vm.openTarePicker() }
         b.cancelReweigh.setOnClickListener { vm.cancelReweigh() }
         b.recordBtn.setOnClickListener { vm.pressRecord() }
+        b.openLedger.setOnClickListener {
+            LedgerSheet().show(parentFragmentManager, LedgerSheet.TAG)
+        }
         b.finish.setOnClickListener {
             Toast.makeText(requireContext(), R.string.weigh_finish_hint, Toast.LENGTH_SHORT).show()
         }
@@ -68,7 +74,21 @@ class WeighFragment : Fragment() {
     }
 
     private fun leave() {
-        findNavController().navigateUp()
+        if (!vm.hasBoxes()) {
+            findNavController().navigateUp()
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.weigh_leave_title)
+            .setPositiveButton(R.string.weigh_leave_keep) { _, _ ->
+                findNavController().navigateUp()
+            }
+            .setNegativeButton(R.string.weigh_abandon) { _, _ ->
+                vm.abandon()
+                findNavController().navigateUp()
+            }
+            .setNeutralButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun render(state: WeighUiState) {
@@ -186,10 +206,13 @@ class WeighFragment : Fragment() {
                 append(" kg")
                 if (box.manual) append(" · ").append(getString(R.string.weigh_manual_tag))
             }
-            btn.setOnClickListener { vm.startReweigh(box.seq) }
+            btn.setOnClickListener {
+                BoxSheet.newFor(box.seq).show(parentFragmentManager, BoxSheet.TAG)
+            }
             b.recentList.addView(btn)
         }
 
+        b.openLedger.isVisible = state.count > 0
         b.finish.isEnabled = state.count > 0 && state.reweighSeq == null
         b.finish.setBackgroundColor(
             ContextCompat.getColor(

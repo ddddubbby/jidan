@@ -20,6 +20,9 @@ class MainActivity : AppCompatActivity() {
         val nav = navHost.navController
         if (savedInstanceState == null && appContainer().session.value != null) {
             nav.navigate(R.id.action_login_to_create)
+            if (appContainer().sessionStore.exists()) {
+                nav.navigate(R.id.action_create_to_weigh)
+            }
         }
 
         lifecycleScope.launch {
