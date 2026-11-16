@@ -73,11 +73,13 @@ class AppContainer(context: Context) {
     @Volatile var resumeSummaryAfterLogin: Boolean = false
 
     val scale: Scale = DeviceFactory.createScale(
+        appContext,
         scope,
         prefs,
         _options.value.get("device.scale-model"),
     )
     val printer: LabelPrinter = DeviceFactory.createPrinter(
+        appContext,
         scope,
         prefs,
         _options.value.get("device.printer-model"),
