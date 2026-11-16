@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 只做浅色主题：原型没有深色版 -->
+    <style name="Theme.Jidan" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryVariant">@color/accent_press</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/on_accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorError">@color/err_ink</item>
+        <item name="android:colorBackground">@color/surface</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_2</item>
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="shapeAppearanceMediumComponent">@style/Shape.Control</item>
+    </style>
+
+    <style name="Shape.Control" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/radius_control</item>
+    </style>
+
+    <!-- 字号五级 -->
+    <style name="Text" parent="">
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Text.Caption">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_13</item>
+    </style>
+    <style name="Text.Body">
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Text.Strong">
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Text.Value">
+        <item name="android:textSize">@dimen/text_19</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Text.Title">
+        <item name="android:textSize">@dimen/text_26</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>
