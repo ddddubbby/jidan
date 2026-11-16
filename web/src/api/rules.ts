@@ -35,5 +35,9 @@ export function conflictsOf(e: unknown): Conflict[] | null {
   return Array.isArray(list) ? list : []
 }
 
+/** 解绑：规则号不传，后端按“传空即解绑”处理（开发规格 5.2） */
+export const unbindVendorRule = (vendorId: number, productId: number, specId: number) =>
+  http.put<RuleView[]>(`/farmers/${vendorId}/rule-binding`, { productId, specId })
+
 export const kindText = (k: string) => (k === 'BUY' ? '收购' : '发货')
 export const fmtPhone = (p: string) => (/^\d{11}$/.test(p) ? `${p.slice(0, 3)} ${p.slice(3, 7)} ${p.slice(7)}` : p)

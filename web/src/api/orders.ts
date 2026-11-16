@@ -41,20 +41,23 @@ export const voidOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/voi
 
 export type HeadPatch = Partial<Pick<UpdateForm, 'bizDate' | 'vendorId' | 'productId' | 'specId' | 'warehouseId'>>
 
+export type BoxRec = S['Box']
+
 /**
- * 改表头：PUT 是整单覆盖（5.2），所以先取当前流水原样带回，只换要改的表头字段。
- * 流水的每个字段（手录记号、秤原读数、毛重、称重组号等）都照原样回传，这里不改任何一箱。
+ * 整单覆盖（5.2）：先带上表头，只换要改的表头字段；流水每个字段（手录记号、秤原读数、毛重、称重组号等）原样带回。
+ * 改表头时不动任何一箱；逐箱流水抽屉改一箱、删一箱、加一箱时传入整份新流水。
  */
-export async function saveHead(d: OrderDetail, patch: HeadPatch) {
-  const rec = await getRecords(d.id!)
-  const boxes = (rec.boxes ?? []).map((b) => ({ ...b, seq: b.seq!, netKg: b.netKg! }))
+async function putOrder(d: OrderDetail, patch: HeadPatch, boxes?: BoxRec[]) {
+  const list = boxes ?? (await getRecords(d.id!)).boxes ?? []
   const body: UpdateForm = {
     bizDate: d.bizDate!, vendorId: d.vendor!.id!, productId: d.product!.id!, specId: d.spec!.id!, warehouseId: d.warehouse!.id!,
     ...patch,
-    boxes,
+    boxes: list.map((b) => ({ ...b, seq: b.seq!, netKg: b.netKg! })),
   }
   return http.put<OrderDetail>('/orders/' + d.id, body)
 }
+export const saveHead = (d: OrderDetail, patch: HeadPatch) => putOrder(d, patch)
+export const saveBoxes = (d: OrderDetail, boxes: BoxRec[]) => putOrder(d, {}, boxes)
 
 /** 表头里的商品、仓库、农户候选：取自好生意档案（农户的 q 也匹配姓名与手机号） */
 export const listArchive = (type: 'products' | 'warehouses' | 'vendors', q = '', pageSize = 100) =>
