@@ -1,14 +1,11 @@
 package com.jidan.receiving.ui.sheets
 
-import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,16 +19,22 @@ import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.device.PrintPayload
 import com.jidan.receiving.device.PrinterIssue
 import com.jidan.receiving.device.label.LabelRenderer
+import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.ui.devices.LinkActionKind
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class DevicesSheet : BottomSheetDialogFragment() {
     private var binding: SheetDevicesBinding? = null
 
-    private val permLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { /* UI 会随 gate 重绘 */ }
+    private val prompts = BluetoothPrompts(this)
+
+    /** 刚搜过一次、附近没有这类设备：这台设备的下一步从“搜索”变成“重新搜索”。 */
+    private var scaleSearchedEmpty = false
+    private var printerSearchedEmpty = false
+    private var scaleScanning = false
+    private var printerScanning = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val b = SheetDevicesBinding.inflate(inflater, container, false)
@@ -55,6 +58,7 @@ class DevicesSheet : BottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { c.bluetoothGate.state.collect { refresh() } }
                 launch { c.scale.linkStatus.collect { refresh() } }
                 launch { c.scale.pairedId.collect { refresh() } }
                 launch { c.scale.batteryLow.collect { refresh() } }
@@ -88,6 +92,7 @@ class DevicesSheet : BottomSheetDialogFragment() {
             batteryLow = c.scale.batteryLow.value,
             onAction = { handle(it, scale = true) },
             onOpenSheet = {},
+            searchedEmpty = scaleSearchedEmpty,
         )
         DeviceCardBinder.bindPrinter(
             binding = b.printerCard,
@@ -98,6 +103,7 @@ class DevicesSheet : BottomSheetDialogFragment() {
             issue = c.printer.printerStatus.value,
             onAction = { handle(it, scale = false) },
             onOpenSheet = {},
+            searchedEmpty = printerSearchedEmpty,
         )
         b.testPrint.isEnabled =
             c.printer.linkStatus.value == LinkStatus.CONNECTED &&
@@ -105,41 +111,56 @@ class DevicesSheet : BottomSheetDialogFragment() {
     }
 
     private fun handle(action: LinkActionKind, scale: Boolean) {
-        val c = requireContext().appContainer()
+        if (prompts.handle(action)) return
         when (action) {
-            LinkActionKind.OPEN_BLUETOOTH ->
-                startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-            LinkActionKind.GRANT_PERMISSION ->
-                permLauncher.launch(
-                    arrayOf(
-                        android.Manifest.permission.BLUETOOTH_CONNECT,
-                        android.Manifest.permission.BLUETOOTH_SCAN,
-                        android.Manifest.permission.ACCESS_FINE_LOCATION,
-                    ),
-                )
             LinkActionKind.SEARCH, LinkActionKind.RESEARCH ->
                 viewLifecycleOwner.lifecycleScope.launch { showScan(scale) }
-            LinkActionKind.CONNECTING, LinkActionKind.NONE -> Unit
+            else -> Unit
         }
     }
 
     private suspend fun showScan(isScale: Boolean) {
         val b = binding ?: return
         val c = requireContext().appContainer()
-        val list = if (isScale) c.scale.search() else c.printer.search()
         val host = if (isScale) b.scaleScan else b.printerScan
-        host.removeAllViews()
-        host.isVisible = true
-        if (list.isEmpty()) {
-            host.addView(TextView(requireContext()).apply {
-                text = "附近没有设备"
-                setTextColor(resources.getColor(R.color.ink_2, null))
-            })
+        // 蓝牙没开或没授权时不碰适配器（SDK 在这两种情况下的表现没验证过）；按钮本来也只会是“打开蓝牙”“允许使用蓝牙”
+        if (!c.bluetoothGate.ready()) {
+            host.isVisible = false
             return
         }
-        for (d in list) {
-            host.addView(scanRow(d, isScale))
+        if (if (isScale) scaleScanning else printerScanning) return
+        setScanning(isScale, true)
+        host.removeAllViews()
+        host.isVisible = true
+        host.addView(hintText("正在搜索附近的${if (isScale) "秤" else "打印机"}…"))
+        val list = try {
+            if (isScale) c.scale.search() else c.printer.search()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList() // 搜索出错当作没搜到，给“重新搜索”
+        } finally {
+            setScanning(isScale, false)
         }
+        val view = binding ?: return
+        val shown = if (isScale) view.scaleScan else view.printerScan
+        shown.removeAllViews()
+        if (isScale) scaleSearchedEmpty = list.isEmpty() else printerSearchedEmpty = list.isEmpty()
+        if (list.isEmpty()) {
+            shown.addView(hintText("附近没有${if (isScale) "秤" else "打印机"}"))
+        } else {
+            for (d in list) shown.addView(scanRow(d, isScale))
+        }
+        refresh()
+    }
+
+    private fun setScanning(isScale: Boolean, on: Boolean) {
+        if (isScale) scaleScanning = on else printerScanning = on
+    }
+
+    private fun hintText(text: String) = TextView(requireContext()).apply {
+        this.text = text
+        setTextColor(resources.getColor(R.color.ink_2, null))
     }
 
     private fun scanRow(d: DiscoveredDevice, isScale: Boolean): View {
@@ -157,15 +178,26 @@ class DevicesSheet : BottomSheetDialogFragment() {
             setOnClickListener {
                 viewLifecycleOwner.lifecycleScope.launch {
                     val c = requireContext().appContainer()
-                    if (isScale) {
-                        c.scale.connect(d.id)
-                        c.linkKeeper.onScaleConnected(d.id)
-                    } else {
-                        c.printer.connect(d.id)
-                        c.linkKeeper.onPrinterConnected(d.id)
+                    // 连接失败时不记住这台，也不收起列表：留在列表里可以再点，或点“重新搜索”
+                    val ok = try {
+                        if (isScale) {
+                            c.scale.connect(d.id)
+                            c.scale.linkStatus.value == LinkStatus.CONNECTED
+                        } else {
+                            c.printer.connect(d.id)
+                            c.printer.linkStatus.value == LinkStatus.CONNECTED
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        false
                     }
-                    binding?.scaleScan?.isVisible = false
-                    binding?.printerScan?.isVisible = false
+                    binding?.sheetMessage?.text = if (ok) "" else "没连上，可以再点一次，或重新搜索"
+                    if (ok) {
+                        if (isScale) c.linkKeeper.onScaleConnected(d.id) else c.linkKeeper.onPrinterConnected(d.id)
+                        binding?.scaleScan?.isVisible = false
+                        binding?.printerScan?.isVisible = false
+                    }
                     refresh()
                 }
             }
