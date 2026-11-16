@@ -55,6 +55,8 @@ class WeighFragment : Fragment() {
         b.chipScale.setOnClickListener { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) }
         b.chipPrinter.setOnClickListener { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) }
         b.changeTare.setOnClickListener { vm.openTarePicker() }
+        b.retryTare.setOnClickListener { vm.retryTare() }
+        b.startRetry.setOnClickListener { vm.startFromDraft() }
         b.cancelReweigh.setOnClickListener { vm.cancelReweigh() }
         b.recordBtn.setOnClickListener { vm.pressRecord() }
         b.openLedger.setOnClickListener {
@@ -134,6 +136,18 @@ class WeighFragment : Fragment() {
             ),
         )
 
+        // 没取到最新设置、或还在取：不显示称重框，不能称重；失败时按钮直达重试
+        b.startCard.isVisible = !state.ready
+        if (!state.ready) {
+            b.startMsg.text = if (state.error.isBlank()) {
+                getString(R.string.weigh_start_loading)
+            } else {
+                getString(R.string.weigh_start_failed, state.error)
+            }
+            b.startRetry.isVisible = !state.loading && state.error.isNotBlank()
+        }
+        b.scalePanel.isVisible = state.ready
+
         b.tareCard.isVisible = state.showTarePicker
         if (state.showTarePicker) {
             b.tareChoices.removeAllViews()
@@ -186,6 +200,14 @@ class WeighFragment : Fragment() {
 
         b.tareRow.isVisible = !state.showTarePicker
         b.tareText.text = state.tare?.let { "${it.name} · ${it.unit.format()} kg" } ?: "—"
+
+        val tareFailed = state.ready && state.tareError.isNotBlank()
+        b.tareErrorText.isVisible = tareFailed
+        b.retryTare.isVisible = tareFailed && state.tare != null
+        if (tareFailed) {
+            b.tareErrorText.text = getString(R.string.weigh_tare_failed, state.tareError)
+            b.retryTare.text = getString(R.string.weigh_retry_tare, state.tare?.unit?.format().orEmpty())
+        }
 
         b.reweighRow.isVisible = state.reweighSeq != null
         if (state.reweighSeq != null) {

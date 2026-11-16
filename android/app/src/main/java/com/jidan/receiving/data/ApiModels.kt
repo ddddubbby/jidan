@@ -44,9 +44,23 @@ data class AppVersion(
 data class BootstrapResponse(
     val settings: Map<String, String?>? = null,
     val options: Map<String, String?>? = null,
+    /** 规格（含标准净含量 W0）。旧草稿缺 W0 时从这里补（F1-3）。 */
+    val specs: List<BootstrapSpecDto>? = null,
 ) {
     fun allValues(): Map<String, String?> = (settings ?: emptyMap()) + (options ?: emptyMap())
+
+    /** 规格 id → 标准净含量（kg）；缺规格或缺 W0 的不在表里。 */
+    fun stdNetBySpec(): Map<Long, Double> =
+        specs.orEmpty().mapNotNull { sp -> sp.stdNetKg?.let { sp.id to it } }.toMap()
 }
+
+data class BootstrapSpecDto(
+    val id: Long = 0,
+    val name: String? = null,
+    val eggCount: Int? = null,
+    val stdNetKg: Double? = null,
+    val basePrice: Double? = null,
+)
 
 data class FarmerDto(
     val id: Long,

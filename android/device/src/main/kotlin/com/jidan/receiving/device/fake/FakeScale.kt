@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
  * 模拟秤（对照 lab/app-sim.html）。未经实物验证。
  * 异常开关供第 4 章选项走查：读数未扣皮 / 稳定标志失灵 / 去皮指令无效。
  *
+ * 断开、丢失、重新连接都会清掉内部数字皮，APP 须重新下发（真秤重启后同样没有皮重）。
+ *
  * 读数口径（对照真秤“设皮后回调的是已扣皮读数”，v7 7.2）：正常情况下回报 台面总重 − 数字皮，
  * 空秤时为负数（设 2kg 皮后空秤读 −2kg）；“读数未扣皮”打开时回报台面总重。
  */
@@ -41,6 +43,8 @@ class FakeScale(
             if (!value && _link.value == LinkStatus.CONNECTED) {
                 _link.value = LinkStatus.LOST
                 _readings.value = null
+                // 真秤断电或离开手机后没有 APP 下发的皮重，恢复连接后要重新下发（F1-3）
+                digitalTareCenti = 0
             }
         }
 
@@ -78,6 +82,8 @@ class FakeScale(
     override suspend fun connect(id: String) {
         connectJob?.cancel()
         settleJob?.cancel()
+        // 新建一条连接：之前下发的数字皮不带过来，由 APP 重新下发
+        digitalTareCenti = 0
         if (!reachable || catalog.none { it.id == id }) {
             _link.value = LinkStatus.DISCONNECTED
             return
@@ -102,6 +108,7 @@ class FakeScale(
         settleJob?.cancel()
         _link.value = LinkStatus.DISCONNECTED
         _readings.value = null
+        digitalTareCenti = 0
     }
 
     override suspend fun setDigitalTare(kg: Kg) {

@@ -236,6 +236,29 @@ class SessionTest {
     }
 
     @Test
+    fun jsonRoundTripKeepsStdNet() {
+        val s = empty().copy(stdNet = Kg(4500)).weigh(4600)
+        val text = s.toJson()
+        assertEquals(4500L, (Json.parseToJsonElement(text).jsonObject["stdNet"] as kotlinx.serialization.json.JsonPrimitive).content.toLong())
+        val back = Session.fromJson(text)
+        assertEquals(s, back)
+        assertEquals(Kg(4500), back.stdNet)
+        // 没取到 W0 时写 null，读回仍是 null
+        assertNull(Session.fromJson(empty().toJson()).stdNet)
+    }
+
+    @Test
+    fun oldDraftWithoutStdNetStillReads() {
+        // 旧版本写的草稿没有 stdNet 键：读回 W0 为空，其余照旧
+        val old = (Json.parseToJsonElement(baseline().toJson()).jsonObject - "stdNet")
+        val text = kotlinx.serialization.json.JsonObject(old).toString()
+        assertFalse("stdNet" in text)
+        val back = Session.fromJson(text)
+        assertNull(back.stdNet)
+        assertEquals(baseline(), back)
+    }
+
+    @Test
     fun jsonRoundTripOfAwkwardText() {
         val tricky = "农户\"李\\四\"\n\t换行 \u0001 😀 /"
         val s = Session(
@@ -250,7 +273,7 @@ class SessionTest {
         val text = baseline().addManual(Kg(4400)).editManual(10, Kg(5280)).toJson()
         val root = Json.parseToJsonElement(text).jsonObject
         assertEquals(
-            setOf("batchNo", "farmer", "product", "spec", "warehouse", "tare", "groupSeq", "boxes"),
+            setOf("batchNo", "farmer", "product", "spec", "warehouse", "tare", "groupSeq", "stdNet", "boxes"),
             root.keys,
         )
         assertEquals(11, (root["boxes"] as kotlinx.serialization.json.JsonArray).size)

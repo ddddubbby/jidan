@@ -83,6 +83,35 @@
             android:orientation="vertical"
             android:padding="@dimen/page_padding">
 
+            <!-- 进入称重前要先取最新设置：取不到时写原因，按钮直达重试（F1-3） -->
+            <LinearLayout
+                android:id="@+id/startCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_step_active"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/startMsg"
+                    style="@style/Text.Strong"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/startRetry"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_small_height"
+                    android:layout_marginTop="10dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/weigh_start_retry"
+                    android:textAllCaps="false"
+                    android:visibility="gone" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/tareCard"
                 android:layout_width="match_parent"
@@ -187,6 +216,27 @@
                         android:text="@string/weigh_change_tare"
                         android:textAllCaps="false" />
                 </LinearLayout>
+
+                <!-- 皮重没能下发到秤：写原因，按钮直达重新设皮重；称重框保持未设皮重 -->
+                <TextView
+                    android:id="@+id/tareErrorText"
+                    style="@style/Text.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/err_ink"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/retryTare"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_small_height"
+                    android:layout_marginTop="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/weigh_retry_tare"
+                    android:textAllCaps="false"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/reweighRow"
