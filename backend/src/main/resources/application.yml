@@ -1,0 +1,19 @@
+# 配置全部可用环境变量覆盖；默认值对应 deploy/compose.dev.yml 起的开发库
+spring:
+  application:
+    name: egg-backend
+  datasource:
+    url: ${EGG_DB_URL:jdbc:mysql://localhost:3306/egg?characterEncoding=utf8&connectionTimeZone=Asia/Shanghai}
+    username: ${EGG_DB_USER:egg}
+    password: ${EGG_DB_PASSWORD:egg}
+  jackson:
+    time-zone: Asia/Shanghai
+
+server:
+  port: ${EGG_PORT:8080}
+
+mybatis-plus:
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
