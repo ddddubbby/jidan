@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -70,14 +69,20 @@ class WeighFragment : Fragment() {
                 vm.reprintUnprinted()
             }
         }
-        b.finish.setOnClickListener {
-            vm.onConfirmWeighing()
-            Toast.makeText(requireContext(), R.string.weigh_finish_hint, Toast.LENGTH_SHORT).show()
-        }
+        b.finish.setOnClickListener { vm.onConfirmWeighing() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.ui.collect { render(it) }
+                launch {
+                    vm.ui.collect { render(it) }
+                }
+                launch {
+                    vm.nav.collect { ev ->
+                        if (ev is ReceivingNav.ToSummary) {
+                            findNavController().navigate(R.id.action_weigh_to_summary)
+                        }
+                    }
+                }
             }
         }
 
