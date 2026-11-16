@@ -25,6 +25,7 @@ import com.jidan.receiving.data.FarmerDto
 import com.jidan.receiving.databinding.FragmentCreateBinding
 import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.ui.sheets.DevicesSheet
+import com.jidan.receiving.ui.update.bindUpdateEntry
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -144,6 +145,7 @@ class CreateFragment : Fragment() {
         b.account.text = if (state.operatorName.isBlank()) "›" else "${state.operatorName} ›"
         b.error.isVisible = state.error.isNotBlank()
         b.error.text = state.error
+        b.updateEntry.bindUpdateEntry(state.update)
 
         syncingTail = true
         if (b.tail.text?.toString() != state.query) {

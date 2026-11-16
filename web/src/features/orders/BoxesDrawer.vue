@@ -6,6 +6,8 @@ import Drawer from '../../ui/Drawer.vue'
 import { toast } from '../../ui/toast'
 
 // 逐箱流水抽屉（原型 drawerBoxes，WEB-07）：同重归类、只看手录、改净重、删除（待审核单才能改）。
+// 删箱不重排其余箱的序号：箱贴在收蛋时已打印，二维码是 批次号#序号（v7 5.4），重排会让已贴的箱贴与流水错位。
+// 加箱取现有最大序号加 1。
 // 每次改动都整单覆盖保存（PUT /orders/{id}，开发规格 5.2），保存后 emit changed 让页面重取单据。
 // 手录与原读数由这里带上（附录 C 第 16 条）：第一次改一箱时把当时的净重记作秤原读数，已是手录的箱再改，原读数不变。
 const props = defineProps<{ order: OrderDetail }>()
@@ -29,7 +31,10 @@ const add = ref('')
 const addErr = ref('')
 
 const editable = computed(() => props.order.status === 'PENDING')
-const boxes = computed(() => rec.value?.boxes ?? [])
+// 按箱序号排序显示：删箱不重排，序号允许有空号
+const boxes = computed(() => [...(rec.value?.boxes ?? [])].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0)))
+// 下一箱的序号：现有最大序号加 1（不是箱数加 1，删过箱后两者不同）
+const nextSeq = computed(() => boxes.value.reduce((m, b) => Math.max(m, b.seq ?? 0), 0) + 1)
 const nMan = computed(() => boxes.value.filter((b) => b.manual).length)
 const rows = computed(() => (onlyManual.value ? boxes.value.filter((b) => b.manual) : boxes.value))
 const groups = computed(() => rec.value?.groups ?? [])
@@ -111,7 +116,7 @@ const cancelEdit = () => (editing.value = -1)
 
 async function remove(seq: number) {
   editing.value = -1
-  await save(boxes.value.filter((x) => x.seq !== seq).map((x, i) => ({ ...x, seq: i + 1 })))
+  await save(boxes.value.filter((x) => x.seq !== seq))
 }
 
 // 加一箱：一箱一回车；粘进来的多个数一次加完。手工加的箱带手录记号，没有秤原读数
@@ -124,7 +129,7 @@ async function addBoxes() {
     return
   }
   const first = boxes.value[0]
-  const n = boxes.value.length
+  const n = nextSeq.value - 1
   const extra: BoxRec[] = parts.map((x, i) => ({
     seq: n + i + 1, netKg: round2(x), tareKg: first?.tareKg, tareName: first?.tareName, groupK: 1, manual: true, printed: false,
   }))
@@ -187,7 +192,7 @@ async function addBoxes() {
             </td>
           </tr>
           <tr v-if="editable && !onlyManual" class="addrow">
-            <td class="num muted seqc">第 {{ boxes.length + 1 }} 箱</td>
+            <td class="num muted seqc">第 {{ nextSeq }} 箱</td>
             <td colspan="3">
               <span class="setrow" style="gap: 8px">
                 <input
@@ -199,7 +204,7 @@ async function addBoxes() {
                   placeholder="净重，回车添加"
                   autocomplete="off"
                   :disabled="busy"
-                  :aria-label="`第 ${boxes.length + 1} 箱净重`"
+                  :aria-label="`第 ${nextSeq} 箱净重`"
                   @keydown.enter.prevent="addBoxes"
                   @input="addErr = ''"
                 />

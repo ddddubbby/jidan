@@ -243,6 +243,47 @@ class OrderQueryTest {
                 .isEqualByComparingTo("47.8");
     }
 
+    /** F1-6：Web 删箱不重排序号。箱贴在收蛋时已打印，二维码是 批次号#序号，其余箱的序号必须原样保留。 */
+    @Test
+    void removingABoxKeepsTheOtherSeqsSoPrintedLabelsStillResolve() {
+        long id = submit(scale(), liSi, pink, s360, LI_SI_BOXES);
+        String batchNo = get("/api/orders/" + id).get("batchNo").asText();
+
+        // 去掉第 3 箱，其余序号不变（4..10 仍是 4..10）
+        List<Map<String, Object>> kept = new ArrayList<>(boxes(LI_SI_BOXES));
+        kept.remove(2);
+        var res = call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, kept), admin());
+        assertThat(res.getStatusCode().value()).isEqualTo(200);
+        JsonNode d = res.getBody();
+        assertThat(d.get("pricing").get("boxCount").asInt()).isEqualTo(9);
+        // 总重 460.5 - 46 = 414.5，箱数 9，均重与金额随之重算
+        assertThat(d.get("pricing").get("totalKg").decimalValue()).isEqualByComparingTo("414.5");
+        assertThat(d.get("pricing").get("amount").decimalValue()).isNotEqualByComparingTo("1810");
+
+        // 箱贴上的 #4 仍是原第 4 箱（净重 46），#3 已经没有这一箱
+        var four = lookup(batchNo + "#4", admin());
+        assertThat(four.getStatusCode().value()).isEqualTo(200);
+        assertThat(four.getBody().get("seq").asInt()).isEqualTo(4);
+        assertThat(four.getBody().get("netKg").decimalValue()).isEqualByComparingTo("46");
+        var ten = lookup(batchNo + "#10", admin());
+        assertThat(ten.getStatusCode().value()).isEqualTo(200);
+        assertThat(ten.getBody().get("netKg").decimalValue()).isEqualByComparingTo("47.8");
+        var three = lookup(batchNo + "#3", admin());
+        assertThat(three.getStatusCode().value()).isEqualTo(404);
+        assertThat(three.getBody().get("code").asText()).isEqualTo("NOT_FOUND");
+
+        // 流水按序号返回，序号带空号：1、2、4..10
+        JsonNode recs = get("/api/orders/" + id + "/records").get("boxes");
+        assertThat(recs).extracting(b -> b.get("seq").asInt()).containsExactly(1, 2, 4, 5, 6, 7, 8, 9, 10);
+
+        // 再加一箱取现有最大序号加 1（11），不是箱数加 1（10）
+        kept.add(box(11, 45.0, true, null));
+        var added = call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, kept), admin());
+        assertThat(added.getStatusCode().value()).isEqualTo(200);
+        assertThat(added.getBody().get("pricing").get("boxCount").asInt()).isEqualTo(10);
+        assertThat(lookup(batchNo + "#11", admin()).getBody().get("netKg").decimalValue()).isEqualByComparingTo("45");
+    }
+
     @Test
     void editReplacesHeaderAndBoxesAsAWholeButKeepsBatchNoAndCode() {
         long id = submit(scale(), liSi, pink, s360, LI_SI_BOXES);

@@ -18,7 +18,7 @@ import java.io.ByteArrayOutputStream
  * 二维码：TSPL 用 QRCODE 指令（打印机自己编码），位图用 zxing 生成的真矩阵，纠错等级两边都是 L。
  */
 object LabelRenderer {
-    /** 200 DPI：1mm = 8 dots（v7 7.3）。 */
+    /** 默认 203 DPI：1mm = 8 dots（v7 7.3）；实际按 `print.dpi` 取 [LabelGeometry.dotsPerMm]。 */
     const val DOTS_PER_MM = 8
 
     /**
@@ -33,9 +33,10 @@ object LabelRenderer {
         data: LabelData,
         template: LabelTemplate,
         mode: RenderMode,
+        geo: LabelGeometry = LabelGeometry(),
     ): PrintPayload = when (mode) {
-        RenderMode.TEXT -> PrintPayload.Text(toTspl(data, template))
-        RenderMode.BITMAP -> PrintPayload.Bitmap(toPng(data, template), template.gapMm)
+        RenderMode.TEXT -> PrintPayload.Text(toTspl(data, template, geo))
+        RenderMode.BITMAP -> PrintPayload.Bitmap(toPng(data, template, geo), template.gapMm, geo.dotsPerMm)
     }
 
     fun parseMode(raw: String?): RenderMode =
@@ -62,11 +63,30 @@ object LabelRenderer {
         )
     }
 
+    /** 一行文字落在纸上的点坐标（左上角，含偏移）与字高点数。 */
+    data class TextAt(val key: String, val text: String, val xDots: Int, val yDots: Int, val fontDots: Float)
+
+    /** 二维码落在纸上的点坐标（左上角，含偏移）与边长点数。 */
+    data class QrAt(val xDots: Int, val yDots: Int, val sizeDots: Int)
+
+    data class Layout(val texts: List<TextAt>, val qr: QrAt)
+
+    /** 所有要素的点坐标：TSPL 与位图共用这一处，毫米换点数与偏移都在这里算。 */
+    fun layout(data: LabelData, template: LabelTemplate, geo: LabelGeometry = LabelGeometry()): Layout {
+        val textByKey = lines(data, template.content).toMap()
+        val texts = template.fields.mapNotNull { f ->
+            val text = textByKey[f.key] ?: return@mapNotNull null
+            TextAt(f.key, text, geo.xDots(f.xMm), geo.yDots(f.yMm), f.fontMm * geo.dotsPerMm)
+        }
+        val qr = QrAt(geo.xDots(template.qrXMm), geo.yDots(template.qrYMm), geo.dots(template.qrSizeMm))
+        return Layout(texts, qr)
+    }
+
     /**
      * 每条指令以 CR LF 结尾（TSPL 手册“设计标签”）；公制单位与数字之间要有空格，
      * GAP 的两个参数都带 mm（手册 GAP 指令）。
      */
-    fun toTspl(data: LabelData, template: LabelTemplate): String {
+    fun toTspl(data: LabelData, template: LabelTemplate, geo: LabelGeometry = LabelGeometry()): String {
         val w = template.widthMm.toInt()
         val h = template.heightMm.toInt()
         val gap = template.gapMm.toInt()
@@ -75,17 +95,12 @@ object LabelRenderer {
         sb.cmd("GAP $gap mm,0 mm")
         sb.cmd("DIRECTION 1")
         sb.cmd("CLS")
-        val textByKey = lines(data, template.content).toMap()
-        for (f in template.fields) {
-            val text = textByKey[f.key] ?: continue
-            val x = mmToDots(f.xMm)
-            val y = mmToDots(f.yMm)
-            sb.cmd("TEXT $x,$y,\"$FONT_CN\",0,1,1,\"${escapeTspl(text)}\"")
+        val lay = layout(data, template, geo)
+        for (t in lay.texts) {
+            sb.cmd("TEXT ${t.xDots},${t.yDots},\"$FONT_CN\",0,1,1,\"${escapeTspl(t.text)}\"")
         }
-        val qx = mmToDots(template.qrXMm)
-        val qy = mmToDots(template.qrYMm)
-        val cell = (mmToDots(template.qrSizeMm) / qrMatrix(data.qrPayload).width).coerceIn(1, 10)
-        sb.cmd("QRCODE $qx,$qy,L,$cell,A,0,\"${escapeTspl(data.qrPayload)}\"")
+        val cell = (lay.qr.sizeDots / qrMatrix(data.qrPayload).width).coerceIn(1, 10)
+        sb.cmd("QRCODE ${lay.qr.xDots},${lay.qr.yDots},L,$cell,A,0,\"${escapeTspl(data.qrPayload)}\"")
         sb.cmd("PRINT 1")
         return sb.toString()
     }
@@ -106,9 +121,9 @@ object LabelRenderer {
         append(line).append("\r\n")
     }
 
-    fun drawBitmap(data: LabelData, template: LabelTemplate): Bitmap {
-        val w = mmToDots(template.widthMm)
-        val h = mmToDots(template.heightMm)
+    fun drawBitmap(data: LabelData, template: LabelTemplate, geo: LabelGeometry = LabelGeometry()): Bitmap {
+        val w = geo.dots(template.widthMm)
+        val h = geo.dots(template.heightMm)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         canvas.drawColor(Color.WHITE)
@@ -116,24 +131,17 @@ object LabelRenderer {
             color = Color.BLACK
             typeface = Typeface.DEFAULT_BOLD
         }
-        val textByKey = lines(data, template.content).toMap()
-        for (f in template.fields) {
-            val text = textByKey[f.key] ?: continue
-            paint.textSize = f.fontMm * DOTS_PER_MM
-            canvas.drawText(text, f.xMm * DOTS_PER_MM, (f.yMm + f.fontMm) * DOTS_PER_MM, paint)
+        val lay = layout(data, template, geo)
+        for (t in lay.texts) {
+            paint.textSize = t.fontDots
+            canvas.drawText(t.text, t.xDots.toFloat(), t.yDots + t.fontDots, paint)
         }
-        drawQr(
-            canvas,
-            data.qrPayload,
-            (template.qrXMm * DOTS_PER_MM).toInt(),
-            (template.qrYMm * DOTS_PER_MM).toInt(),
-            (template.qrSizeMm * DOTS_PER_MM).toInt(),
-        )
+        drawQr(canvas, data.qrPayload, lay.qr.xDots, lay.qr.yDots, lay.qr.sizeDots)
         return bmp
     }
 
-    fun toPng(data: LabelData, template: LabelTemplate): ByteArray {
-        val bmp = drawBitmap(data, template)
+    fun toPng(data: LabelData, template: LabelTemplate, geo: LabelGeometry = LabelGeometry()): ByteArray {
+        val bmp = drawBitmap(data, template, geo)
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         bmp.recycle()
@@ -146,8 +154,6 @@ object LabelRenderer {
             lines(data, content).forEach { (_, v) -> appendLine(v) }
             append("二维码：").append(data.qrPayload)
         }
-
-    private fun mmToDots(mm: Float): Int = (mm * DOTS_PER_MM).toInt()
 
     private fun escapeTspl(s: String): String = s.replace("\"", "'")
 

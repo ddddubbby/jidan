@@ -146,6 +146,46 @@
                     android:textAllCaps="false" />
             </LinearLayout>
 
+            <!-- 秤没连上或断开：称重框位置换成连接卡片，只给当前该做的连接操作和“手工加一箱”（原型 screenWeigh） -->
+            <LinearLayout
+                android:id="@+id/scaleCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_step_active"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/scaleCardTitle"
+                    style="@style/Text.Strong"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/weigh_scale_off"
+                    android:textColor="@color/ok_ink" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/scaleCardAction"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="10dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:textAllCaps="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/scaleCardManual"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_small_height"
+                    android:layout_marginTop="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/ledger_manual_add"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/scalePanel"
                 android:layout_width="match_parent"
@@ -155,6 +195,7 @@
                 android:padding="16dp">
 
                 <LinearLayout
+                    android:id="@+id/scaleTop"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
