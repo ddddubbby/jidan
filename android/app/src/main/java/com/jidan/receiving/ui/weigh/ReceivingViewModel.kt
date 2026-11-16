@@ -180,8 +180,16 @@ data class WeighUiState(
     val labelPreview: String = "",
     /** 已确认计量或已提交：流水只读，只能补打（APP-08）。 */
     val locked: Boolean = false,
+    /** `weigh.manual-entry`：关掉后不出现“手工加一箱”（开发规格 4.3）。 */
+    val manualEntry: Boolean = true,
 ) {
     val count: Int get() = boxes.size
+
+    /** 秤没连上或断开：称重框位置换成连接卡片（原型 screenWeigh）。 */
+    val showScaleCard: Boolean get() = !scaleConnected
+
+    /** “手工加一箱”入口（连接卡片与流水弹层共用）：秤不可用时的最后兜底，0 箱也能用（APP-11）。 */
+    val showManualAdd: Boolean get() = manualEntry && !locked
     val totalNet: Kg get() = boxes.map { it.net }.sum()
     fun avg(rule: RoundRule): Kg? =
         if (count == 0) null else RoundAvg.of(totalNet, count, rule)
@@ -900,6 +908,7 @@ class ReceivingViewModel(
                 printBlock = printBlock(),
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
                 locked = locked,
+                manualEntry = container.options.value.get("weigh.manual-entry").equals("on", ignoreCase = true),
             )
         }
         if (confirmed) {

@@ -143,6 +143,27 @@ class PrintQueueTest {
     }
 
     @Test
+    fun reprintingAnAlreadyPrintedBoxPrintsOneMoreLabelAndLeavesOthersMarked() = runBlocking {
+        val printer = GatedPrinter()
+        var session: Session? = session(3).allPrinted()
+        val q = PrintQueue(printer, this, { AppOptions.defaults() }, { session }, { f -> session = session?.let(f) })
+
+        q.reprintOne(2) // 第 2 箱标签贴坏了，再打一张
+        assertEquals(listOf(2), session!!.unprinted.map { it.seq }) // 只有它回到队列，其余箱的标记不动
+        printer.arrived.receive().open()
+        q.awaitIdle()
+
+        assertEquals(1, printer.printed.size) // 多收到一张
+        assertTrue(printer.printed.single().contains("第2箱"))
+        assertTrue(session!!.boxes.all { it.printed }) // 打完仍是已打印
+
+        q.reprintOne(2) // 不限次数
+        printer.arrived.receive().open()
+        q.awaitIdle()
+        assertEquals(2, printer.printed.size)
+    }
+
+    @Test
     fun blockerFollowsThePrinterNowNotTheLastFailure() = runBlocking {
         val printer = GatedPrinter()
         val session: Session? = session(1)
