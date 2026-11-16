@@ -25,9 +25,9 @@ object TsplBytes {
     /**
      * 位图版：SIZE/GAP/DIRECTION/CLS + 一条 BITMAP（左上角 0,0）+ PRINT。
      * BITMAP 的 width 以字节计、height 以点计，数据为原始字节，行内高位在左，**0 为黑点、1 为白点**（手册 BITMAP 的示意表）。
-     * 纸张毫米数由点数反推（200 DPI，1mm = 8 点，同 `LabelRenderer.DOTS_PER_MM`）。
+     * 纸张毫米数由点数反推（[dotsPerMm] 默认 8，即 203 DPI；按 `print.dpi` 渲染时随位图一起传来）。
      */
-    fun bitmapJob(r: Raster, gapMm: Float): Built {
+    fun bitmapJob(r: Raster, gapMm: Float, dotsPerMm: Int = LabelRenderer.DOTS_PER_MM): Built {
         val wBytes = (r.widthDots + 7) / 8
         val data = ByteArray(wBytes * r.heightDots) { 0xFF.toByte() }
         for (y in 0 until r.heightDots) {
@@ -38,8 +38,8 @@ object TsplBytes {
                 }
             }
         }
-        val wMm = r.widthDots / LabelRenderer.DOTS_PER_MM
-        val hMm = r.heightDots / LabelRenderer.DOTS_PER_MM
+        val wMm = r.widthDots / dotsPerMm
+        val hMm = r.heightDots / dotsPerMm
         val head = "SIZE $wMm mm,$hMm mm\r\n" +
             "GAP ${gapMm.toInt()} mm,0 mm\r\n" +
             "DIRECTION 1\r\n" +

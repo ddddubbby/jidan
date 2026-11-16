@@ -106,6 +106,15 @@ class TsplBytesTest {
     }
 
     @Test
+    fun bitmapPaperMmFollowsDotsPerMm() {
+        val w = 60 * 12
+        val h = 40 * 12
+        val built = TsplBytes.bitmapJob(TsplBytes.Raster(w, h, IntArray(w * h) { WHITE }), 2f, dotsPerMm = 12)
+        val text = String(built.bytes, Charsets.ISO_8859_1)
+        assertTrue(text.startsWith("SIZE 60 mm,40 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,90,480,0,"))
+    }
+
+    @Test
     fun grayAndTransparentPixels() {
         val px = intArrayOf(0xFF404040.toInt(), 0xFF909090.toInt(), 0x00000000, 0xFF000000.toInt())
         val built = TsplBytes.bitmapJob(TsplBytes.Raster(4, 1, px), 2f)

@@ -70,6 +70,17 @@
                 android:textColor="@color/err_ink"
                 android:visibility="gone" />
 
+            <TextView
+                android:id="@+id/updateEntry"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/bg_update_chip"
+                android:padding="12dp"
+                android:textColor="@color/ok_ink"
+                android:visibility="gone" />
+
             <!-- 农户 -->
             <LinearLayout
                 android:id="@+id/stepFarmer"
