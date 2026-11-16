@@ -11,6 +11,7 @@ import PricesPage from '../features/prices/PricesPage.vue'
 import BasicsPage from '../features/basics/BasicsPage.vue'
 import RulesPage from '../features/rules/RulesPage.vue'
 import OrdersPage from '../features/orders/OrdersPage.vue'
+import OrderPage from '../features/orders/OrderPage.vue'
 
 // meta.nav 是侧栏里高亮的那一项；各页由对应任务（P4、P5）替换掉空页面
 const pages: [string, string][] = [
@@ -39,9 +40,9 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/orders' },
     { path: '/login', component: LoginPage, meta: { public: true } },
-    // 单据详情（P5-2）与新建单（P5-4）做出来之前先放空页面；new 要排在 :id 前面
+    // 新建单（P5-4）做出来之前先放空页面；new 要排在 :id 前面
     { path: '/orders/new', component: PlaceholderPage, meta: { nav: 'orders', title: '新建入库单' } },
-    { path: '/orders/:id(\\d+)', component: PlaceholderPage, meta: { nav: 'orders', title: '单据详情' } },
+    { path: '/orders/:id(\\d+)', component: OrderPage, meta: { nav: 'orders', title: '单据详情' } },
     { path: '/rules', component: RulesPage, meta: { nav: 'rules', title: '定价规则' } },
     ...pages.map(([k, title]) => ({ path: '/' + k, component: done[k] ?? PlaceholderPage, meta: { nav: k, title } })),
     // 公共组件的走查页，只在开发服务器里有（build 时整段剔除）

@@ -20,3 +20,42 @@ export async function pendingBySpec(date: string): Promise<Record<string, number
     if (page * 100 >= (r.total ?? 0)) return out
   }
 }
+
+// ---- 单据详情与审核（P5-2；接口见开发规格 5.2“单据（Web）”）
+export type OrderDetail = S['OrderDetail']
+export type OrderRecords = S['Records']
+export type OrderFlow = S['Flow']
+export type NextPending = S['NextPending']
+type UpdateForm = S['UpdateForm']
+
+export const getOrder = (id: number) => http.get<OrderDetail>('/orders/' + id)
+export const getRecords = (id: number) => http.get<OrderRecords>('/orders/' + id + '/records')
+export const nextPending = (after: number) => http.get<NextPending>('/orders/next-pending', { after })
+
+// 审核、回传、退回、标记、作废都返回同一份 Flow；回传失败不是接口错误，而是状态仍为 APPROVED 并带 pushError
+export const approveOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/approve`)
+export const pushOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/push`)
+export const unapproveOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/unapprove`)
+export const markPushed = (id: number, hsId: string) => http.post<OrderFlow>(`/orders/${id}/mark-pushed`, hsId ? { hsId } : {})
+export const voidOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/void`)
+
+export type HeadPatch = Partial<Pick<UpdateForm, 'bizDate' | 'vendorId' | 'productId' | 'specId' | 'warehouseId'>>
+
+/**
+ * 改表头：PUT 是整单覆盖（5.2），所以先取当前流水原样带回，只换要改的表头字段。
+ * 流水的每个字段（手录记号、秤原读数、毛重、称重组号等）都照原样回传，这里不改任何一箱。
+ */
+export async function saveHead(d: OrderDetail, patch: HeadPatch) {
+  const rec = await getRecords(d.id!)
+  const boxes = (rec.boxes ?? []).map((b) => ({ ...b, seq: b.seq!, netKg: b.netKg! }))
+  const body: UpdateForm = {
+    bizDate: d.bizDate!, vendorId: d.vendor!.id!, productId: d.product!.id!, specId: d.spec!.id!, warehouseId: d.warehouse!.id!,
+    ...patch,
+    boxes,
+  }
+  return http.put<OrderDetail>('/orders/' + d.id, body)
+}
+
+/** 表头里的商品、仓库、农户候选：取自好生意档案（农户的 q 也匹配姓名与手机号） */
+export const listArchive = (type: 'products' | 'warehouses' | 'vendors', q = '', pageSize = 100) =>
+  http.get<{ items?: { id?: number; name?: string; phones?: string[] }[] }>('/archive/' + type, { q, pageSize }).then((r) => r.items ?? [])
