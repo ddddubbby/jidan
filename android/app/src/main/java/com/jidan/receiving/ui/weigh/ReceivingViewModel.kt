@@ -102,11 +102,24 @@ data class SummaryUiState(
     val unprinted: Int = 0,
     val printEnabled: Boolean = true,
     val printError: String = "",
+    /** 此刻打印机挡在哪（缺纸、未连接…），空串是能打。补打按钮看它，不看 [printError]。 */
+    val printBlock: String = "",
     val submitting: Boolean = false,
     val submitError: Boolean = false,
     /** `submit.without-price = allow` 时缺价也可提交，金额显示「待定价」。 */
     val allowWithoutPrice: Boolean = false,
-)
+) {
+    /**
+     * 主按钮此刻能不能直接提交：没有计价结果不能；缺规则或缺基准价时只有
+     * `submit.without-price = allow` 才行；计价、刷新、提交中也不能。
+     */
+    val canSubmit: Boolean
+        get() {
+            val q = quote ?: return false
+            if (submitting || loading || refreshing) return false
+            return allowWithoutPrice || !(q.noBasePrice || q.noRule)
+        }
+}
 
 data class DoneUiState(
     val farmerName: String = "",
@@ -122,6 +135,8 @@ data class DoneUiState(
     val unprinted: Int = 0,
     val printEnabled: Boolean = true,
     val printError: String = "",
+    val printBlock: String = "",
+    val printJob: PrintJobState? = null,
     /** 防连点：提交与「再收一单」同位置（原型 500ms）。 */
     val readyAgainAt: Long = 0L,
 )
@@ -154,7 +169,10 @@ data class WeighUiState(
     val printJob: PrintJobState? = null,
     val unprinted: Int = 0,
     val printError: String = "",
+    val printBlock: String = "",
     val labelPreview: String = "",
+    /** 已确认计量或已提交：流水只读，只能补打（APP-08）。 */
+    val locked: Boolean = false,
 ) {
     val count: Int get() = boxes.size
     val totalNet: Kg get() = boxes.map { it.net }.sum()
@@ -194,10 +212,15 @@ class ReceivingViewModel(
 
     private var session: Session? = null
     private var machine: WeighingMachine? = null
-    private var tickJob: Job? = null
+    private var scaleJobs: List<Job> = emptyList()
     private var eventClearJob: Job? = null
     private var scaleBound = false
     private var confirmed = false
+
+    /** 已提交：单子已交给后端，内存里只留箱子供完成页补打；流水只读。 */
+    private var submitted = false
+
+    private val locked: Boolean get() = confirmed || submitted
 
     val printQueue = PrintQueue(
         printer = container.printer,
@@ -211,6 +234,15 @@ class ReceivingViewModel(
         },
     )
 
+    init {
+        // 打印队列与打印机状态变了就刷新界面：补打按钮看的是打印机此刻的状态
+        viewModelScope.launch { printQueue.job.collect { publishIfActive() } }
+        viewModelScope.launch { printQueue.preview.collect { publishIfActive() } }
+        viewModelScope.launch { printQueue.lastError.collect { publishIfActive() } }
+        viewModelScope.launch { container.printer.linkStatus.collect { publishIfActive() } }
+        viewModelScope.launch { container.printer.printerStatus.collect { publishIfActive() } }
+    }
+
     val roundRule: RoundRule
         get() = runCatching {
             RoundRule.fromWire(container.options.value.get("round.mode"))
@@ -218,6 +250,8 @@ class ReceivingViewModel(
 
     /** 有本地草稿时恢复；否则从建单 OrderDraft 开新单。 */
     fun startFromDraft() {
+        // 上一单已提交、只为完成页补打留着：开新单前先清掉
+        if (submitted) resetAll()
         if (session != null) {
             publish()
             return
@@ -316,6 +350,7 @@ class ReceivingViewModel(
     fun hasBoxes(): Boolean = (session?.boxes?.isNotEmpty() == true)
 
     fun editManual(seq: Int, netKg: Double) {
+        if (locked) return
         val s = session ?: return
         session = s.editManual(seq, Kg.of(netKg))
         flash("第 $seq 箱已手录", ok = true)
@@ -325,6 +360,7 @@ class ReceivingViewModel(
     }
 
     fun addManual(netKg: Double) {
+        if (locked) return
         val before = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.addManual(Kg.of(netKg))
@@ -336,23 +372,25 @@ class ReceivingViewModel(
     }
 
     fun deleteBox(seq: Int) {
+        if (locked) return
         val s = session ?: return
         session = s.delete(seq)
         flash("已删除", ok = true)
         persist()
         publish()
+        // 后面的箱序号前移，已贴出去的旧标签作废；序号变了的箱已清打印标记，逐箱模式下重打
+        printQueue.enqueueRenumbered()
     }
 
     fun regroup(seq: Int, k: Int) {
+        if (locked) return
         val s = session ?: return
         if (!s.canRegroup(seq)) return
-        val group = s.box(seq).group
         session = s.regroup(seq, k)
         flash("已改成 $k 箱", ok = true)
         persist()
         publish()
-        val fresh = session?.boxes?.filter { it.group == group }?.map { it.seq }.orEmpty()
-        printQueue.enqueueNew(fresh)
+        printQueue.enqueueRenumbered()
     }
 
     fun reprintUnprinted() = printQueue.reprintUnprinted()
@@ -390,6 +428,8 @@ class ReceivingViewModel(
     fun onConfirmWeighing() {
         if (session?.boxes.isNullOrEmpty()) return
         confirmed = true
+        // 锁定流水：此后秤上的动静不记箱；解锁后须重新见到空秤才记
+        machine?.resetScale()
         printQueue.enqueueAfterConfirm()
         viewModelScope.launch {
             refreshQuote(resetM0Retried = true)
@@ -400,16 +440,16 @@ class ReceivingViewModel(
     /** 返回计量：解锁流水继续称（原型 `back`）。 */
     fun backToWeigh() {
         confirmed = false
+        machine?.resetScale()
         viewModelScope.launch { _nav.emit(ReceivingNav.BackToWeigh) }
     }
 
     /** 提交单据（APP-10）。失败保留流水；登录失效由 MainActivity 回登录，草稿不丢。 */
     fun submitOrder() {
         val s = session ?: return
-        if (_summary.value.submitting) return
-        val allow = container.options.value.get("submit.without-price").equals("allow", ignoreCase = true)
+        if (submitted || _summary.value.submitting) return
         val q = _summary.value.quote
-        if (!allow && q != null && (q.noBasePrice || q.noRule)) return
+        if (!_summary.value.canSubmit) return
         viewModelScope.launch {
             _summary.update { it.copy(submitting = true, submitError = false, error = "") }
             try {
@@ -457,26 +497,29 @@ class ReceivingViewModel(
     fun again() {
         val readyAt = _done.value.readyAgainAt
         if (System.currentTimeMillis() < readyAt) return
+        if (printQueue.job.value != null) return // 标签还在打，打完再收一单
+        container.sessionStore.clear()
+        resetAll()
+        viewModelScope.launch { _nav.emit(ReceivingNav.ToCreate) }
+    }
+
+    /** 清空内存里的整张单（含提交后留着补打的箱）与打印队列，回到没有单的状态。 */
+    private fun resetAll() {
         printQueue.stop()
         session = null
         machine = null
-        tickJob?.cancel()
-        scaleBound = false
+        unbindScale()
         confirmed = false
+        submitted = false
         container.orderDraft.clear()
-        container.sessionStore.clear()
         _ui.value = WeighUiState()
         _summary.value = SummaryUiState()
         _ruleSheet.value = RuleSheetState()
         _done.value = DoneUiState()
-        viewModelScope.launch { _nav.emit(ReceivingNav.ToCreate) }
     }
 
     private fun finishSubmit(s: Session, submitted: SubmittedDto, quote: QuoteResult?) {
         val pending = submitted.submittedAmount == null && submitted.submittedPrice == null
-        val unprinted = printQueue.unprintedCount()
-        val printEnabled = printQueue.enabled()
-        val printError = printQueue.lastError.value
         _done.value = DoneUiState(
             farmerName = s.farmer.name,
             productName = s.product.name,
@@ -488,22 +531,18 @@ class ReceivingViewModel(
             unitPrice = submitted.submittedPrice ?: quote?.unitPrice,
             amount = submitted.submittedAmount ?: quote?.amount,
             pendingPrice = pending,
-            unprinted = unprinted,
-            printEnabled = printEnabled,
-            printError = printError,
             readyAgainAt = System.currentTimeMillis() + 500,
         )
-        // 提交成功清草稿；完成页只用 DoneUiState
-        printQueue.stop()
+        // 提交成功清草稿与建单四项。内存里的箱留着、打印队列不停：没打完的接着打，
+        // 完成页还能补打（APP-07；附录 C 第 17 条：提交后的补打不回写后端）。流水从此只读。
         container.sessionStore.clear()
         container.orderDraft.clear()
-        session = null
         machine = null
-        tickJob?.cancel()
-        scaleBound = false
+        unbindScale()
         confirmed = false
-        _ui.value = WeighUiState()
+        this.submitted = true
         _summary.update { it.copy(submitting = false, submitError = false) }
+        publish()
         viewModelScope.launch { _nav.emit(ReceivingNav.ToDone) }
     }
 
@@ -685,6 +724,7 @@ class ReceivingViewModel(
                 unprinted = printQueue.unprintedCount(),
                 printEnabled = printQueue.enabled(),
                 printError = printQueue.lastError.value,
+                printBlock = printBlock(),
             )
         }
         try {
@@ -703,6 +743,7 @@ class ReceivingViewModel(
                     unprinted = printQueue.unprintedCount(),
                     printEnabled = printQueue.enabled(),
                     printError = printQueue.lastError.value,
+                    printBlock = printBlock(),
                 )
             }
         } catch (e: Throwable) {
@@ -740,16 +781,7 @@ class ReceivingViewModel(
     private fun bindScale() {
         if (scaleBound) return
         scaleBound = true
-        viewModelScope.launch {
-            printQueue.job.collect { publish() }
-        }
-        viewModelScope.launch {
-            printQueue.preview.collect { publish() }
-        }
-        viewModelScope.launch {
-            printQueue.lastError.collect { publish() }
-        }
-        viewModelScope.launch {
+        val link = viewModelScope.launch {
             container.scale.linkStatus.collect { st ->
                 val connected = st == LinkStatus.CONNECTED
                 val lost = st == LinkStatus.LOST ||
@@ -759,18 +791,18 @@ class ReceivingViewModel(
                 publish()
             }
         }
-        viewModelScope.launch {
+        val readings = viewModelScope.launch {
             container.scale.readings.collect { r ->
-                if (r == null) return@collect
+                if (r == null || locked) return@collect
                 val outcome = machine?.onReading(ScaleReading(r.raw, r.stable), System.currentTimeMillis())
                 applyOutcome(outcome)
                 publish()
             }
         }
-        tickJob?.cancel()
-        tickJob = viewModelScope.launch {
+        val tick = viewModelScope.launch {
             while (isActive) {
                 delay(100)
+                if (locked) continue
                 val outcome = machine?.onTick(System.currentTimeMillis())
                 if (outcome != null) {
                     applyOutcome(outcome)
@@ -780,6 +812,13 @@ class ReceivingViewModel(
                 }
             }
         }
+        scaleJobs = listOf(link, readings, tick)
+    }
+
+    private fun unbindScale() {
+        scaleJobs.forEach { it.cancel() }
+        scaleJobs = emptyList()
+        scaleBound = false
     }
 
     fun openTarePicker() {
@@ -810,16 +849,19 @@ class ReceivingViewModel(
     }
 
     fun pressRecord() {
+        if (locked) return
         applyOutcome(machine?.press())
         publish()
     }
 
     fun chooseK(k: Int) {
+        if (locked) return
         applyOutcome(machine?.choose(k))
         publish()
     }
 
     fun startReweigh(seq: Int) {
+        if (locked) return
         machine?.startReweigh(seq)
         flash("重称第 $seq 箱", ok = true)
         publish()
@@ -830,22 +872,10 @@ class ReceivingViewModel(
         publish()
     }
 
-    fun clear() {
-        printQueue.stop()
-        session = null
-        machine = null
-        tickJob?.cancel()
-        scaleBound = false
-        confirmed = false
-        container.orderDraft.clear()
-        _ui.value = WeighUiState()
-        _summary.value = SummaryUiState()
-        _ruleSheet.value = RuleSheetState()
-        _done.value = DoneUiState()
-    }
+    fun clear() = resetAll()
 
     private fun applyOutcome(outcome: WeighOutcome?) {
-        if (outcome == null) return
+        if (outcome == null || locked) return
         val beforeSeqs = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.apply(outcome)
@@ -904,7 +934,9 @@ class ReceivingViewModel(
                 printJob = printQueue.job.value,
                 unprinted = printQueue.unprintedCount(),
                 printError = printQueue.lastError.value,
+                printBlock = printBlock(),
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
+                locked = locked,
             )
         }
         if (confirmed) {
@@ -913,10 +945,30 @@ class ReceivingViewModel(
                     unprinted = printQueue.unprintedCount(),
                     printEnabled = printQueue.enabled(),
                     printError = printQueue.lastError.value,
+                    printBlock = printBlock(),
+                )
+            }
+        }
+        if (submitted) {
+            _done.update {
+                it.copy(
+                    unprinted = printQueue.unprintedCount(),
+                    printEnabled = printQueue.enabled(),
+                    printError = printQueue.lastError.value,
+                    printBlock = printBlock(),
+                    printJob = printQueue.job.value,
                 )
             }
         }
     }
+
+    private fun publishIfActive() {
+        if (session != null) publish()
+    }
+
+    /** 打印机此刻挡在哪；不用打印或没有未打印的箱就不挡。 */
+    private fun printBlock(): String =
+        if (printQueue.enabled()) printQueue.blocker().orEmpty() else ""
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

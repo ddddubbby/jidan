@@ -137,7 +137,7 @@ class CreateFragment : Fragment() {
             .setMessage(R.string.logout)
             .setPositiveButton(R.string.logout) { _, _ ->
                 requireContext().appContainer().clearSession()
-                findNavController().navigate(R.id.action_create_to_login)
+                findNavController().navigate(R.id.action_global_to_login)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

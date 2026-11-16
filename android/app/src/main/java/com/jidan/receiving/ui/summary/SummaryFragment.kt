@@ -18,11 +18,14 @@ import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.databinding.FragmentSummaryBinding
 import com.jidan.receiving.platform.Feedback
+import com.jidan.receiving.printing.reprintAction
+import com.jidan.receiving.ui.sheets.DevicesSheet
 import com.jidan.receiving.ui.sheets.LedgerSheet
 import com.jidan.receiving.ui.sheets.RuleSheet
 import com.jidan.receiving.ui.weigh.ReceivingNav
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
 import com.jidan.receiving.ui.weigh.SummaryUiState
+import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
 class SummaryFragment : Fragment() {
@@ -57,8 +60,9 @@ class SummaryFragment : Fragment() {
             val blockMissing = !s.allowWithoutPrice
             when {
                 s.refreshing || s.loading || s.submitting -> Unit
-                blockMissing && q?.noBasePrice == true -> vm.refreshBasePrice()
-                blockMissing && q?.noRule == true -> openRule()
+                q == null -> vm.reloadQuote()
+                blockMissing && q.noBasePrice -> vm.refreshBasePrice()
+                blockMissing && q.noRule -> openRule()
                 else -> vm.submitOrder()
             }
         }
@@ -170,10 +174,12 @@ class SummaryFragment : Fragment() {
             }
         }
 
-        b.unprinted.isVisible = state.printEnabled && state.unprinted > 0
-        if (b.unprinted.isVisible) {
-            b.unprinted.text = getString(R.string.print_failed_n, state.unprinted, state.printError.ifBlank { "未打印" })
-        }
+        b.reprint.bindReprint(
+            action = reprintAction(state.printEnabled, state.unprinted, state.printBlock),
+            unprinted = state.unprinted,
+            onPrint = { vm.reprintUnprinted() },
+            onFixPrinter = { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) },
+        )
         val hadError = b.error.isVisible && b.error.text?.isNotBlank() == true
         b.error.isVisible = state.error.isNotBlank()
         b.error.text = state.error
@@ -195,11 +201,16 @@ class SummaryFragment : Fragment() {
                 b.primary.isEnabled = false
                 b.primary.text = getString(R.string.summary_loading)
             }
-            blockMissing && q?.noBasePrice == true -> {
+            q == null -> {
+                // 没有计价结果不能提交：按钮写明缺的是什么，点了重新计价
+                b.primary.isEnabled = true
+                b.primary.text = getString(R.string.summary_requote)
+            }
+            blockMissing && q.noBasePrice -> {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_refresh_base)
             }
-            blockMissing && q?.noRule == true -> {
+            blockMissing && q.noRule -> {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_bind_rule)
             }

@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -15,7 +16,9 @@ import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.SameWeight
 import com.jidan.receiving.databinding.SheetLedgerBinding
+import com.jidan.receiving.printing.reprintAction
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
+import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
 class LedgerSheet : BottomSheetDialogFragment() {
@@ -40,6 +43,8 @@ class LedgerSheet : BottomSheetDialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.ui.collect { state ->
                     b.title.text = getString(R.string.ledger_title_n, state.count)
+                    // 确认计量后与提交后流水只读：不能手工加、重称、手录、删除，只能补打（APP-08）
+                    b.manualAdd.isVisible = !state.locked
                     val groups = SameWeight.groups(state.boxes.map { it.net })
                     b.groups.text = if (groups.isEmpty()) {
                         ""
@@ -69,12 +74,17 @@ class LedgerSheet : BottomSheetDialogFragment() {
                                 append("\n原 ").append(box.raw!!.format()).append(" kg")
                             }
                         }
-                        btn.setOnClickListener {
-                            dismiss()
-                            BoxSheet.newFor(box.seq).show(parentFragmentManager, BoxSheet.TAG)
+                        if (state.locked) {
+                            btn.isClickable = false
+                            btn.isFocusable = false
+                        } else {
+                            btn.setOnClickListener {
+                                dismiss()
+                                BoxSheet.newFor(box.seq).show(parentFragmentManager, BoxSheet.TAG)
+                            }
                         }
                         b.rows.addView(btn)
-                        if (!box.printed && vm.ui.value.printEnabled) {
+                        if (!box.printed) {
                             val reprint = MaterialButton(
                                 requireContext(),
                                 null,
@@ -85,8 +95,14 @@ class LedgerSheet : BottomSheetDialogFragment() {
                                 ViewGroup.LayoutParams.WRAP_CONTENT,
                             )
                             reprint.isAllCaps = false
-                            reprint.text = getString(R.string.print_reprint_n, 1)
-                            reprint.setOnClickListener { vm.reprintOne(box.seq) }
+                            reprint.bindReprint(
+                                action = reprintAction(state.printEnabled, 1, state.printBlock),
+                                unprinted = 1,
+                                onPrint = { vm.reprintOne(box.seq) },
+                                onFixPrinter = {
+                                    DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG)
+                                },
+                            )
                             b.rows.addView(reprint)
                         }
                     }

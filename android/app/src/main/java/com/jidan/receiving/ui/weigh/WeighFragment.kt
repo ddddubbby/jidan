@@ -22,9 +22,11 @@ import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.databinding.FragmentWeighBinding
 import com.jidan.receiving.platform.Feedback
+import com.jidan.receiving.printing.reprintAction
 import com.jidan.receiving.ui.sheets.BoxSheet
 import com.jidan.receiving.ui.sheets.DevicesSheet
 import com.jidan.receiving.ui.sheets.LedgerSheet
+import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
 class WeighFragment : Fragment() {
@@ -57,18 +59,6 @@ class WeighFragment : Fragment() {
         b.recordBtn.setOnClickListener { vm.pressRecord() }
         b.openLedger.setOnClickListener {
             LedgerSheet().show(parentFragmentManager, LedgerSheet.TAG)
-        }
-        b.reprint.setOnClickListener {
-            if (vm.ui.value.printError.isNotBlank() &&
-                (vm.ui.value.printError.contains("未连接") ||
-                    vm.ui.value.printError.contains("缺纸") ||
-                    vm.ui.value.printError.contains("开盖") ||
-                    vm.ui.value.printError.contains("过热"))
-            ) {
-                DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG)
-            } else {
-                vm.reprintUnprinted()
-            }
         }
         b.finish.setOnClickListener { vm.onConfirmWeighing() }
 
@@ -252,15 +242,13 @@ class WeighFragment : Fragment() {
         if (job != null) {
             b.printProgress.text = getString(R.string.print_progress, job.done, job.total)
         }
-        val showReprint = state.printEnabled && state.unprinted > 0 && job == null
-        b.reprint.isVisible = showReprint
-        if (showReprint) {
-            b.reprint.text = if (state.printError.isNotBlank()) {
-                getString(R.string.print_failed_n, state.unprinted, state.printError)
-            } else {
-                getString(R.string.print_reprint_n, state.unprinted)
-            }
-        }
+        // 去向由打印机此刻的状态定：换好纸后按钮立刻变回「补打」，不看上一次失败的文字
+        b.reprint.bindReprint(
+            action = if (job == null) reprintAction(state.printEnabled, state.unprinted, state.printBlock) else null,
+            unprinted = state.unprinted,
+            onPrint = { vm.reprintUnprinted() },
+            onFixPrinter = { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) },
+        )
         val preview = state.labelPreview
         b.labelPreviewTitle.isVisible = preview.isNotBlank()
         b.labelPreview.isVisible = preview.isNotBlank()
