@@ -23,6 +23,16 @@ egg:
   # 正式部署设 EGG_SEED_DEMO=false。
   seed-demo: ${EGG_SEED_DEMO:true}
 
+  # 好生意对接（开发规格 3.5）。mode 为 fake（默认，模拟好生意）或 real；
+  # real 下面四项密钥可以不填，服务照常启动，同步与回传时会提示缺哪几项。
+  chanjet:
+    mode: ${CHANJET_MODE:fake}
+    base-url: ${CHANJET_BASE_URL:https://openapi.chanjet.com}
+    app-key: ${CHANJET_APP_KEY:}
+    app-secret: ${CHANJET_APP_SECRET:}
+    book-id: ${CHANJET_BOOK_ID:}
+    open-token: ${CHANJET_OPEN_TOKEN:}
+
   # 初始管理员（开发规格 7.2）：启动时库里没有任何管理员才建；已有管理员时这三项不起作用。
   admin:
     phone: ${EGG_ADMIN_PHONE:}

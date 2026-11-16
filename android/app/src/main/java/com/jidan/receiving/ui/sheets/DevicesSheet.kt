@@ -21,6 +21,7 @@ import com.jidan.receiving.device.DiscoveredDevice
 import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.device.PrintPayload
 import com.jidan.receiving.device.PrinterIssue
+import com.jidan.receiving.device.label.LabelRenderer
 import com.jidan.receiving.ui.devices.LinkActionKind
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
 import kotlinx.coroutines.launch
@@ -44,7 +45,7 @@ class DevicesSheet : BottomSheetDialogFragment() {
 
         b.testPrint.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val outcome = c.printer.print(PrintPayload.Text("TEST\n收蛋\n"))
+                val outcome = c.printer.print(PrintPayload.Text(LabelRenderer.testTspl()))
                 b.sheetMessage.text = when (outcome) {
                     is com.jidan.receiving.device.PrintOutcome.Success -> "测试标签已发送"
                     is com.jidan.receiving.device.PrintOutcome.Failure -> outcome.reason

@@ -20,11 +20,15 @@ sealed class PrintOutcome {
     data class Failure(val reason: String) : PrintOutcome()
 }
 
-/** P7 前测试打印走 Text；Bitmap 为契约预留。 */
+/**
+ * Text 是拼好的 TSPL 指令文本；Bitmap 是整张标签的位图（PNG，200 DPI，1mm = 8 点），
+ * 位图没有纸张间隙信息，随带 [gapMm] 供适配器拼 TSPL 的 GAP。
+ */
 sealed class PrintPayload {
     data class Text(val tspl: String) : PrintPayload()
-    data class Bitmap(val png: ByteArray) : PrintPayload() {
-        override fun equals(other: Any?): Boolean = other is Bitmap && png.contentEquals(other.png)
-        override fun hashCode(): Int = png.contentHashCode()
+    data class Bitmap(val png: ByteArray, val gapMm: Float = 2f) : PrintPayload() {
+        override fun equals(other: Any?): Boolean =
+            other is Bitmap && png.contentEquals(other.png) && gapMm == other.gapMm
+        override fun hashCode(): Int = png.contentHashCode() * 31 + gapMm.hashCode()
     }
 }
