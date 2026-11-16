@@ -6,6 +6,34 @@ package com.jidan.receiving.device.label
  */
 enum class LabelContent { MINIMAL, FULL }
 
+/**
+ * 毫米换点数的口径与整体偏移（选项 `print.dpi`、`print.offset-x-mm`、`print.offset-y-mm`，开发规格 4.3、11.5）。
+ * 每毫米点数 = DPI / 25.4 四舍五入：203 对应 8，300 对应 12（v7 7.3）。
+ * 偏移加在所有要素（文字、二维码）的坐标上；正值向右、向下。
+ */
+data class LabelGeometry(
+    val dpi: Int = DEFAULT_DPI,
+    val offsetXMm: Float = 0f,
+    val offsetYMm: Float = 0f,
+) {
+    val dotsPerMm: Int = Math.round(dpi / 25.4f).coerceAtLeast(1)
+
+    fun dots(mm: Float): Int = (mm * dotsPerMm).toInt()
+    fun xDots(mm: Float): Int = ((mm + offsetXMm) * dotsPerMm).toInt()
+    fun yDots(mm: Float): Int = ((mm + offsetYMm) * dotsPerMm).toInt()
+
+    companion object {
+        const val DEFAULT_DPI = 203
+
+        /** 取不到或不是数时用默认值（203 DPI、不偏移）。 */
+        fun parse(dpi: String?, offsetXMm: String?, offsetYMm: String?) = LabelGeometry(
+            dpi = dpi?.trim()?.toIntOrNull()?.takeIf { it in 100..1200 } ?: DEFAULT_DPI,
+            offsetXMm = offsetXMm?.trim()?.toFloatOrNull() ?: 0f,
+            offsetYMm = offsetYMm?.trim()?.toFloatOrNull() ?: 0f,
+        )
+    }
+}
+
 data class LabelField(
     val key: String,
     val xMm: Float,

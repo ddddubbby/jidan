@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
+import com.jidan.receiving.BuildConfig
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.data.FarmerDto
 import com.jidan.receiving.data.NamedDto
 import com.jidan.receiving.data.RuleViewDto
 import com.jidan.receiving.data.SpecDto
 import com.jidan.receiving.data.userMessage
+import com.jidan.receiving.ui.update.UpdateOffer
+import com.jidan.receiving.ui.update.fetchUpdateOffer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +43,7 @@ data class CreateUiState(
     val error: String = "",
     val loading: Boolean = false,
     val operatorName: String = "",
+    val update: UpdateOffer? = null,
 ) {
     val picks: CreatePicks
         get() = CreatePicks(farmerId, productId, specId, warehouseId)
@@ -61,6 +65,15 @@ class CreateViewModel(
     init {
         loadCatalog()
         loadRecent()
+        refreshVersion()
+    }
+
+    /** 进入建单页查一次新版本（长期登录的手机不会回登录页）；失败或没有更新就不显示。 */
+    fun refreshVersion() {
+        viewModelScope.launch {
+            val offer = fetchUpdateOffer(BuildConfig.VERSION_CODE) { container.auth.appVersion() }
+            _ui.update { it.copy(update = offer) }
+        }
     }
 
     fun loadCatalog() {
