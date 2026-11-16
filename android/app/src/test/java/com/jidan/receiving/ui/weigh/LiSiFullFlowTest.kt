@@ -3,6 +3,7 @@ package com.jidan.receiving.ui.weigh
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.jidan.receiving.core.EmptyBoxTare
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.WeighPhase
@@ -426,6 +427,51 @@ class LiSiFullFlowTest {
         }
         assertEquals("182", formatMoney(vm.done.value.unitPrice))
         assertEquals("1820", formatMoney(vm.done.value.amount))
+        assertEquals(emptyList(), contract.violations.toList())
+    }
+
+    @Test
+    fun secondOrderOnTheSameScaleStartsFromAnEmptyScaleSoWeighingTheEmptyBoxTaresRight() = flow { deps, vm, navs ->
+        // 第一单：选 2 号包装箱（2kg），放 10 箱，提交。秤里留着第一单下发的 2kg 数字皮
+        weighLiSi(deps, vm)
+        vm.onConfirmWeighing()
+        until("计价回来") { vm.summary.value.quote != null }
+        vm.submitOrder()
+        until("提交完成") { navs.contains(ReceivingNav.ToDone) }
+        assertEquals(Kg(-200), deps.scale.readings.value!!.raw) // 空秤读 -2.0kg：旧皮重还在
+
+        // 再收一单（完成页点“收下一单”会清掉上一单，再走建单页）：不选皮重。进入称重后，APP 先清掉秤里的旧皮重
+        vm.clear()
+        deps.createOrder()
+        vm.startFromDraft()
+        until("第二单进入称重且秤里的旧皮重清掉") {
+            vm.ui.value.ready && deps.scale.readings.value?.raw == Kg(0) && vm.ui.value.displayNet == Kg(0)
+        }
+        assertNull(vm.ui.value.tare)
+        assertEquals(Kg(0), deps.scale.readings.value!!.raw)
+        assertEquals(Kg(0), vm.ui.value.displayNet)
+        assertEquals("", vm.ui.value.tareError)
+
+        // 放一只 2.5kg 的空箱：按钮写的是台面真实读数，不是被旧皮重扣过的 0.5
+        deps.scale.placeEmptyBox(250)
+        settle()
+        assertTrue(vm.ui.value.emptyBox.available)
+        assertEquals("称空箱 · 按 2.5 kg 去皮", EmptyBoxTare.label(vm.ui.value.emptyBox))
+        vm.weighEmptyBox()
+        settle(500)
+        assertEquals(Kg.of(2.5), vm.ui.value.tare?.unit)
+        assertEquals("空箱", vm.ui.value.tare?.name)
+
+        // 拿走空箱，放上一箱蛋（台面 48.5kg）：净重 46，皮重 2.5，毛重 48.5
+        deps.scale.removeLoad()
+        settle()
+        deps.scale.setLoadCenti(4850)
+        settle()
+        val box = vm.ui.value.boxes.single()
+        assertEquals(Kg.of(46.0), box.net)
+        assertEquals(Kg.of(2.5), box.tare)
+        assertEquals(Kg.of(48.5), box.gross)
+        assertEquals("", vm.ui.value.error)
         assertEquals(emptyList(), contract.violations.toList())
     }
 
