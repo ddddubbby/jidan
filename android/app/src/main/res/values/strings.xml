@@ -129,8 +129,9 @@
     <string name="box_net_hint">净重（kg）</string>
     <string name="box_save">保存</string>
     <string name="box_need_net">填写净重</string>
-    <string name="weigh_leave_title">离开称重</string>
-    <string name="weigh_leave_keep">先放着，下次继续</string>
+    <string name="weigh_leave_title">放弃这一单？</string>
+    <string name="weigh_leave_message">已称的 %1$d 箱记录会全部删除。</string>
+    <string name="weigh_leave_continue">继续称</string>
     <string name="weigh_abandon">放弃这一单</string>
     <string name="print_progress">正在打印 %1$d / %2$d</string>
     <string name="print_reprint_n">补打 %1$d 张标签</string>
