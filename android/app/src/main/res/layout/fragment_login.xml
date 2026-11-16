@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html screenLogin；另加服务器地址与新版本入口（开发规格 9.4、附录 B.5） -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="24dp">
+
+                <View
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_brand_mark" />
+
+                <TextView
+                    style="@style/Text.Title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="@string/brand_name" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_login_fields"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/input_height"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <TextView
+                        style="@style/Text.Caption"
+                        android:layout_width="72dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/login_server" />
+
+                    <EditText
+                        android:id="@+id/serverUrl"
+                        style="@style/Text.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:hint="@string/login_server_hint"
+                        android:importantForAutofill="no"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:paddingVertical="12dp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/line" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/input_height"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <TextView
+                        style="@style/Text.Caption"
+                        android:layout_width="72dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/login_phone" />
+
+                    <EditText
+                        android:id="@+id/phone"
+                        style="@style/Text.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:autofillHints="username"
+                        android:background="@android:color/transparent"
+                        android:inputType="phone"
+                        android:maxLines="1"
+                        android:paddingVertical="12dp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/line" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/input_height"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <TextView
+                        style="@style/Text.Caption"
+                        android:layout_width="72dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/login_password" />
+
+                    <EditText
+                        android:id="@+id/password"
+                        style="@style/Text.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:autofillHints="password"
+                        android:background="@android:color/transparent"
+                        android:inputType="textPassword"
+                        android:maxLines="1"
+                        android:paddingVertical="12dp" />
+
+                    <ImageButton
+                        android:id="@+id/togglePassword"
+                        android:layout_width="@dimen/button_small_height"
+                        android:layout_height="@dimen/button_small_height"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/login_show_password"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_eye" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/error"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="20dp"
+                android:textColor="@color/err_ink" />
+
+            <TextView
+                android:id="@+id/updateEntry"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_update_chip"
+                android:padding="12dp"
+                android:textColor="@color/ok_ink"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:textAllCaps="false"
+            android:textSize="@dimen/text_17" />
+    </FrameLayout>
+</LinearLayout>

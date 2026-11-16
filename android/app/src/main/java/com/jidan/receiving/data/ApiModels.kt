@@ -1,0 +1,121 @@
+package com.jidan.receiving.data
+
+/** 与 openapi / 开发规格 5.2、附录 E P1-2 对齐的请求响应。 */
+
+data class LoginRequest(
+    val phone: String,
+    val password: String,
+    val client: String = "APP",
+)
+
+data class LoginResult(
+    val token: String,
+    val name: String,
+    val role: String,
+)
+
+data class CurrentUser(
+    val id: Long,
+    val name: String,
+    val phone: String,
+    val role: String,
+)
+
+data class ErrorBody(
+    val code: String? = null,
+    val message: String? = null,
+)
+
+/**
+ * `GET /app/version`（开发规格 5.2）。P2-2 / 部署任务落地前调用会失败，登录页隐藏下载入口。
+ * 字段名按常见契约预留；若后端最终命名不同，合入后对照改一处即可。
+ */
+data class AppVersion(
+    val versionCode: Int = 0,
+    val versionName: String? = null,
+    val downloadUrl: String? = null,
+)
+
+/**
+ * `GET /app/bootstrap`（开发规格 5.2）。APP 只取两张键值表：
+ * [settings] 是业务设置（打印时机、标签内容、设备型号、均重取整等），
+ * [options] 是高级选项里 APP 生效的两组。两张表合起来交给 [AppOptions.from]。
+ */
+data class BootstrapResponse(
+    val settings: Map<String, String?>? = null,
+    val options: Map<String, String?>? = null,
+) {
+    fun allValues(): Map<String, String?> = (settings ?: emptyMap()) + (options ?: emptyMap())
+}
+
+data class FarmerDto(
+    val id: Long,
+    val name: String,
+    val hsCode: String? = null,
+    val phones: List<String> = emptyList(),
+    val matchedPhones: List<String> = emptyList(),
+)
+
+data class RuleViewDto(
+    val id: Long,
+    val name: String,
+    val kind: String? = null,
+    val productId: Long,
+    val productName: String? = null,
+    val specId: Long,
+    val specName: String? = null,
+    val coef: Double? = null,
+    val enabled: Boolean = true,
+)
+
+data class ArchiveRowDto(
+    val id: Long,
+    val hsCode: String? = null,
+    val name: String,
+    val unitName: String? = null,
+    val phones: List<String>? = null,
+)
+
+data class PageResultDto(
+    val items: List<ArchiveRowDto> = emptyList(),
+    val total: Long = 0,
+    val page: Int = 1,
+    val pageSize: Int = 20,
+)
+
+data class SpecDto(
+    val id: Long,
+    val name: String,
+    val eggCount: Int? = null,
+    val stdNetKg: Double? = null,
+    val enabled: Boolean = true,
+)
+
+data class BasePriceDayDto(
+    val date: String? = null,
+    val items: List<BasePriceItemDto> = emptyList(),
+)
+
+data class BasePriceItemDto(
+    val specId: Long,
+    val specName: String? = null,
+    val stdNetKg: Double? = null,
+    val price: Double? = null,
+)
+
+data class TareDto(
+    val id: Long,
+    val name: String,
+    val tareKg: Double,
+    val hotkey: Boolean = true,
+    val enabled: Boolean = true,
+)
+
+/** `POST /api/batches`。磅秤员调用时后端一律取当日，APP 不传日期。 */
+data class BatchRequest(
+    val date: String? = null,
+)
+
+data class BatchDto(
+    val batchNo: String,
+)

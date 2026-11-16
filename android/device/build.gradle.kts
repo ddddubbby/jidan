@@ -26,4 +26,15 @@ kotlin {
 
 dependencies {
     api(project(":core"))
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.withType<Test> {
+    useJUnit()
 }
