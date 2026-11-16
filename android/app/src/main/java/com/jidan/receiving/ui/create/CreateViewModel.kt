@@ -116,12 +116,12 @@ class CreateViewModel(
                     selectFarmer(hits[0])
                     return@launch
                 }
-                _ui.update {
-                    it.copy(
-                        farmers = hits,
-                        noMatch = if (hits.isEmpty()) q else "",
-                    )
+                // 无匹配：清空尾号并提示（原型 farmerResults / APP-02）
+                if (hits.isEmpty()) {
+                    _ui.update { it.copy(farmers = emptyList(), query = "", noMatch = q) }
+                    return@launch
                 }
+                _ui.update { it.copy(farmers = hits, noMatch = "") }
             } catch (e: Throwable) {
                 _ui.update { it.copy(error = e.userMessage(), farmers = emptyList()) }
             }
