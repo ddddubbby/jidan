@@ -37,15 +37,26 @@ data class AppVersion(
 )
 
 /**
- * `GET /app/bootstrap`（开发规格 5.2）。APP 只取两张键值表：
- * [settings] 是业务设置（打印时机、标签内容、设备型号、均重取整等），
- * [options] 是高级选项里 APP 生效的两组。两张表合起来交给 [AppOptions.from]。
+ * `GET /app/bootstrap`（开发规格 5.2），磅秤员建单与称重要用的东西一次下发：
+ * [products]、[specs]（含标准净含量与当日基准价，没录为 null）、[warehouses]、[tares]（后端只下发热键皮重），
+ * 以及两张键值表：[settings] 是业务设置（打印时机、标签内容、设备型号、均重取整等），
+ * [options] 是高级选项里 APP 生效的两组，两张表合起来交给 [AppOptions.from]。
+ * 列表字段都可空：后端少给一项时当空列表，不让整个解析失败。
  */
 data class BootstrapResponse(
+    val date: String? = null,
+    val products: List<NamedDto>? = null,
+    val specs: List<SpecDto>? = null,
+    val warehouses: List<NamedDto>? = null,
+    val tares: List<TareDto>? = null,
     val settings: Map<String, String?>? = null,
     val options: Map<String, String?>? = null,
 ) {
     fun allValues(): Map<String, String?> = (settings ?: emptyMap()) + (options ?: emptyMap())
+
+    /** 规格 id → 标准净含量（kg）；缺规格或缺 W0 的不在表里。 */
+    fun stdNetBySpec(): Map<Long, Double> =
+        specs.orEmpty().mapNotNull { sp -> sp.stdNetKg?.let { sp.id to it } }.toMap()
 }
 
 data class FarmerDto(
@@ -88,47 +99,26 @@ data class RuleCoefPatch(
     val coef: Double,
 )
 
-data class ArchiveRowDto(
+/** 商品、仓库（bootstrap 的 products、warehouses）。 */
+data class NamedDto(
     val id: Long,
-    val hsCode: String? = null,
     val name: String,
-    val unitName: String? = null,
-    val phones: List<String>? = null,
 )
 
-data class PageResultDto(
-    val items: List<ArchiveRowDto> = emptyList(),
-    val total: Long = 0,
-    val page: Int = 1,
-    val pageSize: Int = 20,
-)
-
+/** bootstrap 的规格；[basePrice] 是当日基准价，没录为 null（APP 标“无基准价”）。后端只下发启用的规格。 */
 data class SpecDto(
     val id: Long,
     val name: String,
     val eggCount: Int? = null,
     val stdNetKg: Double? = null,
-    val enabled: Boolean = true,
+    val basePrice: Double? = null,
 )
 
-data class BasePriceDayDto(
-    val date: String? = null,
-    val items: List<BasePriceItemDto> = emptyList(),
-)
-
-data class BasePriceItemDto(
-    val specId: Long,
-    val specName: String? = null,
-    val stdNetKg: Double? = null,
-    val price: Double? = null,
-)
-
+/** bootstrap 的皮重；后端只下发启用且作热键的。 */
 data class TareDto(
     val id: Long,
     val name: String,
     val tareKg: Double,
-    val hotkey: Boolean = true,
-    val enabled: Boolean = true,
 )
 
 /** `POST /api/batches`。磅秤员调用时后端一律取当日，APP 不传日期。 */

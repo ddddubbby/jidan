@@ -14,6 +14,8 @@ data class Pick(val id: Long, val name: String)
  * 状态机不持有流水（见 [WeighingMachine]），它记下的 [WeighOutcome] 交给 [apply] 加进来。
  *
  * @param groupSeq 已发出的称重组号。删掉一组后不回收，新组继续往后编；手工加的箱也占一个组号。
+ * @param stdNet 规格的标准净含量 W0，建单时取到就写进草稿，进程被回收后恢复不用再猜。
+ *   旧草稿没有这个字段，读回是 null，由 `:app` 从 bootstrap 的规格里补；取不到就不让称重，不用默认值顶替。
  */
 data class Session(
     val batchNo: String,
@@ -24,6 +26,7 @@ data class Session(
     val tare: Tare? = null,
     val boxes: List<Box> = emptyList(),
     val groupSeq: Int = 0,
+    val stdNet: Kg? = null,
 ) {
     val count: Int get() = boxes.size
 
@@ -123,6 +126,7 @@ data class Session(
             "warehouse" to warehouse.toMap(),
             "tare" to tare?.let { mapOf("unit" to it.unit.cents, "name" to it.name) },
             "groupSeq" to groupSeq,
+            "stdNet" to stdNet?.cents,
             "boxes" to boxes.map { it.toMap() },
         ),
     )
@@ -140,6 +144,8 @@ data class Session(
                 tare = m.mapOrNull("tare")?.let { Tare(Kg(it.int("unit")), it.str("name")) },
                 boxes = m.list("boxes").map { it.asMap().toBox() },
                 groupSeq = m.int("groupSeq"),
+                // 旧草稿没有 stdNet：缺字段读成 null，不算草稿损坏
+                stdNet = if (m.containsKey("stdNet")) m.intOrNull("stdNet")?.let(::Kg) else null,
             )
         }
 

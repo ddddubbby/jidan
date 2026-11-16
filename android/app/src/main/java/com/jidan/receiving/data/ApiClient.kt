@@ -16,10 +16,16 @@ import java.util.concurrent.TimeUnit
  * 401 + UNAUTHENTICATED 时清登录并回调（登录接口自己的 BAD_CREDENTIALS 不触发）。
  */
 class ApiClient(
-    private val prefs: Prefs,
-    private val tokenStore: TokenStore,
+    private val baseUrl: () -> String,
+    private val token: () -> String?,
     private val onUnauthenticated: () -> Unit,
 ) {
+    constructor(prefs: Prefs, tokenStore: TokenStore, onUnauthenticated: () -> Unit) : this(
+        baseUrl = { prefs.normalizedBaseUrl() },
+        token = { tokenStore.readSession()?.token },
+        onUnauthenticated = onUnauthenticated,
+    )
+
     private val gson = Gson()
     private val lock = Any()
 
@@ -27,7 +33,7 @@ class ApiClient(
     @Volatile private var cachedApi: EggApi? = null
 
     fun api(): EggApi {
-        val base = prefs.normalizedBaseUrl()
+        val base = baseUrl()
         require(base.isNotEmpty()) { "填写服务器地址" }
         synchronized(lock) {
             if (cachedApi != null && cachedBase == base) return cachedApi!!
@@ -48,9 +54,9 @@ class ApiClient(
     private fun build(baseUrl: String): EggApi {
         val auth = Interceptor { chain ->
             val req = chain.request()
-            val token = tokenStore.readSession()?.token
-            val next = if (!token.isNullOrBlank()) {
-                req.newBuilder().header("Authorization", "Bearer $token").build()
+            val bearer = token()
+            val next = if (!bearer.isNullOrBlank()) {
+                req.newBuilder().header("Authorization", "Bearer $bearer").build()
             } else {
                 req
             }

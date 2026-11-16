@@ -7,7 +7,10 @@ import retrofit2.http.Path
 import retrofit2.http.POST
 import retrofit2.http.Query
 
-/** Retrofit 接口表（开发规格 5.2）。bootstrap 等 P2-2；建单用档案/规则接口已有。 */
+/**
+ * Retrofit 接口表（开发规格 5.2）。这里只放磅秤员账号能调的接口；商品、规格、仓库、皮重都走 bootstrap，
+ * 不得直连仅管理员的档案接口（后端 ScaleAccessTest 按本文件的声明逐个核对）。
+ */
 interface EggApi {
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginRequest): LoginResult
@@ -29,23 +32,6 @@ interface EggApi {
 
     @GET("api/farmers/{id}/rules")
     suspend fun farmerRules(@Path("id") id: Long): List<RuleViewDto>
-
-    @GET("api/archive/{type}")
-    suspend fun archive(
-        @Path("type") type: String,
-        @Query("q") q: String? = null,
-        @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 100,
-    ): PageResultDto
-
-    @GET("api/specs")
-    suspend fun specs(): List<SpecDto>
-
-    @GET("api/base-prices")
-    suspend fun basePrices(@Query("date") date: String? = null): BasePriceDayDto
-
-    @GET("api/tares")
-    suspend fun tares(): List<TareDto>
 
     @POST("api/batches")
     suspend fun createBatch(@Body body: BatchRequest = BatchRequest()): BatchDto

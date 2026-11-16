@@ -115,6 +115,12 @@ class WeighingMachine(
             else -> WeighPhase.READY
         }
 
+    /** 此刻台面总重（未扣皮，按当前皮重还原）；没有读数（刚换皮重、秤断开）时为 null。称空箱按它去皮。 */
+    val platformNow: Kg? get() = platform
+
+    /** 此刻读数是否稳定。 */
+    val isStable: Boolean get() = stable
+
     /** 称重框显示的净重（k 箱）；没有读数时为 null。 */
     val displayNet: Kg?
         get() = platform?.let { it - Kg(tareUnit.cents * k) }

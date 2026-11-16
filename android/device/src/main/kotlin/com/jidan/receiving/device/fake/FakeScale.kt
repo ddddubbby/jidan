@@ -16,6 +16,11 @@ import kotlinx.coroutines.launch
 /**
  * 模拟秤（对照 lab/app-sim.html）。未经实物验证。
  * 异常开关供第 4 章选项走查：读数未扣皮 / 稳定标志失灵 / 去皮指令无效。
+ *
+ * 断开、丢失、重新连接都会清掉内部数字皮，APP 须重新下发（真秤重启后同样没有皮重）。
+ *
+ * 读数口径（对照真秤“设皮后回调的是已扣皮读数”，v7 7.2）：正常情况下回报 台面总重 − 数字皮，
+ * 空秤时为负数（设 2kg 皮后空秤读 −2kg）；“读数未扣皮”打开时回报台面总重。
  */
 class FakeScale(
     private val scope: CoroutineScope,
@@ -38,6 +43,8 @@ class FakeScale(
             if (!value && _link.value == LinkStatus.CONNECTED) {
                 _link.value = LinkStatus.LOST
                 _readings.value = null
+                // 真秤断电或离开手机后没有 APP 下发的皮重，恢复连接后要重新下发（F1-3）
+                digitalTareCenti = 0
             }
         }
 
@@ -45,7 +52,7 @@ class FakeScale(
         get() = _batteryLow.value
         set(value) { _batteryLow.value = value }
 
-    /** 读数未扣皮：上报值多加一份当前数字皮（毛重伪装成净重场景的反面）。 */
+    /** 读数未扣皮：设了数字皮也照报台面总重（不减皮重）。 */
     var anomalyReadingNotNet: Boolean = false
 
     /** 稳定标志失灵：stable 恒为 false。 */
@@ -61,6 +68,7 @@ class FakeScale(
 
     /** 当前数字皮（0.01kg）；仅 Fake 内部记，真正换算在 :core。 */
     private var digitalTareCenti: Int = 0
+    private var lastStable: Boolean = true
 
     val catalog: List<DiscoveredDevice> = listOf(
         DiscoveredDevice(MINE_ID, "LS-S2", 3),
@@ -74,6 +82,8 @@ class FakeScale(
     override suspend fun connect(id: String) {
         connectJob?.cancel()
         settleJob?.cancel()
+        // 新建一条连接：之前下发的数字皮不带过来，由 APP 重新下发
+        digitalTareCenti = 0
         if (!reachable || catalog.none { it.id == id }) {
             _link.value = LinkStatus.DISCONNECTED
             return
@@ -98,22 +108,26 @@ class FakeScale(
         settleJob?.cancel()
         _link.value = LinkStatus.DISCONNECTED
         _readings.value = null
+        digitalTareCenti = 0
     }
 
     override suspend fun setDigitalTare(kg: Kg) {
         if (anomalyTareIgnored) return
         digitalTareCenti = kg.cents
+        reemit()
     }
 
     override suspend fun tareWeigh() {
         if (anomalyTareIgnored) return
-        // 空箱称重皮：取当前台面读数
+        // 空箱称重皮：取当时台面重
         digitalTareCenti = targetCenti.coerceAtLeast(0)
+        reemit()
     }
 
     override suspend fun clearTare() {
         if (anomalyTareIgnored) return
         digitalTareCenti = 0
+        reemit()
     }
 
     /** 模拟台：设置台面重量（0.01kg）。先不稳定再稳定。 */
@@ -144,16 +158,19 @@ class FakeScale(
         setLoadCenti(0)
     }
 
+    /** 皮重变了，真秤会立刻按新皮重回调一次读数。 */
+    private fun reemit() {
+        if (_link.value == LinkStatus.CONNECTED) emitReading(lastStable)
+    }
+
     private fun emitReading(stable: Boolean) {
+        lastStable = stable
         if (_link.value != LinkStatus.CONNECTED) {
             _readings.value = null
             return
         }
-        var raw = targetCenti
-        if (anomalyReadingNotNet && digitalTareCenti > 0) {
-            // 读数未扣皮：多报一份皮重，模拟秤回传毛重
-            raw += digitalTareCenti
-        }
+        // 正常：已扣皮（空秤为负）；读数未扣皮异常：台面总重
+        val raw = if (anomalyReadingNotNet) targetCenti else targetCenti - digitalTareCenti
         val s = if (anomalyStableBroken) false else stable
         _readings.value = DeviceScaleReading(Kg(raw), s)
     }

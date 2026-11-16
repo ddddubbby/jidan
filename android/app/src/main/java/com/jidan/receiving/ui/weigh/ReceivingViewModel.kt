@@ -5,28 +5,27 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.core.Box
+import com.jidan.receiving.core.EmptyBoxState
+import com.jidan.receiving.core.EmptyBoxTare
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.RecordBy
 import com.jidan.receiving.core.RoundAvg
 import com.jidan.receiving.core.RoundRule
-import com.jidan.receiving.core.ScaleReading
 import com.jidan.receiving.core.Session
-import com.jidan.receiving.core.StableBy
 import com.jidan.receiving.core.Tare
-import com.jidan.receiving.core.TareBy
 import com.jidan.receiving.core.WeighOutcome
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.core.WeighingMachine
 import com.jidan.receiving.core.sum
 import com.jidan.receiving.data.ApiError
-import com.jidan.receiving.data.QuoteRequest
 import com.jidan.receiving.data.QuoteResult
 import com.jidan.receiving.data.RuleViewDto
 import com.jidan.receiving.data.SubmitBoxRequest
 import com.jidan.receiving.data.SubmitRequest
 import com.jidan.receiving.data.SubmittedDto
 import com.jidan.receiving.data.TareDto
+import com.jidan.receiving.data.quoteRequestOf
 import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.printing.PrintJobState
@@ -153,8 +152,13 @@ data class WeighUiState(
     val k: Int = 1,
     val candidates: Pair<Int, Int>? = null,
     val tare: Tare? = null,
+    /** 皮重热键，上一单用的排首位（不自动选中）。 */
     val tares: List<TareDto> = emptyList(),
+    /** 上一单用的皮重热键 id，用来标“上一单用的”；没有或已不在热键里为 null。 */
+    val lastTareId: Long? = null,
     val showTarePicker: Boolean = false,
+    /** 称重皮（称空箱）按钮的当下状态。 */
+    val emptyBox: EmptyBoxState = EmptyBoxState(connected = false, platform = null, stable = false),
     val boxes: List<Box> = emptyList(),
     val reweighSeq: Int? = null,
     val eventText: String = "",
@@ -163,6 +167,9 @@ data class WeighUiState(
     val canPressRecord: Boolean = false,
     val scaleConnected: Boolean = false,
     val scaleLost: Boolean = false,
+    /** 皮重没能下发到秤的原因；空串是没有。有值时称重框是未设皮重，按钮直达重新设皮重。 */
+    val tareError: String = "",
+    /** 进入称重失败的原因（取不到最新设置、取不到 W0…）；有值时不能称重，界面给“重试”。 */
     val error: String = "",
     val loading: Boolean = false,
     val printEnabled: Boolean = true,
@@ -188,12 +195,40 @@ data class WeighUiState(
         }
 }
 
+/** 称重框要显示的、来自秤这一侧（[Session]、状态机、皮重下发）的那部分界面状态。 */
+internal fun WeighUiState.withScaleSide(ctl: WeighController, scaleConnected: Boolean): WeighUiState {
+    val s = ctl.session
+    val m = ctl.machine
+    return copy(
+        ready = s != null,
+        farmerName = s?.farmer?.name.orEmpty(),
+        productName = s?.product?.name.orEmpty(),
+        specName = s?.spec?.name.orEmpty(),
+        batchNo = s?.batchNo.orEmpty(),
+        warehouseName = s?.warehouse?.name.orEmpty(),
+        phase = m?.phase ?: WeighPhase.LOCKED,
+        displayNet = m?.displayNet,
+        k = m?.k ?: 1,
+        candidates = m?.candidates,
+        tare = m?.tare ?: s?.tare,
+        boxes = s?.boxes.orEmpty(),
+        reweighSeq = m?.reweighSeq,
+        recordByButton = ctl.options.recordBy == RecordBy.BUTTON,
+        canPressRecord = m?.canPress == true,
+        scaleConnected = scaleConnected,
+        scaleLost = ctl.scaleLost,
+        tareError = ctl.tareError,
+    )
+}
+
 /**
  * Activity 级：持有 [Session] + [WeighingMachine]（开发规格 9.4）。
  * P6-4 称重；P6-5 再接流水弹层与草稿落盘。
  */
 class ReceivingViewModel(
-    private val container: AppContainer,
+    private val container: ReceivingDeps,
+    /** 当前时间（毫秒）；测试里换成虚拟时钟。 */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(WeighUiState())
     val ui: StateFlow<WeighUiState> = _ui.asStateFlow()
@@ -210,17 +245,46 @@ class ReceivingViewModel(
     private val _nav = MutableSharedFlow<ReceivingNav>(extraBufferCapacity = 1)
     val nav: SharedFlow<ReceivingNav> = _nav.asSharedFlow()
 
-    private var session: Session? = null
-    private var machine: WeighingMachine? = null
-    private var scaleJobs: List<Job> = emptyList()
     private var eventClearJob: Job? = null
-    private var scaleBound = false
+    private var startJob: Job? = null
     private var confirmed = false
 
     /** 已提交：单子已交给后端，内存里只留箱子供完成页补打；流水只读。 */
     private var submitted = false
 
     private val locked: Boolean get() = confirmed || submitted
+
+    private val host = object : WeighHost {
+        override suspend fun loadBootstrap(): BootstrapSnapshot {
+            val b = container.fetchBootstrap()
+            return BootstrapSnapshot(container.options.value, b.stdNetBySpec())
+        }
+
+        override suspend fun nextBatchNo(): String = container.catalog.nextBatchNo()
+
+        override suspend fun tares(): List<TareDto> = container.catalog.tareHotkeys()
+
+        override var lastTareId: Long?
+            get() = container.lastTareId
+            set(value) { container.lastTareId = value }
+    }
+
+    /** 秤这一侧：Session、状态机、秤连接与皮重下发（F1-3）。 */
+    private val ctl = WeighController(
+        scope = viewModelScope,
+        scale = container.scale,
+        host = host,
+        isLocked = { locked },
+        onChange = { publish() },
+        onOutcome = { applyOutcome(it) },
+        now = clock,
+    )
+
+    private var session: Session?
+        get() = ctl.session
+        set(value) { ctl.session = value }
+
+    private val machine: WeighingMachine? get() = ctl.machine
 
     val printQueue = PrintQueue(
         printer = container.printer,
@@ -248,7 +312,10 @@ class ReceivingViewModel(
             RoundRule.fromWire(container.options.value.get("round.mode"))
         }.getOrDefault(RoundRule.DEFAULT)
 
-    /** 有本地草稿时恢复；否则从建单 OrderDraft 开新单。 */
+    /**
+     * 有本地草稿时恢复；否则从建单 OrderDraft 开新单。两种都先取一次 bootstrap，成功后才建状态机；
+     * 取不到时不进入可称重状态，界面给原因和“重试”（再调一次本方法）。
+     */
     fun startFromDraft() {
         // 上一单已提交、只为完成页补打留着：开新单前先清掉
         if (submitted) resetAll()
@@ -256,94 +323,53 @@ class ReceivingViewModel(
             publish()
             return
         }
+        if (startJob?.isActive == true) return
         val saved = container.sessionStore.load()
-        if (saved != null) {
-            restoreSession(saved)
-            return
-        }
         val h = container.orderDraft.header.value
-        if (!h.ready) return
-        viewModelScope.launch {
-            _ui.update { it.copy(loading = true, error = "") }
-            try {
-                val batch = container.catalog.nextBatchNo()
-                val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
-                val std = Kg(h.stdNetCents ?: Kg.of(36.0).cents) // 粉蛋默认 36kg，缺字段时兜底
-                val opts = container.options.value.weighOptions()
-                val s = Session(
-                    batchNo = batch,
-                    farmer = h.farmer!!,
-                    product = h.product!!,
-                    spec = h.spec!!,
-                    warehouse = h.warehouse!!,
+        if (saved == null && !h.ready) return
+        startJob = viewModelScope.launch {
+            _ui.update {
+                it.copy(
+                    loading = true,
+                    error = "",
+                    farmerName = saved?.farmer?.name ?: h.farmer?.name.orEmpty(),
+                    productName = saved?.product?.name ?: h.product?.name.orEmpty(),
+                    specName = saved?.spec?.name ?: h.spec?.name.orEmpty(),
+                    batchNo = saved?.batchNo.orEmpty(),
+                    warehouseName = saved?.warehouse?.name ?: h.warehouse?.name.orEmpty(),
                 )
-                session = s
-                machine = WeighingMachine(opts, std)
-                val lastTareId = container.prefs.lastTareId
-                val last = tares.firstOrNull { it.id == lastTareId }
-                if (last != null) {
-                    applyTare(Tare(Kg.of(last.tareKg), last.name), last.id, persistOnly = false)
-                }
-                _ui.update {
+            }
+            if (!ctl.start(saved, h)) {
+                _ui.update { it.copy(loading = false, ready = false, error = ctl.startError) }
+                return@launch
+            }
+            val s = session ?: return@launch
+            if (saved != null) {
+                // 把表头写回 OrderDraft，便于返回建单页仍可见
+                container.orderDraft.update {
                     it.copy(
-                        loading = false,
-                        ready = true,
-                        farmerName = s.farmer.name,
-                        productName = s.product.name,
-                        specName = s.spec.name,
-                        batchNo = s.batchNo,
-                        warehouseName = s.warehouse.name,
-                        tares = tares,
-                        showTarePicker = last == null,
-                        recordByButton = opts.recordBy == RecordBy.BUTTON,
+                        farmer = s.farmer,
+                        product = s.product,
+                        spec = s.spec,
+                        warehouse = s.warehouse,
+                        stdNetCents = s.stdNet?.cents,
                     )
                 }
-                persist()
-                publish()
-                bindScale()
-            } catch (e: Throwable) {
-                _ui.update { it.copy(loading = false, error = e.userMessage()) }
             }
-        }
-    }
-
-    private fun restoreSession(s: Session) {
-        viewModelScope.launch {
-            val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
-            val std = Kg(
-                container.orderDraft.header.value.stdNetCents
-                    ?: s.spec.let { Kg.of(36.0).cents },
-            )
-            val opts = container.options.value.weighOptions()
-            session = s
-            machine = WeighingMachine(opts, std).also { m ->
-                s.tare?.let { m.setTare(it) }
-            }
-            // 把表头写回 OrderDraft，便于返回建单页仍可见
-            container.orderDraft.update {
-                it.copy(
-                    farmer = s.farmer,
-                    product = s.product,
-                    spec = s.spec,
-                    warehouse = s.warehouse,
-                )
-            }
+            // 上一单用的排首位但不自动选中：换了包装箱而没注意，整批皮重都错（v7 APP-04）
+            val tareStart = TareStart.of(ctl.tares, container.lastTareId)
             _ui.update {
                 it.copy(
                     loading = false,
+                    error = "",
                     ready = true,
-                    farmerName = s.farmer.name,
-                    productName = s.product.name,
-                    specName = s.spec.name,
-                    batchNo = s.batchNo,
-                    warehouseName = s.warehouse.name,
-                    tares = tares,
+                    tares = tareStart.tares,
+                    lastTareId = tareStart.lastTareId,
                     showTarePicker = s.tare == null,
-                    recordByButton = opts.recordBy == RecordBy.BUTTON,
                 )
             }
+            persist()
             publish()
-            bindScale()
         }
     }
 
@@ -496,7 +522,7 @@ class ReceivingViewModel(
     /** 再收一单：清完成态，回建单页。 */
     fun again() {
         val readyAt = _done.value.readyAgainAt
-        if (System.currentTimeMillis() < readyAt) return
+        if (clock() < readyAt) return
         if (printQueue.job.value != null) return // 标签还在打，打完再收一单
         container.sessionStore.clear()
         resetAll()
@@ -506,9 +532,8 @@ class ReceivingViewModel(
     /** 清空内存里的整张单（含提交后留着补打的箱）与打印队列，回到没有单的状态。 */
     private fun resetAll() {
         printQueue.stop()
-        session = null
-        machine = null
-        unbindScale()
+        startJob?.cancel()
+        ctl.reset()
         confirmed = false
         submitted = false
         container.orderDraft.clear()
@@ -531,14 +556,13 @@ class ReceivingViewModel(
             unitPrice = submitted.submittedPrice ?: quote?.unitPrice,
             amount = submitted.submittedAmount ?: quote?.amount,
             pendingPrice = pending,
-            readyAgainAt = System.currentTimeMillis() + 500,
+            readyAgainAt = clock() + 500,
         )
         // 提交成功清草稿与建单四项。内存里的箱留着、打印队列不停：没打完的接着打，
         // 完成页还能补打（APP-07；附录 C 第 17 条：提交后的补打不回写后端）。流水从此只读。
         container.sessionStore.clear()
         container.orderDraft.clear()
-        machine = null
-        unbindScale()
+        ctl.detach()
         confirmed = false
         this.submitted = true
         _summary.update { it.copy(submitting = false, submitError = false) }
@@ -550,7 +574,6 @@ class ReceivingViewModel(
     fun refreshBasePrice() {
         viewModelScope.launch {
             _summary.update { it.copy(refreshing = true, error = "") }
-            runCatching { container.catalog.basePriceBySpec() }
             refreshQuote(resetM0Retried = false)
             val stillMissing = _summary.value.quote?.noBasePrice == true
             _summary.update { it.copy(refreshing = false, m0Retried = stillMissing) }
@@ -632,13 +655,7 @@ class ReceivingViewModel(
         val s = session ?: return
         try {
             val q = container.orders.quote(
-                QuoteRequest(
-                    vendorId = s.farmer.id,
-                    productId = s.product.id,
-                    specId = s.spec.id,
-                    boxNetKg = s.boxes.map { it.net.toDouble() },
-                    trialCoef = coef,
-                ),
+                quoteRequestOf(s, trialCoef = coef),
             )
             _ruleSheet.update { it.copy(trialUnitPrice = q.unitPrice) }
         } catch (_: Throwable) {
@@ -673,13 +690,7 @@ class ReceivingViewModel(
             val priced = others.map { r ->
                 val unit = runCatching {
                     container.orders.quote(
-                        QuoteRequest(
-                            vendorId = s.farmer.id,
-                            productId = s.product.id,
-                            specId = s.spec.id,
-                            boxNetKg = s.boxes.map { it.net.toDouble() },
-                            trialRuleId = r.id,
-                        ),
+                        quoteRequestOf(s, trialRuleId = r.id),
                     ).unitPrice
                 }.getOrNull()
                 RuleCandidate(r, unit)
@@ -728,14 +739,7 @@ class ReceivingViewModel(
             )
         }
         try {
-            val quote = container.orders.quote(
-                QuoteRequest(
-                    vendorId = s.farmer.id,
-                    productId = s.product.id,
-                    specId = s.spec.id,
-                    boxNetKg = s.boxes.map { it.net.toDouble() },
-                ),
-            )
+            val quote = container.orders.quote(quoteRequestOf(s))
             _summary.update {
                 it.copy(
                     loading = false,
@@ -778,75 +782,52 @@ class ReceivingViewModel(
         clear()
     }
 
-    private fun bindScale() {
-        if (scaleBound) return
-        scaleBound = true
-        val link = viewModelScope.launch {
-            container.scale.linkStatus.collect { st ->
-                val connected = st == LinkStatus.CONNECTED
-                val lost = st == LinkStatus.LOST ||
-                    (st == LinkStatus.CONNECTING && (session?.boxes?.isNotEmpty() == true))
-                if (!connected) machine?.resetScale()
-                _ui.update { it.copy(scaleConnected = connected, scaleLost = lost) }
-                publish()
-            }
-        }
-        val readings = viewModelScope.launch {
-            container.scale.readings.collect { r ->
-                if (r == null || locked) return@collect
-                val outcome = machine?.onReading(ScaleReading(r.raw, r.stable), System.currentTimeMillis())
-                applyOutcome(outcome)
-                publish()
-            }
-        }
-        val tick = viewModelScope.launch {
-            while (isActive) {
-                delay(100)
-                if (locked) continue
-                val outcome = machine?.onTick(System.currentTimeMillis())
-                if (outcome != null) {
-                    applyOutcome(outcome)
-                    publish()
-                } else if (container.options.value.weighOptions().stableBy == StableBy.APP) {
-                    publish()
-                }
-            }
-        }
-        scaleJobs = listOf(link, readings, tick)
-    }
-
-    private fun unbindScale() {
-        scaleJobs.forEach { it.cancel() }
-        scaleJobs = emptyList()
-        scaleBound = false
-    }
-
     fun openTarePicker() {
         _ui.update { it.copy(showTarePicker = true) }
     }
 
     fun selectTare(dto: TareDto) {
         viewModelScope.launch {
-            applyTare(Tare(Kg.of(dto.tareKg), dto.name), dto.id, persistOnly = false)
+            ctl.chooseTare(Tare(Kg.of(dto.tareKg), dto.name), dto.id)
             _ui.update { it.copy(showTarePicker = false) }
             persist()
             publish()
         }
     }
 
-    private suspend fun applyTare(t: Tare, id: Long?, persistOnly: Boolean) {
-        val opts = container.options.value.weighOptions()
-        if (!persistOnly && opts.tareBy == TareBy.SCALE) {
-            try {
-                container.scale.setDigitalTare(t.unit)
-            } catch (_: Throwable) {
-                // Fake/占位可能未实现；APP 扣皮路径仍可用
-            }
+    /** 皮重没下发成功时，“重新设皮重”直达：用已选的皮重重发，不用重新挑。 */
+    fun retryTare() {
+        viewModelScope.launch {
+            ctl.retryTare()
+            publish()
         }
-        machine?.setTare(t)
-        session = session?.withTare(t)
-        if (id != null) container.prefs.lastTareId = id
     }
+
+    /**
+     * 称重皮（v7 `APP-04`）：秤上是一只空箱且读数稳定时，按台面读数去皮，皮重名记“空箱”。
+     * 走和选热键皮重同一条路（[WeighController.chooseTare]）：`scale.tare-by = scale` 时下发到秤，
+     * 下发失败不记；条件不满足时什么也不做。
+     */
+    fun weighEmptyBox() {
+        if (locked) return
+        val st = emptyBoxState()
+        val platform = st.platform
+        if (!st.available || platform == null) return
+        viewModelScope.launch {
+            ctl.chooseTare(EmptyBoxTare.tareOf(platform), null)
+            // 空箱没有热键 id；上一单标记不留在别的箱上
+            container.lastTareId = null
+            _ui.update { it.copy(showTarePicker = false) }
+            persist()
+            publish()
+        }
+    }
+
+    private fun emptyBoxState() = EmptyBoxState(
+        connected = container.scale.linkStatus.value == LinkStatus.CONNECTED,
+        platform = machine?.platformNow,
+        stable = machine?.isStable == true,
+    )
 
     fun pressRecord() {
         if (locked) return
@@ -909,27 +890,9 @@ class ReceivingViewModel(
     }
 
     private fun publish() {
-        val s = session
-        val m = machine
-        val opts = container.options.value.weighOptions()
         _ui.update {
-            it.copy(
-                ready = s != null,
-                farmerName = s?.farmer?.name.orEmpty(),
-                productName = s?.product?.name.orEmpty(),
-                specName = s?.spec?.name.orEmpty(),
-                batchNo = s?.batchNo.orEmpty(),
-                warehouseName = s?.warehouse?.name.orEmpty(),
-                phase = m?.phase ?: WeighPhase.LOCKED,
-                displayNet = m?.displayNet,
-                k = m?.k ?: 1,
-                candidates = m?.candidates,
-                tare = m?.tare ?: s?.tare,
-                boxes = s?.boxes.orEmpty(),
-                reweighSeq = m?.reweighSeq,
-                recordByButton = opts.recordBy == RecordBy.BUTTON,
-                canPressRecord = m?.canPress == true,
-                scaleConnected = container.scale.linkStatus.value == LinkStatus.CONNECTED,
+            it.withScaleSide(ctl, container.scale.linkStatus.value == LinkStatus.CONNECTED).copy(
+                emptyBox = emptyBoxState(),
                 printEnabled = printQueue.enabled(),
                 printJob = printQueue.job.value,
                 unprinted = printQueue.unprintedCount(),

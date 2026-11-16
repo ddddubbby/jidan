@@ -8,8 +8,8 @@ import java.io.File
  * 本地草稿（开发规格 9.4）：Session 每次变化写入 JSON；进程回收后恢复。
  * 不是离线功能——提交成功或放弃整单后删除。
  */
-class SessionStore(context: Context) {
-    private val file = File(context.filesDir, FILE_NAME)
+class SessionStore(private val file: File) {
+    constructor(context: Context) : this(File(context.filesDir, FILE_NAME))
 
     fun save(session: Session) {
         file.writeText(session.toJson())

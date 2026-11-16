@@ -4,6 +4,7 @@ import android.content.Context
 import com.jidan.receiving.data.ApiClient
 import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.AuthRepository
+import com.jidan.receiving.data.BootstrapResponse
 import com.jidan.receiving.data.CatalogRepository
 import com.jidan.receiving.data.OrderDraftStore
 import com.jidan.receiving.data.OrderRepository
@@ -17,6 +18,7 @@ import com.jidan.receiving.device.Scale
 import com.jidan.receiving.device.fake.FakePrinter
 import com.jidan.receiving.device.fake.FakeScale
 import com.jidan.receiving.platform.BluetoothGate
+import com.jidan.receiving.ui.weigh.ReceivingDeps
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Activity 级手工组装（开发规格 9.4）。
  */
-class AppContainer(context: Context) {
+class AppContainer(context: Context) : ReceivingDeps {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -48,7 +50,7 @@ class AppContainer(context: Context) {
     val session: StateFlow<SessionUser?> = _session.asStateFlow()
 
     private val _options = MutableStateFlow(AppOptions.defaults())
-    val options: StateFlow<AppOptions> = _options.asStateFlow()
+    override val options: StateFlow<AppOptions> = _options.asStateFlow()
 
     private val _unauthenticated = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val unauthenticated: SharedFlow<Unit> = _unauthenticated.asSharedFlow()
@@ -63,24 +65,28 @@ class AppContainer(context: Context) {
     )
 
     val auth = AuthRepository(apiClient)
-    val catalog = CatalogRepository(apiClient)
-    val orders = OrderRepository(apiClient)
-    val orderDraft = OrderDraftStore()
-    val sessionStore = SessionStore(appContext)
+    override val catalog = CatalogRepository(apiClient)
+    override val orders = OrderRepository(apiClient)
+    override val orderDraft = OrderDraftStore()
+    override val sessionStore = SessionStore(appContext)
 
     /**
      * 提交时登录失效：先登录，登录后回到汇总页（单据草稿不丢，APP-10）。
      * 进程内标志；清会话不清草稿。
      */
-    @Volatile var resumeSummaryAfterLogin: Boolean = false
+    @Volatile override var resumeSummaryAfterLogin: Boolean = false
 
-    val scale: Scale = DeviceFactory.createScale(
+    override var lastTareId: Long?
+        get() = prefs.lastTareId
+        set(value) { prefs.lastTareId = value }
+
+    override val scale: Scale = DeviceFactory.createScale(
         appContext,
         scope,
         prefs,
         _options.value.get("device.scale-model"),
     )
-    val printer: LabelPrinter = DeviceFactory.createPrinter(
+    override val printer: LabelPrinter = DeviceFactory.createPrinter(
         appContext,
         scope,
         prefs,
@@ -124,9 +130,16 @@ class AppContainer(context: Context) {
         _options.value = options
     }
 
+    /** 取 `GET /app/bootstrap`，把业务设置与选项换成刚取到的，原样返回供调用方读规格。失败时抛出，选项不变。 */
+    override suspend fun fetchBootstrap(): BootstrapResponse {
+        val b = auth.bootstrap()
+        applyOptions(AppOptions.from(b.allValues()))
+        return b
+    }
+
     /** 取 `GET /app/bootstrap` 的业务设置与选项。 */
     suspend fun refreshOptions() {
-        applyOptions(AppOptions.from(auth.bootstrap().allValues()))
+        fetchBootstrap()
     }
 
     /** 进程启动时已有会话：恢复自动连，并重新取一次下发的设置。 */
