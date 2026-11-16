@@ -8,6 +8,221 @@
     "url" : "/"
   } ],
   "paths" : {
+    "/api/tares/{id}" : {
+      "put" : {
+        "tags" : [ "tare-box-controller" ],
+        "operationId" : "update",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TarePatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TareBox"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/specs/{id}" : {
+      "put" : {
+        "tags" : [ "spec-controller" ],
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SpecPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Spec"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings" : {
+      "get" : {
+        "tags" : [ "options-controller" ],
+        "operationId" : "settings",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OptionList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "options-controller" ],
+        "operationId" : "updateSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OptionsForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OptionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/options" : {
+      "get" : {
+        "tags" : [ "options-controller" ],
+        "operationId" : "options",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OptionList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "options-controller" ],
+        "operationId" : "updateOptions",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OptionsForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OptionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/base-prices" : {
+      "get" : {
+        "tags" : [ "base-price-controller" ],
+        "operationId" : "day",
+        "parameters" : [ {
+          "name" : "date",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Day"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "base-price-controller" ],
+        "operationId" : "save",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BasePriceForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Item"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/accounts/{id}/enabled" : {
       "put" : {
         "tags" : [ "account-controller" ],
@@ -38,6 +253,100 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/AccountView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tares" : {
+      "get" : {
+        "tags" : [ "tare-box-controller" ],
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TareBox"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "tare-box-controller" ],
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TareCreate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TareBox"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/specs" : {
+      "get" : {
+        "tags" : [ "spec-controller" ],
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Spec"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "spec-controller" ],
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SpecCreate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Spec"
                 }
               }
             }
@@ -76,7 +385,7 @@
     "/api/accounts" : {
       "get" : {
         "tags" : [ "account-controller" ],
-        "operationId" : "list",
+        "operationId" : "list_2",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -95,7 +404,7 @@
       },
       "post" : {
         "tags" : [ "account-controller" ],
-        "operationId" : "create",
+        "operationId" : "create_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -186,6 +495,222 @@
   },
   "components" : {
     "schemas" : {
+      "TarePatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "tareKg" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "hotkey" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "TareBox" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "tareKg" : {
+            "type" : "number"
+          },
+          "hotkey" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "updatedBy" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "SpecPatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "eggCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "stdNetKg" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "enabled" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "Spec" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "eggCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "stdNetKg" : {
+            "type" : "number"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "updatedBy" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "OptionsForm" : {
+        "type" : "object",
+        "properties" : {
+          "values" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "values" ]
+      },
+      "Choice" : {
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        }
+      },
+      "OptionList" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionView"
+            }
+          }
+        }
+      },
+      "OptionView" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "group" : {
+            "type" : "string"
+          },
+          "groupName" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "hint" : {
+            "type" : "string"
+          },
+          "choices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Choice"
+            }
+          },
+          "min" : {
+            "type" : "string"
+          },
+          "max" : {
+            "type" : "string"
+          },
+          "defaultValue" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        }
+      },
+      "BasePriceForm" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "price" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "date", "price", "specId" ]
+      },
+      "Item" : {
+        "type" : "object",
+        "properties" : {
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specName" : {
+            "type" : "string"
+          },
+          "stdNetKg" : {
+            "type" : "number"
+          },
+          "price" : {
+            "type" : "number"
+          },
+          "prevPrice" : {
+            "type" : "number"
+          }
+        }
+      },
       "EnabledChange" : {
         "type" : "object",
         "properties" : {
@@ -216,6 +741,43 @@
             "format" : "date-time"
           }
         }
+      },
+      "TareCreate" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0
+          },
+          "tareKg" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "hotkey" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "name", "tareKg" ]
+      },
+      "SpecCreate" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 0
+          },
+          "eggCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "stdNetKg" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "eggCount", "name", "stdNetKg" ]
       },
       "LoginRequest" : {
         "type" : "object",
@@ -284,6 +846,21 @@
           },
           "db" : {
             "type" : "string"
+          }
+        }
+      },
+      "Day" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Item"
+            }
           }
         }
       },
