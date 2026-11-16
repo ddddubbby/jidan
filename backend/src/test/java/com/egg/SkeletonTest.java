@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.TimeZone;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -74,5 +77,13 @@ class SkeletonTest {
         }
         assertThat(actual).as("api/openapi.json 过期，用 -Dopenapi.export=true 重新导出").isEqualTo(
                 mapper.readTree(Files.readString(SNAPSHOT)));
+    }
+
+    /** 测试 JVM 与数据库都按东八区（开发规格 6.1），“当日”相关的测试才与生产同一个时钟。 */
+    @Test
+    void jvmAndDatabaseShareShanghaiClock() {
+        assertThat(TimeZone.getDefault().getID()).isEqualTo("Asia/Shanghai");
+        LocalDateTime dbNow = jdbc.queryForObject("SELECT NOW()", LocalDateTime.class);
+        assertThat(Duration.between(dbNow, LocalDateTime.now()).abs()).isLessThan(Duration.ofMinutes(1));
     }
 }
