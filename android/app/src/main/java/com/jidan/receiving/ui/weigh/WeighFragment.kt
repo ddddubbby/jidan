@@ -21,6 +21,7 @@ import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.databinding.FragmentWeighBinding
+import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.ui.sheets.BoxSheet
 import com.jidan.receiving.ui.sheets.DevicesSheet
 import com.jidan.receiving.ui.sheets.LedgerSheet
@@ -87,7 +88,17 @@ class WeighFragment : Fragment() {
         }
 
         if (b.simHost.childCount == 0) {
-            SimConsoleHook.attach(b.simHost)
+            val prefs = requireContext().appContainer().prefs
+            SimConsoleHook.attach(
+                b.simHost,
+                onFill100 = { vm.seedAdaptBoxes() },
+                onWorstName = { vm.applyWorstFarmerName() },
+                onToggleBigFont = {
+                    prefs.simBigFont = !prefs.simBigFont
+                    requireActivity().recreate()
+                },
+                bigFontOn = prefs.simBigFont,
+            )
         }
     }
 
@@ -194,8 +205,12 @@ class WeighFragment : Fragment() {
         b.recordBtn.isVisible = state.recordByButton
         b.recordBtn.isEnabled = state.canPressRecord
 
+        val prevEvent = b.event.text?.toString().orEmpty()
         b.event.isVisible = state.eventText.isNotBlank()
         b.event.text = state.eventText
+        if (state.eventText.isNotBlank() && state.eventText != prevEvent) {
+            if (state.eventOk) Feedback.ok(requireContext()) else Feedback.warn(requireContext())
+        }
 
         if (state.count == 0) {
             b.stats.text = getString(R.string.weigh_stats_zero)

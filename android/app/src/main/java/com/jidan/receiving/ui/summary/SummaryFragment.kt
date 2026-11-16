@@ -17,6 +17,7 @@ import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.databinding.FragmentSummaryBinding
+import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.ui.sheets.LedgerSheet
 import com.jidan.receiving.ui.sheets.RuleSheet
 import com.jidan.receiving.ui.weigh.ReceivingNav
@@ -173,8 +174,12 @@ class SummaryFragment : Fragment() {
         if (b.unprinted.isVisible) {
             b.unprinted.text = getString(R.string.print_failed_n, state.unprinted, state.printError.ifBlank { "未打印" })
         }
+        val hadError = b.error.isVisible && b.error.text?.isNotBlank() == true
         b.error.isVisible = state.error.isNotBlank()
         b.error.text = state.error
+        if (state.submitError && state.error.isNotBlank() && !hadError) {
+            Feedback.warn(requireContext())
+        }
 
         val blockMissing = !state.allowWithoutPrice
         when {

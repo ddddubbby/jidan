@@ -144,6 +144,11 @@
     <string name="sim_anomaly_not_net">读数未扣皮</string>
     <string name="sim_anomaly_stable">稳定标志失灵</string>
     <string name="sim_anomaly_tare">去皮指令无效</string>
+    <string name="sim_adapt_section">适配走查</string>
+    <string name="sim_fill_100">灌入 100 箱</string>
+    <string name="sim_worst_name">最坏户名</string>
+    <string name="sim_big_font">大字号 130%</string>
+    <string name="sim_big_font_on">大字号 130% · 开</string>
 
     <string name="login_server">服务器</string>
     <string name="login_server_hint">如 http://192.168.1.10:8080</string>
