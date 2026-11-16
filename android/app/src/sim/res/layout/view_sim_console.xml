@@ -128,6 +128,25 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/labelPreviewTitle"
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/print_preview_title" />
+
+        <TextView
+            android:id="@+id/labelPreview"
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_choice"
+            android:minHeight="48dp"
+            android:padding="8dp"
+            android:text="—" />
+
+        <TextView
             style="@style/Text.Caption"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

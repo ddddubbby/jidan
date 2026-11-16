@@ -74,6 +74,21 @@ class LedgerSheet : BottomSheetDialogFragment() {
                             BoxSheet.newFor(box.seq).show(parentFragmentManager, BoxSheet.TAG)
                         }
                         b.rows.addView(btn)
+                        if (!box.printed && vm.ui.value.printEnabled) {
+                            val reprint = MaterialButton(
+                                requireContext(),
+                                null,
+                                com.google.android.material.R.attr.materialButtonOutlinedStyle,
+                            )
+                            reprint.layoutParams = LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                            )
+                            reprint.isAllCaps = false
+                            reprint.text = getString(R.string.print_reprint_n, 1)
+                            reprint.setOnClickListener { vm.reprintOne(box.seq) }
+                            b.rows.addView(reprint)
+                        }
                     }
                 }
             }

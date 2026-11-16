@@ -21,6 +21,8 @@ import com.jidan.receiving.core.sum
 import com.jidan.receiving.data.TareDto
 import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
+import com.jidan.receiving.printing.PrintJobState
+import com.jidan.receiving.printing.PrintQueue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +56,11 @@ data class WeighUiState(
     val scaleLost: Boolean = false,
     val error: String = "",
     val loading: Boolean = false,
+    val printEnabled: Boolean = true,
+    val printJob: PrintJobState? = null,
+    val unprinted: Int = 0,
+    val printError: String = "",
+    val labelPreview: String = "",
 ) {
     val count: Int get() = boxes.size
     val totalNet: Kg get() = boxes.map { it.net }.sum()
@@ -84,6 +91,18 @@ class ReceivingViewModel(
     private var tickJob: Job? = null
     private var eventClearJob: Job? = null
     private var scaleBound = false
+
+    val printQueue = PrintQueue(
+        printer = container.printer,
+        scope = viewModelScope,
+        options = { container.options.value },
+        session = { session },
+        updateSession = { transform ->
+            session = session?.let(transform)
+            persist()
+            publish()
+        },
+    )
 
     val roundRule: RoundRule
         get() = runCatching {
@@ -195,14 +214,18 @@ class ReceivingViewModel(
         flash("第 $seq 箱已手录", ok = true)
         persist()
         publish()
+        printQueue.enqueueReprint(seq)
     }
 
     fun addManual(netKg: Double) {
+        val before = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.addManual(Kg.of(netKg))
         flash("已手工加一箱", ok = true)
         persist()
         publish()
+        val added = session?.boxes?.map { it.seq }.orEmpty().filter { it !in before }
+        printQueue.enqueueNew(added)
     }
 
     fun deleteBox(seq: Int) {
@@ -216,10 +239,22 @@ class ReceivingViewModel(
     fun regroup(seq: Int, k: Int) {
         val s = session ?: return
         if (!s.canRegroup(seq)) return
+        val group = s.box(seq).group
         session = s.regroup(seq, k)
         flash("已改成 $k 箱", ok = true)
         persist()
         publish()
+        val fresh = session?.boxes?.filter { it.group == group }?.map { it.seq }.orEmpty()
+        printQueue.enqueueNew(fresh)
+    }
+
+    fun reprintUnprinted() = printQueue.reprintUnprinted()
+
+    fun reprintOne(seq: Int) = printQueue.reprintOne(seq)
+
+    /** 确认计量：完成后一次打印时入队；逐箱时只补未打出的。汇总页属 P7-2。 */
+    fun onConfirmWeighing() {
+        printQueue.enqueueAfterConfirm()
     }
 
     fun canRegroup(seq: Int): Boolean = session?.canRegroup(seq) == true
@@ -242,6 +277,7 @@ class ReceivingViewModel(
 
     /** 放弃整单：清草稿与内存，回到建单。 */
     fun abandon() {
+        printQueue.stop()
         container.sessionStore.clear()
         clear()
     }
@@ -249,6 +285,15 @@ class ReceivingViewModel(
     private fun bindScale() {
         if (scaleBound) return
         scaleBound = true
+        viewModelScope.launch {
+            printQueue.job.collect { publish() }
+        }
+        viewModelScope.launch {
+            printQueue.preview.collect { publish() }
+        }
+        viewModelScope.launch {
+            printQueue.lastError.collect { publish() }
+        }
         viewModelScope.launch {
             container.scale.linkStatus.collect { st ->
                 val connected = st == LinkStatus.CONNECTED
@@ -331,6 +376,7 @@ class ReceivingViewModel(
     }
 
     fun clear() {
+        printQueue.stop()
         session = null
         machine = null
         tickJob?.cancel()
@@ -341,15 +387,21 @@ class ReceivingViewModel(
 
     private fun applyOutcome(outcome: WeighOutcome?) {
         if (outcome == null) return
+        val beforeSeqs = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.apply(outcome)
         persist()
         val text = when (outcome) {
             is WeighOutcome.Recorded -> {
+                val added = session?.boxes?.map { it.seq }.orEmpty().filter { it !in beforeSeqs }
+                printQueue.enqueueNew(added)
                 val k = outcome.weighing.k
                 if (k > 1) "已记录 $k 箱" else "已记录"
             }
-            is WeighOutcome.Replaced -> "第 ${outcome.seq} 箱已重称"
+            is WeighOutcome.Replaced -> {
+                printQueue.enqueueReprint(outcome.seq)
+                "第 ${outcome.seq} 箱已重称"
+            }
         }
         flash(text, ok = true)
     }
@@ -389,6 +441,11 @@ class ReceivingViewModel(
                 recordByButton = opts.recordBy == RecordBy.BUTTON,
                 canPressRecord = m?.canPress == true,
                 scaleConnected = container.scale.linkStatus.value == LinkStatus.CONNECTED,
+                printEnabled = printQueue.enabled(),
+                printJob = printQueue.job.value,
+                unprinted = printQueue.unprintedCount(),
+                printError = printQueue.lastError.value,
+                labelPreview = printQueue.preview.value?.text.orEmpty(),
             )
         }
     }
