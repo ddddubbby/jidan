@@ -21,16 +21,21 @@ import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.databinding.FragmentWeighBinding
+import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.printing.reprintAction
 import com.jidan.receiving.ui.sheets.BoxSheet
 import com.jidan.receiving.ui.sheets.DevicesSheet
+import com.jidan.receiving.ui.devices.LinkActionKind
+import com.jidan.receiving.ui.devices.label
+import com.jidan.receiving.ui.devices.linkAction
 import com.jidan.receiving.ui.sheets.LedgerSheet
 import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
 class WeighFragment : Fragment() {
     private var binding: FragmentWeighBinding? = null
+    private val prompts = BluetoothPrompts(this)
     private val vm: ReceivingViewModel by activityViewModels {
         ReceivingViewModel.Factory(requireContext().appContainer())
     }
@@ -61,11 +66,21 @@ class WeighFragment : Fragment() {
             LedgerSheet().show(parentFragmentManager, LedgerSheet.TAG)
         }
         b.finish.setOnClickListener { vm.onConfirmWeighing() }
+        b.scaleCardManual.setOnClickListener {
+            BoxSheet.newAdd().show(parentFragmentManager, BoxSheet.TAG)
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     vm.ui.collect { render(it) }
+                }
+                // 蓝牙开关、授权、配对变化时，连接卡片上“当前该做的一步”要跟着变
+                launch {
+                    requireContext().appContainer().bluetoothGate.state.collect { renderScaleCard(vm.ui.value) }
+                }
+                launch {
+                    requireContext().appContainer().scale.pairedId.collect { renderScaleCard(vm.ui.value) }
                 }
                 launch {
                     vm.nav.collect { ev ->
@@ -192,7 +207,7 @@ class WeighFragment : Fragment() {
             b.reweighText.text = getString(R.string.weigh_reweigh, state.reweighSeq)
         }
 
-        b.recordBtn.isVisible = state.recordByButton
+        b.recordBtn.isVisible = state.recordByButton && !state.showScaleCard
         b.recordBtn.isEnabled = state.canPressRecord
 
         val prevEvent = b.event.text?.toString().orEmpty()
@@ -270,6 +285,34 @@ class WeighFragment : Fragment() {
                 if (b.finish.isEnabled) R.color.on_accent else R.color.ink_2,
             ),
         )
+        renderScaleCard(state)
+    }
+
+    /**
+     * 秤没连上或断开：称重框位置换成连接卡片，只给当前该做的一个连接操作和“手工加一箱”（原型 screenWeigh）。
+     * 卡片出现时称重框里的读数、皮重、按钮都藏起来；正在重称的提示行留着，免得取消不掉。
+     */
+    private fun renderScaleCard(state: WeighUiState) {
+        val b = binding ?: return
+        val c = requireContext().appContainer()
+        val card = state.showScaleCard
+        b.scaleCard.isVisible = card
+        b.scalePanel.isVisible = !card || state.reweighSeq != null
+        b.scaleTop.isVisible = !card
+        b.weight.isVisible = !card
+        b.tareRow.isVisible = !card && !state.showTarePicker
+        if (card) b.askRow.isVisible = false
+        if (!card) return
+        b.scaleCardTitle.text = getString(if (state.scaleLost) R.string.weigh_scale_lost else R.string.weigh_scale_off)
+        val action = linkAction(c.bluetoothGate, c.scale.linkStatus.value, c.scale.pairedId.value)
+        b.scaleCardAction.isVisible = action != LinkActionKind.NONE
+        b.scaleCardAction.isEnabled = action != LinkActionKind.CONNECTING
+        b.scaleCardAction.text = action.label(isScale = true)
+        b.scaleCardAction.setOnClickListener {
+            // 打开蓝牙、允许使用蓝牙点了直达系统页；搜索类去设备弹层选秤
+            if (!prompts.handle(action)) DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG)
+        }
+        b.scaleCardManual.isVisible = state.showManualAdd
     }
 
     private fun phaseLabel(p: WeighPhase): String = when (p) {

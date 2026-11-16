@@ -109,6 +109,10 @@
     <string name="ledger_title">收购流水</string>
     <string name="ledger_title_n">收购流水 · %1$d 箱</string>
     <string name="ledger_manual_add">手工加一箱</string>
+    <string name="ledger_groups_more">还有 %1$d 种重量，点开查看</string>
+    <string name="ledger_groups_less">只看箱数最多的 6 种</string>
+    <string name="print_again">再打</string>
+    <string name="print_again_blocked">再打 · %1$s</string>
     <string name="box_reweigh">重称</string>
     <string name="box_manual">手工录入</string>
     <string name="box_manual_title">手工录入 · 第 %1$d 箱</string>
