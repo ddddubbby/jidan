@@ -44,4 +44,34 @@ class LinkKeeperTest {
         assertEquals(LinkStatus.CONNECTED, scale.linkStatus.value)
         keeper.stop()
     }
+
+    /** 蓝牙没开 / 没授权时登录不去连；条件满足后补连，APP-01。 */
+    @Test
+    fun connectsRememberedDevicesOnlyOnceBluetoothIsReady() = runTest {
+        val scale = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val printer = FakePrinter(backgroundScope, FakePrinter.MINE_ID)
+        var ready = false
+        val keeper = LinkKeeper(
+            scale = scale,
+            printer = printer,
+            scope = backgroundScope,
+            isScaleReachable = { true },
+            isPrinterReachable = { true },
+            persistScaleId = {},
+            persistPrinterId = {},
+            canConnect = { ready },
+        )
+        keeper.start()
+        advanceTimeBy(3000)
+        runCurrent()
+        assertEquals(LinkStatus.DISCONNECTED, scale.linkStatus.value)
+        assertEquals(LinkStatus.DISCONNECTED, printer.linkStatus.value)
+
+        ready = true
+        advanceTimeBy(2 * FakeScale.CONNECT_MS + 1000)
+        runCurrent()
+        assertEquals(LinkStatus.CONNECTED, scale.linkStatus.value)
+        assertEquals(LinkStatus.CONNECTED, printer.linkStatus.value)
+        keeper.stop()
+    }
 }

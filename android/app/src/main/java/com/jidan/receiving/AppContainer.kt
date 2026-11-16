@@ -40,6 +40,8 @@ class AppContainer(context: Context) {
     val bluetoothGate = BluetoothGate(appContext).also {
         // 模拟版无真蓝牙时仍可走查连接 UI
         if (DeviceFactory.isSim) it.forceReady = true
+        it.refresh()
+        it.register()
     }
 
     private val _session = MutableStateFlow(tokenStore.readSession())
@@ -89,13 +91,15 @@ class AppContainer(context: Context) {
         scale = scale,
         printer = printer,
         scope = scope,
+        // 蓝牙没开或没授权时不去连：真适配器此时的表现没验证过；打开 / 允许之后由 LinkKeeper 接着连
+        canConnect = { bluetoothGate.ready() },
         isScaleReachable = {
             val fake = scale as? FakeScale
-            fake?.reachable ?: true
+            bluetoothGate.ready() && (fake?.reachable ?: true)
         },
         isPrinterReachable = {
             val fake = printer as? FakePrinter
-            fake?.reachable ?: true
+            bluetoothGate.ready() && (fake?.reachable ?: true)
         },
         persistScaleId = { prefs.pairedScaleId = it },
         persistPrinterId = { prefs.pairedPrinterId = it },

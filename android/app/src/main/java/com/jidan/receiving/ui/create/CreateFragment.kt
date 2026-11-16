@@ -23,7 +23,7 @@ import com.jidan.receiving.appContainer
 import com.jidan.receiving.data.ArchiveRowDto
 import com.jidan.receiving.data.FarmerDto
 import com.jidan.receiving.databinding.FragmentCreateBinding
-import com.jidan.receiving.ui.devices.LinkActionKind
+import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.ui.sheets.DevicesSheet
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
 import kotlinx.coroutines.launch
@@ -39,6 +39,7 @@ class CreateFragment : Fragment() {
         CreateViewModel.Factory(requireContext().appContainer())
     }
     private var syncingTail = false
+    private val prompts = BluetoothPrompts(this)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val b = FragmentCreateBinding.inflate(inflater, container, false)
@@ -74,13 +75,7 @@ class CreateFragment : Fragment() {
                 pairedId = c.scale.pairedId.value,
                 modelLabel = c.options.value.get("device.scale-model"),
                 batteryLow = c.scale.batteryLow.value,
-                onAction = { act ->
-                    if (act == LinkActionKind.SEARCH || act == LinkActionKind.RESEARCH ||
-                        act == LinkActionKind.OPEN_BLUETOOTH || act == LinkActionKind.GRANT_PERMISSION
-                    ) {
-                        openSheet()
-                    }
-                },
+                onAction = { act -> if (!prompts.handle(act)) openSheet() },
                 onOpenSheet = ::openSheet,
             )
             DeviceCardBinder.bindPrinter(
@@ -90,7 +85,7 @@ class CreateFragment : Fragment() {
                 pairedId = c.printer.pairedId.value,
                 modelLabel = c.options.value.get("device.printer-model"),
                 issue = c.printer.printerStatus.value,
-                onAction = { openSheet() },
+                onAction = { act -> if (!prompts.handle(act)) openSheet() },
                 onOpenSheet = ::openSheet,
             )
         }
@@ -98,6 +93,7 @@ class CreateFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { vm.ui.collect { render(it) } }
+                launch { c.bluetoothGate.state.collect { refreshCards() } }
                 launch { c.scale.linkStatus.collect { refreshCards() } }
                 launch { c.scale.pairedId.collect { refreshCards() } }
                 launch { c.scale.batteryLow.collect { refreshCards() } }

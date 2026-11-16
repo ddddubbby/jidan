@@ -35,6 +35,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 从系统蓝牙设置、授权弹窗、应用设置页回来时，重读蓝牙开关与授权，设备卡片的按钮随之变化
+        appContainer().bluetoothGate.refresh()
+    }
+
     /**
      * 登录失效：任何页面都回登录页（全局动作，清回退栈）。在汇总页失效的，重登后回汇总页；
      * 其余页面重登后回称重页（草稿还在）。完成页的单已提交，没有可回的，不记。

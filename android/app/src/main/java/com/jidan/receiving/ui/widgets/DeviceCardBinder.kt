@@ -22,8 +22,9 @@ object DeviceCardBinder {
         batteryLow: Boolean,
         onAction: (LinkActionKind) -> Unit,
         onOpenSheet: () -> Unit,
+        searchedEmpty: Boolean = false,
     ) {
-        val action = linkAction(gate, status, pairedId)
+        val action = linkAction(gate, status, pairedId, searchedEmpty)
         binding.title.text = buildString {
             append(modelLabel)
             if (!pairedId.isNullOrBlank()) append(" · ").append(pairedId)
@@ -43,8 +44,9 @@ object DeviceCardBinder {
         issue: PrinterIssue,
         onAction: (LinkActionKind) -> Unit,
         onOpenSheet: () -> Unit,
+        searchedEmpty: Boolean = false,
     ) {
-        val action = linkAction(gate, status, pairedId)
+        val action = linkAction(gate, status, pairedId, searchedEmpty)
         binding.title.text = buildString {
             append(modelLabel)
             if (!pairedId.isNullOrBlank()) append(" · ").append(pairedId)
