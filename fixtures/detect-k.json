@@ -1,0 +1,26 @@
+{
+  "说明": "合并称重的箱数识别。grossKg 是秤上总重（含每箱皮重，未扣皮）；tareKg 是每箱皮重；tolerancePct 对应选项 weigh.merge-tolerance-pct，maxK 对应 weigh.merge-max-k。k 取每箱净重最接近标准净含量的箱数；相邻两个箱数下每箱净重都在标准 ±tolerancePct 以内时 ambiguous 为 true，candidates 给出这两个箱数（小在前），k 仍为更接近的那个。ambiguous 为 false 时 candidates 为 null。tareTotalKg、netTotalKg 按 k 计算：tareTotalKg = tareKg × k，netTotalKg = grossKg − tareTotalKg。",
+  "cases": [
+    {
+      "id": "v7-6.7",
+      "source": "v7 6.7",
+      "desc": "3 箱每箱净重 46、皮重 2：识别为 3 箱",
+      "input": { "grossKg": 144, "tareKg": 2, "standardNetKg": 45, "tolerancePct": 10, "maxK": 8 },
+      "expected": { "k": 3, "tareTotalKg": 6, "netTotalKg": 138, "ambiguous": false, "candidates": null }
+    },
+    {
+      "id": "extra-single",
+      "source": "补充（非 v7）",
+      "desc": "单箱：净重 46、皮重 2",
+      "input": { "grossKg": 48, "tareKg": 2, "standardNetKg": 45, "tolerancePct": 10, "maxK": 8 },
+      "expected": { "k": 1, "tareTotalKg": 2, "netTotalKg": 46, "ambiguous": false, "candidates": null }
+    },
+    {
+      "id": "extra-ambiguous",
+      "source": "补充（非 v7）",
+      "desc": "识别不准：5 箱与 6 箱的每箱净重都在 45 ±10% 以内",
+      "input": { "grossKg": 256, "tareKg": 2, "standardNetKg": 45, "tolerancePct": 10, "maxK": 8 },
+      "expected": { "k": 5, "tareTotalKg": 10, "netTotalKg": 246, "ambiguous": true, "candidates": [5, 6] }
+    }
+  ]
+}
