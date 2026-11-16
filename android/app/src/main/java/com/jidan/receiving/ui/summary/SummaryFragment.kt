@@ -53,13 +53,18 @@ class SummaryFragment : Fragment() {
         b.primary.setOnClickListener {
             val s = vm.summary.value
             val q = s.quote
+            val blockMissing = !s.allowWithoutPrice
             when {
-                s.refreshing || s.loading -> Unit
-                q?.noBasePrice == true -> vm.refreshBasePrice()
-                q?.noRule == true -> openRule()
-                // 提交属 P7-4；齐了时按钮文案已是「提交单据」，点了暂不动作
-                else -> Unit
+                s.refreshing || s.loading || s.submitting -> Unit
+                blockMissing && q?.noBasePrice == true -> vm.refreshBasePrice()
+                blockMissing && q?.noRule == true -> openRule()
+                else -> vm.submitOrder()
             }
+        }
+
+        // 登录失效重登回汇总、或进程恢复后补一次计价
+        if (vm.summary.value.quote == null) {
+            vm.reloadQuote()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -69,8 +74,10 @@ class SummaryFragment : Fragment() {
                 }
                 launch {
                     vm.nav.collect { ev ->
-                        if (ev is ReceivingNav.BackToWeigh) {
-                            findNavController().navigateUp()
+                        when (ev) {
+                            is ReceivingNav.BackToWeigh -> findNavController().navigateUp()
+                            is ReceivingNav.ToDone -> findNavController().navigate(R.id.action_summary_to_done)
+                            else -> Unit
                         }
                     }
                 }
@@ -90,9 +97,10 @@ class SummaryFragment : Fragment() {
 
         val q = state.quote
         val missing = q != null && (q.noBasePrice || q.noRule)
+        val pendingAllowed = missing && state.allowWithoutPrice
         b.moneyCard.background = ContextCompat.getDrawable(
             requireContext(),
-            if (missing) R.drawable.bg_money_card_warn else R.drawable.bg_money_card,
+            if (missing && !state.allowWithoutPrice) R.drawable.bg_money_card_warn else R.drawable.bg_money_card,
         )
 
         if (q == null) {
@@ -104,40 +112,61 @@ class SummaryFragment : Fragment() {
             b.factLedgerValue.text = "—"
             b.factAvg.text = "—"
         } else {
-            b.warnRow.isVisible = missing
-            if (q.noBasePrice) {
-                b.amountRow.isVisible = false
-                b.amountCalc.isVisible = false
-                b.warnTag.text = getString(
-                    if (state.m0Retried) R.string.summary_still_no_base else R.string.summary_no_base,
-                )
-                b.warnBind.isVisible = false
-            } else if (q.noRule) {
-                b.amountRow.isVisible = false
-                b.amountCalc.isVisible = false
-                b.warnTag.text = getString(R.string.summary_no_rule)
-                b.warnBind.isVisible = true
-            } else {
-                b.amountRow.isVisible = true
-                b.amountCalc.isVisible = true
-                b.amountValue.text = formatMoney(q.amount)
-                b.amountCalc.text = getString(
-                    R.string.summary_calc,
-                    formatMoney(q.unitPrice),
-                    q.boxCount,
-                )
-                b.warnBind.isVisible = false
-            }
-
             b.factRuleValue.text = q.ruleName?.takeIf { it.isNotBlank() }
                 ?: getString(R.string.summary_rule_unbound)
             val formula = formulaLine(q)
             b.factFormula.isVisible = formula.isNotBlank()
             b.factFormula.text = formula
-
             val total = q.totalKg?.let { Kg.of(it).format() } ?: "—"
             b.factLedgerValue.text = getString(R.string.summary_ledger_value, q.boxCount, total)
             b.factAvg.text = q.avgKg?.let { "${formatMoney(it)} kg" } ?: "—"
+
+            when {
+                pendingAllowed -> {
+                    b.amountRow.isVisible = true
+                    b.amountCalc.isVisible = false
+                    b.amountValue.text = getString(R.string.summary_pending_price)
+                    b.amountUnit.isVisible = false
+                    b.warnRow.isVisible = true
+                    b.warnTag.text = when {
+                        q.noBasePrice && state.m0Retried -> getString(R.string.summary_still_no_base)
+                        q.noBasePrice -> getString(R.string.summary_no_base)
+                        else -> getString(R.string.summary_no_rule)
+                    }
+                    b.warnBind.isVisible = q.noRule
+                }
+                q.noBasePrice -> {
+                    b.amountRow.isVisible = false
+                    b.amountCalc.isVisible = false
+                    b.amountUnit.isVisible = true
+                    b.warnRow.isVisible = true
+                    b.warnTag.text = getString(
+                        if (state.m0Retried) R.string.summary_still_no_base else R.string.summary_no_base,
+                    )
+                    b.warnBind.isVisible = false
+                }
+                q.noRule -> {
+                    b.amountRow.isVisible = false
+                    b.amountCalc.isVisible = false
+                    b.amountUnit.isVisible = true
+                    b.warnRow.isVisible = true
+                    b.warnTag.text = getString(R.string.summary_no_rule)
+                    b.warnBind.isVisible = true
+                }
+                else -> {
+                    b.amountRow.isVisible = true
+                    b.amountCalc.isVisible = true
+                    b.amountUnit.isVisible = true
+                    b.amountValue.text = formatMoney(q.amount)
+                    b.amountCalc.text = getString(
+                        R.string.summary_calc,
+                        formatMoney(q.unitPrice),
+                        q.boxCount,
+                    )
+                    b.warnRow.isVisible = false
+                    b.warnBind.isVisible = false
+                }
+            }
         }
 
         b.unprinted.isVisible = state.printEnabled && state.unprinted > 0
@@ -147,7 +176,12 @@ class SummaryFragment : Fragment() {
         b.error.isVisible = state.error.isNotBlank()
         b.error.text = state.error
 
+        val blockMissing = !state.allowWithoutPrice
         when {
+            state.submitting -> {
+                b.primary.isEnabled = false
+                b.primary.text = getString(R.string.summary_submitting)
+            }
             state.refreshing -> {
                 b.primary.isEnabled = false
                 b.primary.text = getString(R.string.summary_refreshing)
@@ -156,18 +190,19 @@ class SummaryFragment : Fragment() {
                 b.primary.isEnabled = false
                 b.primary.text = getString(R.string.summary_loading)
             }
-            q?.noBasePrice == true -> {
+            blockMissing && q?.noBasePrice == true -> {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_refresh_base)
             }
-            q?.noRule == true -> {
+            blockMissing && q?.noRule == true -> {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_bind_rule)
             }
             else -> {
-                // 提交属 P7-4；齐了时显示提交文案但不做提交
-                b.primary.isEnabled = false
-                b.primary.text = getString(R.string.summary_submit)
+                b.primary.isEnabled = true
+                b.primary.text = getString(
+                    if (state.submitError) R.string.summary_retry else R.string.summary_submit,
+                )
             }
         }
     }

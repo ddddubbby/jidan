@@ -175,3 +175,40 @@ data class QuoteResult(
     val noRule: Boolean get() = issues.any { it.equals("NO_RULE", ignoreCase = true) }
     val noBasePrice: Boolean get() = issues.any { it.equals("NO_BASE_PRICE", ignoreCase = true) }
 }
+
+/** `POST /api/orders` 一箱。 */
+data class SubmitBoxRequest(
+    val seq: Int,
+    val netKg: Double,
+    val grossKg: Double? = null,
+    val tareKg: Double? = null,
+    val tareName: String? = null,
+    val groupNo: Int? = null,
+    val groupK: Int? = null,
+    val manual: Boolean = false,
+    val rawKg: Double? = null,
+    val printed: Boolean = false,
+)
+
+data class SubmitRequest(
+    val batchNo: String,
+    val vendorId: Long,
+    val productId: Long,
+    val specId: Long,
+    val warehouseId: Long,
+    val boxes: List<SubmitBoxRequest>,
+)
+
+/** 提交结果（完成页）。 */
+data class SubmittedDto(
+    val id: Long = 0,
+    val code: String? = null,
+    val batchNo: String? = null,
+    val status: String? = null,
+    val source: String? = null,
+    val boxCount: Int = 0,
+    val totalNetKg: Double? = null,
+    val avgKg: Double? = null,
+    val submittedPrice: Double? = null,
+    val submittedAmount: Double? = null,
+)
