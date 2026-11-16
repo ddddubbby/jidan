@@ -12,7 +12,7 @@ verify-backend:
 
 verify-web:
 	@if [ -d web ]; then \
-		cd web && npm run typecheck && npm run build; \
+		cd web && npm ci && npm run typecheck && npm run build; \
 	else \
 		echo "[跳过] web/ 尚未建立（P0-3），Web 未验证"; \
 	fi
