@@ -10,6 +10,7 @@ public enum ErrorCode {
     RULE_CONFLICT(HttpStatus.CONFLICT),
     ORDER_LOCKED(HttpStatus.CONFLICT),
     NOT_READY(HttpStatus.CONFLICT),
+    NOT_FOUND(HttpStatus.NOT_FOUND),
     INVALID(HttpStatus.BAD_REQUEST);
 
     public final HttpStatus status;

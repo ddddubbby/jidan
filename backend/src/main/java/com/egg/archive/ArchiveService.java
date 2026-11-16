@@ -3,6 +3,7 @@ package com.egg.archive;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -173,6 +174,63 @@ public class ArchiveService {
         long total = mapper.selectCount(w);
         w.orderByAsc("id").last("LIMIT " + size + " OFFSET " + (long) (page - 1) * size);
         return new PageResult<>(toRows.apply(mapper.selectList(w)), total, page, size);
+    }
+
+    // ---------------------------------------------------------------- 建单用
+
+    /** 商品全量，APP 的 bootstrap 下发用。 */
+    public List<Product> allProducts() {
+        return products.selectList(new QueryWrapper<Product>().orderByAsc("id"));
+    }
+
+    /** 仓库全量，APP 的 bootstrap 下发用。 */
+    public List<Warehouse> allWarehouses() {
+        return warehouses.selectList(new QueryWrapper<Warehouse>().orderByAsc("id"));
+    }
+
+    /** 单据列表与详情显示农户用，含全部号码。 */
+    public Map<Long, Farmer> farmersByIds(Collection<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return farmers(vendors.selectList(new QueryWrapper<Vendor>().in("id", ids)), Map.of()).stream()
+                .collect(Collectors.toMap(Farmer::id, f -> f));
+    }
+
+    public Map<Long, String> productNames(Collection<Long> ids) {
+        return ids.isEmpty() ? Map.of() : products.selectList(new QueryWrapper<Product>().in("id", ids)).stream()
+                .collect(Collectors.toMap(x -> x.id, x -> x.name));
+    }
+
+    public Map<Long, String> warehouseNames(Collection<Long> ids) {
+        return ids.isEmpty() ? Map.of() : warehouses.selectList(new QueryWrapper<Warehouse>().in("id", ids)).stream()
+                .collect(Collectors.toMap(x -> x.id, x -> x.name));
+    }
+
+    /** 审核组装回传报文时取编码用。单据引用的档案本系统不删，取不到只会是数据被改坏了，直接抛。 */
+    public Vendor vendor(long id) {
+        return vendors.selectById(id);
+    }
+
+    public Product product(long id) {
+        return products.selectById(id);
+    }
+
+    public Warehouse warehouse(long id) {
+        return warehouses.selectById(id);
+    }
+
+    /** 提交单据时确认农户、商品、仓库都在档案里。好生意里删掉的档案本系统保留，所以只会是传错了 id。 */
+    public void requireExist(long vendorId, long productId, long warehouseId) {
+        if (vendors.selectById(vendorId) == null) {
+            throw ApiException.invalid("农户不存在");
+        }
+        if (products.selectById(productId) == null) {
+            throw ApiException.invalid("商品不存在");
+        }
+        if (warehouses.selectById(warehouseId) == null) {
+            throw ApiException.invalid("仓库不存在");
+        }
     }
 
     // ---------------------------------------------------------------- 建单选农户

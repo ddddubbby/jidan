@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail"];
+        put: operations["update_3"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/options": {
         parameters: {
             query?: never;
@@ -180,6 +196,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_3"];
+        put?: never;
+        post: operations["submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["quote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["batch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -219,7 +283,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post: operations["create_3"];
         delete?: never;
@@ -238,6 +302,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["records"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/next-pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["nextPending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["counts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -324,6 +436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/boxes/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["lookup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/me": {
         parameters: {
             query?: never;
@@ -364,6 +492,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bootstrap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -473,6 +617,103 @@ export interface components {
             name?: string;
             tail4?: string;
         };
+        BoxForm: {
+            /** Format: int32 */
+            seq: number;
+            netKg: number;
+            grossKg?: number;
+            tareKg?: number;
+            tareName?: string;
+            /** Format: int32 */
+            groupNo?: number;
+            /** Format: int32 */
+            groupK?: number;
+            manual?: boolean;
+            rawKg?: number;
+            printed?: boolean;
+        };
+        UpdateForm: {
+            /** Format: date */
+            bizDate: string;
+            /** Format: int64 */
+            vendorId: number;
+            /** Format: int64 */
+            productId: number;
+            /** Format: int64 */
+            specId: number;
+            /** Format: int64 */
+            warehouseId: number;
+            boxes: components["schemas"]["BoxForm"][];
+        };
+        OrderDetail: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            batchNo?: string;
+            /** Format: date */
+            bizDate?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
+            /** @enum {string} */
+            source?: "APP" | "WEB";
+            operator?: components["schemas"]["Ref"];
+            approver?: components["schemas"]["Ref"];
+            /** Format: date-time */
+            approvedAt?: string;
+            vendor?: components["schemas"]["VendorRef"];
+            warehouse?: components["schemas"]["Ref"];
+            product?: components["schemas"]["Ref"];
+            spec?: components["schemas"]["SpecRef"];
+            hsId?: string;
+            pushError?: string;
+            submittedPrice?: number;
+            submittedAmount?: number;
+            submittedDiffers?: boolean;
+            frozen?: boolean;
+            /** Format: int32 */
+            manualCount?: number;
+            pricing?: components["schemas"]["Result"];
+        };
+        Ref: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+        };
+        Result: {
+            /** Format: int32 */
+            boxCount?: number;
+            totalKg?: number;
+            rawAvgKg?: number;
+            avgKg?: number;
+            standardNetKg?: number;
+            basePrice?: number;
+            /** Format: int64 */
+            ruleId?: number;
+            ruleName?: string;
+            coefficient?: number;
+            tailKg?: number;
+            priceDiff?: number;
+            unitPrice?: number;
+            amount?: number;
+            /** @enum {string} */
+            roundMode?: "HALF" | "FLOOR" | "CEIL";
+            issues?: string[];
+        };
+        SpecRef: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            stdNetKg?: number;
+        };
+        VendorRef: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            hsCode?: string;
+            phones?: string[];
+        };
         BindingForm: {
             /** Format: int64 */
             productId: number;
@@ -530,6 +771,57 @@ export interface components {
             enabled?: boolean;
             bindIds?: number[];
         };
+        SubmitForm: {
+            batchNo: string;
+            /** Format: int64 */
+            vendorId: number;
+            /** Format: int64 */
+            productId: number;
+            /** Format: int64 */
+            specId: number;
+            /** Format: int64 */
+            warehouseId: number;
+            boxes: components["schemas"]["BoxForm"][];
+        };
+        Submitted: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            batchNo?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
+            /** @enum {string} */
+            source?: "APP" | "WEB";
+            /** Format: int32 */
+            boxCount?: number;
+            totalNetKg?: number;
+            avgKg?: number;
+            submittedPrice?: number;
+            submittedAmount?: number;
+        };
+        QuoteForm: {
+            /** Format: int64 */
+            vendorId: number;
+            /** Format: int64 */
+            productId: number;
+            /** Format: int64 */
+            specId: number;
+            /** Format: date */
+            date?: string;
+            boxNetKg?: number[];
+            /** Format: int64 */
+            trialRuleId?: number;
+            trialCoef?: number;
+        };
+        BatchForm: {
+            /** Format: date */
+            date?: string;
+        };
+        Batch: {
+            batchNo?: string;
+            /** Format: date */
+            date?: string;
+        };
         LoginRequest: {
             phone: string;
             password: string;
@@ -562,6 +854,93 @@ export interface components {
             account?: components["schemas"]["AccountView"];
             password?: string;
         };
+        OrderRow: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            batchNo?: string;
+            /** Format: date */
+            bizDate?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
+            /** @enum {string} */
+            source?: "APP" | "WEB";
+            vendorName?: string;
+            vendorPhone?: string;
+            productName?: string;
+            specName?: string;
+            /** Format: int32 */
+            boxCount?: number;
+            avgKg?: number;
+            price?: number;
+            amount?: number;
+            submittedAmount?: number;
+            amountChanged?: boolean;
+            operatorName?: string;
+            pushError?: string;
+            /** Format: int32 */
+            manualCount?: number;
+            issues?: string[];
+        };
+        PageResultOrderRow: {
+            items?: components["schemas"]["OrderRow"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+        };
+        Box: {
+            /** Format: int32 */
+            seq?: number;
+            netKg?: number;
+            grossKg?: number;
+            tareKg?: number;
+            tareName?: string;
+            /** Format: int32 */
+            groupNo?: number;
+            /** Format: int32 */
+            groupK?: number;
+            manual?: boolean;
+            rawKg?: number;
+            printed?: boolean;
+        };
+        Group: {
+            kg?: number;
+            /** Format: int32 */
+            boxes?: number;
+        };
+        Records: {
+            /** Format: int64 */
+            orderId?: number;
+            batchNo?: string;
+            editable?: boolean;
+            boxes?: components["schemas"]["Box"][];
+            groups?: components["schemas"]["Group"][];
+            /** Format: int32 */
+            manualCount?: number;
+        };
+        NextPending: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            vendorName?: string;
+        };
+        Counts: {
+            /** Format: int64 */
+            pending?: number;
+            /** Format: int64 */
+            failed?: number;
+            missingBasePrices?: components["schemas"]["MissingPrice"][];
+        };
+        MissingPrice: {
+            /** Format: int64 */
+            specId?: number;
+            specName?: string;
+        };
         Meta: {
             chanjetMode?: string;
             bookName?: string;
@@ -577,6 +956,25 @@ export interface components {
             hsCode?: string;
             phones?: string[];
             matchedPhones?: string[];
+        };
+        BoxLookup: {
+            code?: string;
+            batchNo?: string;
+            /** Format: int32 */
+            seq?: number;
+            netKg?: number;
+            manual?: boolean;
+            rawKg?: number;
+            vendor?: components["schemas"]["Ref"];
+            product?: components["schemas"]["Ref"];
+            spec?: components["schemas"]["SpecRef"];
+            /** Format: int64 */
+            orderId?: number;
+            orderCode?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
+            avgKg?: number;
+            price?: number;
         };
         Day: {
             /** Format: date */
@@ -609,6 +1007,40 @@ export interface components {
             page?: number;
             /** Format: int32 */
             pageSize?: number;
+        };
+        Bootstrap: {
+            /** Format: date */
+            date?: string;
+            products?: components["schemas"]["Named"][];
+            specs?: components["schemas"]["SpecItem"][];
+            warehouses?: components["schemas"]["Named"][];
+            tares?: components["schemas"]["Tare"][];
+            settings?: {
+                [key: string]: string;
+            };
+            options?: {
+                [key: string]: string;
+            };
+        };
+        Named: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+        };
+        SpecItem: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            /** Format: int32 */
+            eggCount?: number;
+            stdNetKg?: number;
+            basePrice?: number;
+        };
+        Tare: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            tareKg?: number;
         };
     };
     responses: never;
@@ -737,6 +1169,54 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleView"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetail"];
+                };
+            };
+        };
+    };
+    update_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetail"];
                 };
             };
         };
@@ -1020,6 +1500,103 @@ export interface operations {
             };
         };
     };
+    list_3: {
+        parameters: {
+            query?: {
+                tab?: string;
+                q?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResultOrderRow"];
+                };
+            };
+        };
+    };
+    submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Submitted"];
+                };
+            };
+        };
+    };
+    quote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Result"];
+                };
+            };
+        };
+    };
+    batch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BatchForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Batch"];
+                };
+            };
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -1064,7 +1641,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1126,6 +1703,70 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WithPassword"];
+                };
+            };
+        };
+    };
+    records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Records"];
+                };
+            };
+        };
+    };
+    nextPending: {
+        parameters: {
+            query?: {
+                after?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NextPending"];
+                };
+            };
+        };
+    };
+    counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Counts"];
                 };
             };
         };
@@ -1234,6 +1875,28 @@ export interface operations {
             };
         };
     };
+    lookup: {
+        parameters: {
+            query: {
+                code: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BoxLookup"];
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -1296,6 +1959,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Status"];
+                };
+            };
+        };
+    };
+    bootstrap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Bootstrap"];
                 };
             };
         };

@@ -1,25 +1,44 @@
+import type { Component } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSession } from '../stores/session'
 import PlaceholderPage from '../ui/PlaceholderPage.vue'
 import LoginPage from '../features/login/LoginPage.vue'
+import ArchivePage from '../features/archive/ArchivePage.vue'
+import AccountsPage from '../features/accounts/AccountsPage.vue'
+import SettingsPage from '../features/settings/SettingsPage.vue'
+import OptionsPage from '../features/options/OptionsPage.vue'
+import PricesPage from '../features/prices/PricesPage.vue'
+import BasicsPage from '../features/basics/BasicsPage.vue'
+import RulesPage from '../features/rules/RulesPage.vue'
 
 // meta.nav 是侧栏里高亮的那一项；各页由对应任务（P4、P5）替换掉空页面
 const pages: [string, string][] = [
   ['orders', '采购入库单'],
   ['prices', '每日基准价'],
-  ['rules', '定价规则'],
   ['basics', '规格与皮重'],
   ['archive', '好生意档案'],
   ['accounts', '磅秤员账号'],
   ['settings', '系统设置'],
+  ['options', '高级选项'],
 ]
+
+// 已经做出来的页面
+const done: Record<string, Component> = {
+  archive: ArchivePage,
+  accounts: AccountsPage,
+  settings: SettingsPage,
+  options: OptionsPage,
+  prices: PricesPage,
+  basics: BasicsPage,
+}
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/orders' },
     { path: '/login', component: LoginPage, meta: { public: true } },
-    ...pages.map(([k, title]) => ({ path: '/' + k, component: PlaceholderPage, meta: { nav: k, title } })),
+    { path: '/rules', component: RulesPage, meta: { nav: 'rules', title: '定价规则' } },
+    ...pages.map(([k, title]) => ({ path: '/' + k, component: done[k] ?? PlaceholderPage, meta: { nav: k, title } })),
     // 公共组件的走查页，只在开发服务器里有（build 时整段剔除）
     ...(import.meta.env.DEV
       ? [{ path: '/_ui', component: () => import('../ui/Gallery.vue'), meta: { nav: '', title: '组件走查' } }]

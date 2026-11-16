@@ -4,4 +4,13 @@ import type { components } from './types.gen'
 type S = components['schemas']
 export type LoginResult = S['LoginResult']
 export type Meta = S['Meta']
+export type OrderCounts = S['Counts']
 export type BasePriceDay = S['Day']
+export type Spec = Required<Pick<S['Spec'], 'id' | 'name' | 'eggCount' | 'stdNetKg' | 'enabled'>>
+export type TareBox = Required<Pick<S['TareBox'], 'id' | 'name' | 'tareKg' | 'hotkey' | 'enabled'>>
+export type SpecPatch = S['SpecPatch']
+export type TarePatch = S['TarePatch']
+export type SpecCreate = S['SpecCreate']
+export type TareCreate = S['TareCreate']
+export type RuleView = S['RuleView']
+export type PriceItem = S['Item']
