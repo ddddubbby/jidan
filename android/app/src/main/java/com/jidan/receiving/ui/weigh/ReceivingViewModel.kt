@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.core.Box
 import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.RecordBy
 import com.jidan.receiving.core.RoundAvg
 import com.jidan.receiving.core.RoundRule
@@ -30,6 +31,7 @@ import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.printing.PrintJobState
 import com.jidan.receiving.printing.PrintQueue
+import com.jidan.receiving.ui.adapt.AdaptFixtures
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -356,6 +358,33 @@ class ReceivingViewModel(
     fun reprintUnprinted() = printQueue.reprintUnprinted()
 
     fun reprintOne(seq: Int) = printQueue.reprintOne(seq)
+
+    /**
+     * 适配走查：灌入 [count] 箱（默认 100），不入打印队列，避免 Fake 打满。
+     * 对照原型「最坏 + 100 箱」。
+     */
+    fun seedAdaptBoxes(count: Int = AdaptFixtures.STRESS_BOX_COUNT) {
+        var s = session ?: return
+        if (count <= s.boxes.size) return
+        val need = count - s.boxes.size
+        repeat(need) { i ->
+            s = s.addManual(Kg.of(AdaptFixtures.netKgForIndex(s.boxes.size + i)))
+        }
+        session = s
+        persist()
+        publish()
+        flash("已灌入 ${session?.boxes?.size ?: count} 箱（适配）", ok = true)
+    }
+
+    /** 适配走查：把当前农户名换成最坏长名，不截断展示。 */
+    fun applyWorstFarmerName() {
+        val s = session ?: return
+        session = s.copy(farmer = Pick(s.farmer.id, AdaptFixtures.WORST_FARMER_NAME))
+        persist()
+        publish()
+        _summary.update { it.copy(farmerName = AdaptFixtures.WORST_FARMER_NAME) }
+        flash("已套用最坏户名", ok = true)
+    }
 
     /** 确认计量完毕：完成后一次打印入队，拉计价，进汇总页（APP-08）。 */
     fun onConfirmWeighing() {

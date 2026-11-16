@@ -109,7 +109,15 @@ class CreateFragment : Fragment() {
         refreshCards()
 
         if (b.simHost.childCount == 0) {
-            SimConsoleHook.attach(b.simHost)
+            val prefs = c.prefs
+            SimConsoleHook.attach(
+                b.simHost,
+                onToggleBigFont = {
+                    prefs.simBigFont = !prefs.simBigFont
+                    requireActivity().recreate()
+                },
+                bigFontOn = prefs.simBigFont,
+            )
         }
     }
 

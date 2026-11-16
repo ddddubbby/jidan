@@ -16,6 +16,7 @@ import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.databinding.FragmentDoneBinding
+import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.ui.summary.formatMoney
 import com.jidan.receiving.ui.weigh.DoneUiState
 import com.jidan.receiving.ui.weigh.ReceivingNav
@@ -46,6 +47,12 @@ class DoneFragment : Fragment() {
         b.ledgerLine.setOnClickListener {
             // 提交后流水已清；只展示文案，不打开空弹层
         }
+        if (!Feedback.reducedMotion(requireContext())) {
+            b.check.scaleX = 0.85f
+            b.check.scaleY = 0.85f
+            b.check.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+        }
+        Feedback.ok(requireContext())
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
