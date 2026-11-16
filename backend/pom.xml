@@ -89,6 +89,14 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <!-- 时区统一 Asia/Shanghai（开发规格 6.1）。main() 里的设定测试不执行，这里让测试 JVM 也一致 -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-Duser.timezone=Asia/Shanghai</argLine>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
