@@ -226,7 +226,9 @@ internal fun WeighUiState.withScaleSide(ctl: WeighController, scaleConnected: Bo
  * P6-4 称重；P6-5 再接流水弹层与草稿落盘。
  */
 class ReceivingViewModel(
-    private val container: AppContainer,
+    private val container: ReceivingDeps,
+    /** 当前时间（毫秒）；测试里换成虚拟时钟。 */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(WeighUiState())
     val ui: StateFlow<WeighUiState> = _ui.asStateFlow()
@@ -263,8 +265,8 @@ class ReceivingViewModel(
         override suspend fun tares(): List<TareDto> = container.catalog.tareHotkeys()
 
         override var lastTareId: Long?
-            get() = container.prefs.lastTareId
-            set(value) { container.prefs.lastTareId = value }
+            get() = container.lastTareId
+            set(value) { container.lastTareId = value }
     }
 
     /** 秤这一侧：Session、状态机、秤连接与皮重下发（F1-3）。 */
@@ -275,6 +277,7 @@ class ReceivingViewModel(
         isLocked = { locked },
         onChange = { publish() },
         onOutcome = { applyOutcome(it) },
+        now = clock,
     )
 
     private var session: Session?
@@ -354,7 +357,7 @@ class ReceivingViewModel(
                 }
             }
             // 上一单用的排首位但不自动选中：换了包装箱而没注意，整批皮重都错（v7 APP-04）
-            val tareStart = TareStart.of(ctl.tares, container.prefs.lastTareId)
+            val tareStart = TareStart.of(ctl.tares, container.lastTareId)
             _ui.update {
                 it.copy(
                     loading = false,
@@ -519,7 +522,7 @@ class ReceivingViewModel(
     /** 再收一单：清完成态，回建单页。 */
     fun again() {
         val readyAt = _done.value.readyAgainAt
-        if (System.currentTimeMillis() < readyAt) return
+        if (clock() < readyAt) return
         if (printQueue.job.value != null) return // 标签还在打，打完再收一单
         container.sessionStore.clear()
         resetAll()
@@ -553,7 +556,7 @@ class ReceivingViewModel(
             unitPrice = submitted.submittedPrice ?: quote?.unitPrice,
             amount = submitted.submittedAmount ?: quote?.amount,
             pendingPrice = pending,
-            readyAgainAt = System.currentTimeMillis() + 500,
+            readyAgainAt = clock() + 500,
         )
         // 提交成功清草稿与建单四项。内存里的箱留着、打印队列不停：没打完的接着打，
         // 完成页还能补打（APP-07；附录 C 第 17 条：提交后的补打不回写后端）。流水从此只读。
@@ -813,7 +816,7 @@ class ReceivingViewModel(
         viewModelScope.launch {
             ctl.chooseTare(EmptyBoxTare.tareOf(platform), null)
             // 空箱没有热键 id；上一单标记不留在别的箱上
-            container.prefs.lastTareId = null
+            container.lastTareId = null
             _ui.update { it.copy(showTarePicker = false) }
             persist()
             publish()
