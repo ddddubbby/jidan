@@ -25,4 +25,4 @@
 
 看板“负责人”只填角色（开发方 / 联调方）或 `agent`。v7 里的示例人名和手机号是虚构的，可以用。
 
-不要修改仓库的提交身份。首次克隆后执行一次 `git config core.hooksPath scripts/hooks`，提交时会自动运行 `scripts/pii-check.sh`；提 PR 前另外看一眼标题和描述。详见 spec 14.3。
+提交身份只能是 `egg-dev <egg-dev@users.noreply.invalid>` 或 `Claude <noreply@anthropic.com>`，不要改成个人账号；首次克隆后在本克隆里（不加 `--global`）执行一次 `git config user.name egg-dev` 和 `git config user.email egg-dev@users.noreply.invalid`，否则提交会被拒绝。另外执行一次 `git config core.hooksPath scripts/hooks`，提交时会自动运行 `scripts/pii-check.sh`；提 PR 前另外看一眼标题和描述。详见 spec 14.3。

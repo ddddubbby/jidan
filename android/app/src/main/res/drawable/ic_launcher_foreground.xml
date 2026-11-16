@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 一只蛋：108dp 自适应图标的前景，内容放在中间 66dp 安全区内 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M54,27 C65,27 74,44 74,58 C74,70 65.5,80 54,80 C42.5,80 34,70 34,58 C34,44 43,27 54,27 Z" />
+</vector>

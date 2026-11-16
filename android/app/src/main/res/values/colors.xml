@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 设计令牌，取自 lab/app-sim.html 的 :root，与 Web 同一套（开发规格 9.5） -->
+<resources>
+    <color name="bg">#eceee9</color>
+    <color name="surface">#ffffff</color>
+    <color name="sunken">#f4f5f2</color>
+    <color name="ink">#14181a</color>
+    <color name="ink_2">#4a5357</color>
+    <color name="line">#d5d9d3</color>
+    <color name="edge">#8b9590</color>
+    <color name="accent">#0b6b3a</color>
+    <color name="accent_press">#095a31</color>
+    <color name="ok_bg">#e1f2e6</color>
+    <color name="ok_ink">#0a5a31</color>
+    <color name="warn_bg">#fff1cf</color>
+    <color name="warn_ink">#734600</color>
+    <color name="err_bg">#fde4e1</color>
+    <color name="err_ink">#9c1f18</color>
+    <color name="on_accent">#ffffff</color>
+</resources>
