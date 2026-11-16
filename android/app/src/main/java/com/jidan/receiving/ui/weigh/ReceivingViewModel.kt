@@ -323,7 +323,6 @@ class ReceivingViewModel(
         if (startJob?.isActive == true) return
         val saved = container.sessionStore.load()
         val h = container.orderDraft.header.value
-<<<<<<< HEAD
         if (saved == null && !h.ready) return
         startJob = viewModelScope.launch {
             _ui.update {
@@ -353,87 +352,16 @@ class ReceivingViewModel(
                         stdNetCents = s.stdNet?.cents,
                     )
                 }
-=======
-        if (!h.ready) return
-        viewModelScope.launch {
-            _ui.update { it.copy(loading = true, error = "") }
-            try {
-                val batch = container.catalog.nextBatchNo()
-                val tareStart = loadTares()
-                val std = Kg(h.stdNetCents ?: Kg.of(36.0).cents) // 粉蛋默认 36kg，缺字段时兜底
-                val opts = container.options.value.weighOptions()
-                val s = Session(
-                    batchNo = batch,
-                    farmer = h.farmer!!,
-                    product = h.product!!,
-                    spec = h.spec!!,
-                    warehouse = h.warehouse!!,
-                )
-                session = s
-                machine = WeighingMachine(opts, std)
-                // 上一单用的排首位但不自动选中：换了包装箱而没注意，整批皮重都错（v7 APP-04）
-                _ui.update {
-                    it.copy(
-                        loading = false,
-                        ready = true,
-                        farmerName = s.farmer.name,
-                        productName = s.product.name,
-                        specName = s.spec.name,
-                        batchNo = s.batchNo,
-                        warehouseName = s.warehouse.name,
-                        tares = tareStart.tares,
-                        lastTareId = tareStart.lastTareId,
-                        showTarePicker = tareStart.showPicker,
-                        recordByButton = opts.recordBy == RecordBy.BUTTON,
-                    )
-                }
-                persist()
-                publish()
-                bindScale()
-            } catch (e: Throwable) {
-                _ui.update { it.copy(loading = false, error = e.userMessage()) }
             }
-        }
-    }
-
-    private fun restoreSession(s: Session) {
-        viewModelScope.launch {
-            val tareStart = loadTares()
-            val std = Kg(
-                container.orderDraft.header.value.stdNetCents
-                    ?: s.spec.let { Kg.of(36.0).cents },
-            )
-            val opts = container.options.value.weighOptions()
-            session = s
-            machine = WeighingMachine(opts, std).also { m ->
-                s.tare?.let { m.setTare(it) }
-            }
-            // 把表头写回 OrderDraft，便于返回建单页仍可见
-            container.orderDraft.update {
-                it.copy(
-                    farmer = s.farmer,
-                    product = s.product,
-                    spec = s.spec,
-                    warehouse = s.warehouse,
-                )
->>>>>>> origin/task/F1-4
-            }
+            // 上一单用的排首位但不自动选中：换了包装箱而没注意，整批皮重都错（v7 APP-04）
+            val tareStart = TareStart.of(ctl.tares, container.prefs.lastTareId)
             _ui.update {
                 it.copy(
                     loading = false,
                     error = "",
                     ready = true,
-<<<<<<< HEAD
-                    tares = ctl.tares,
-=======
-                    farmerName = s.farmer.name,
-                    productName = s.product.name,
-                    specName = s.spec.name,
-                    batchNo = s.batchNo,
-                    warehouseName = s.warehouse.name,
                     tares = tareStart.tares,
                     lastTareId = tareStart.lastTareId,
->>>>>>> origin/task/F1-4
                     showTarePicker = s.tare == null,
                 )
             }
@@ -864,41 +792,26 @@ class ReceivingViewModel(
         }
     }
 
-<<<<<<< HEAD
     /** 皮重没下发成功时，“重新设皮重”直达：用已选的皮重重发，不用重新挑。 */
     fun retryTare() {
         viewModelScope.launch {
             ctl.retryTare()
             publish()
-=======
-    /** 皮重热键，上一单用的排首位（不自动选中）。 */
-    private suspend fun loadTares(): TareStart {
-        val all = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
-        return TareStart.of(all, container.prefs.lastTareId)
+        }
     }
 
     /**
      * 称重皮（v7 `APP-04`）：秤上是一只空箱且读数稳定时，按台面读数去皮，皮重名记“空箱”。
-     * `scale.tare-by = scale` 时先让秤去皮；`app` 时只在 APP 侧记下。条件不满足时什么也不做。
+     * 走和选热键皮重同一条路（[WeighController.chooseTare]）：`scale.tare-by = scale` 时下发到秤，
+     * 下发失败不记；条件不满足时什么也不做。
      */
     fun weighEmptyBox() {
         if (locked) return
         val st = emptyBoxState()
         val platform = st.platform
         if (!st.available || platform == null) return
-        val t = EmptyBoxTare.tareOf(platform)
         viewModelScope.launch {
-            if (container.options.value.weighOptions().tareBy == TareBy.SCALE) {
-                try {
-                    container.scale.tareWeigh()
-                } catch (_: Throwable) {
-                    // 秤没去成皮而 APP 记了皮重，之后每箱都会算错，所以不记
-                    flash("秤没有去皮，再试一次", ok = false)
-                    return@launch
-                }
-            }
-            machine?.setTare(t)
-            session = session?.withTare(t)
+            ctl.chooseTare(EmptyBoxTare.tareOf(platform), null)
             // 空箱没有热键 id；上一单标记不留在别的箱上
             container.prefs.lastTareId = null
             _ui.update { it.copy(showTarePicker = false) }
@@ -912,18 +825,6 @@ class ReceivingViewModel(
         platform = machine?.platformNow,
         stable = machine?.isStable == true,
     )
-
-    private suspend fun applyTare(t: Tare, id: Long?, persistOnly: Boolean) {
-        val opts = container.options.value.weighOptions()
-        if (!persistOnly && opts.tareBy == TareBy.SCALE) {
-            try {
-                container.scale.setDigitalTare(t.unit)
-            } catch (_: Throwable) {
-                // Fake/占位可能未实现；APP 扣皮路径仍可用
-            }
->>>>>>> origin/task/F1-4
-        }
-    }
 
     fun pressRecord() {
         if (locked) return
@@ -987,28 +888,8 @@ class ReceivingViewModel(
 
     private fun publish() {
         _ui.update {
-<<<<<<< HEAD
             it.withScaleSide(ctl, container.scale.linkStatus.value == LinkStatus.CONNECTED).copy(
-=======
-            it.copy(
-                ready = s != null,
-                farmerName = s?.farmer?.name.orEmpty(),
-                productName = s?.product?.name.orEmpty(),
-                specName = s?.spec?.name.orEmpty(),
-                batchNo = s?.batchNo.orEmpty(),
-                warehouseName = s?.warehouse?.name.orEmpty(),
-                phase = m?.phase ?: WeighPhase.LOCKED,
-                displayNet = m?.displayNet,
-                k = m?.k ?: 1,
-                candidates = m?.candidates,
-                tare = m?.tare ?: s?.tare,
                 emptyBox = emptyBoxState(),
-                boxes = s?.boxes.orEmpty(),
-                reweighSeq = m?.reweighSeq,
-                recordByButton = opts.recordBy == RecordBy.BUTTON,
-                canPressRecord = m?.canPress == true,
-                scaleConnected = container.scale.linkStatus.value == LinkStatus.CONNECTED,
->>>>>>> origin/task/F1-4
                 printEnabled = printQueue.enabled(),
                 printJob = printQueue.job.value,
                 unprinted = printQueue.unprintedCount(),

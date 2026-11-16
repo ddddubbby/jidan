@@ -117,7 +117,6 @@ class WeighController(
                     throw StartFailure("建单信息不全")
                 }
                 val w0 = header.stdNetCents?.let(::Kg) ?: boot.stdNetOf(spec)
-                val last = list.firstOrNull { it.id == host.lastTareId }
                 Session(
                     batchNo = host.nextBatchNo(),
                     farmer = farmer,
@@ -125,7 +124,8 @@ class WeighController(
                     spec = spec,
                     warehouse = warehouse,
                     stdNet = w0,
-                ).withTare(last?.let { Tare(Kg.of(it.tareKg), it.name) })
+                )
+                // 新开一单不自动套用上一单皮重：换了包装箱而没注意，整批皮重都错（v7 APP-04）；磅秤员点了才设
             }
             unbind()
             session = s
