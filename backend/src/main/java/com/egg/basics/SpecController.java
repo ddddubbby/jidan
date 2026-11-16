@@ -1,5 +1,6 @@
 package com.egg.basics;
 
+import com.egg.common.CurrentUser;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -51,13 +52,12 @@ public class SpecController {
     }
 
     @PostMapping("/api/specs")
-    public Spec create(@Valid @RequestBody SpecCreate form) {
-        // 操作人：登录拦截（P1-2）合入后改传当前登录人，下同
-        return service.create(form.name(), form.eggCount(), form.stdNetKg(), null);
+    public Spec create(@Valid @RequestBody SpecCreate form, CurrentUser me) {
+        return service.create(form.name(), form.eggCount(), form.stdNetKg(), me.id());
     }
 
     @PutMapping("/api/specs/{id}")
-    public Spec update(@PathVariable long id, @Valid @RequestBody SpecPatch form) {
-        return service.update(id, form.name(), form.eggCount(), form.stdNetKg(), form.enabled(), null);
+    public Spec update(@PathVariable long id, @Valid @RequestBody SpecPatch form, CurrentUser me) {
+        return service.update(id, form.name(), form.eggCount(), form.stdNetKg(), form.enabled(), me.id());
     }
 }

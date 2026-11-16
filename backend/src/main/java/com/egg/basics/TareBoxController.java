@@ -1,5 +1,6 @@
 package com.egg.basics;
 
+import com.egg.common.CurrentUser;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -51,12 +52,12 @@ public class TareBoxController {
     }
 
     @PostMapping("/api/tares")
-    public TareBox create(@Valid @RequestBody TareCreate form) {
-        return service.create(form.name(), form.tareKg(), form.hotkey(), null);
+    public TareBox create(@Valid @RequestBody TareCreate form, CurrentUser me) {
+        return service.create(form.name(), form.tareKg(), form.hotkey(), me.id());
     }
 
     @PutMapping("/api/tares/{id}")
-    public TareBox update(@PathVariable long id, @Valid @RequestBody TarePatch form) {
-        return service.update(id, form.name(), form.tareKg(), form.hotkey(), form.enabled(), null);
+    public TareBox update(@PathVariable long id, @Valid @RequestBody TarePatch form, CurrentUser me) {
+        return service.update(id, form.name(), form.tareKg(), form.hotkey(), form.enabled(), me.id());
     }
 }

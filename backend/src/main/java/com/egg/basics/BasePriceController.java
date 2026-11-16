@@ -1,5 +1,6 @@
 package com.egg.basics;
 
+import com.egg.common.CurrentUser;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -42,7 +43,7 @@ public class BasePriceController {
     }
 
     @PutMapping("/api/base-prices")
-    public Item save(@Valid @RequestBody BasePriceForm form) {
-        return service.save(form.date(), form.specId(), form.price(), null);
+    public Item save(@Valid @RequestBody BasePriceForm form, CurrentUser me) {
+        return service.save(form.date(), form.specId(), form.price(), me.id());
     }
 }

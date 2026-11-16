@@ -223,6 +223,43 @@
         }
       }
     },
+    "/api/accounts/{id}/enabled" : {
+      "put" : {
+        "tags" : [ "account-controller" ],
+        "operationId" : "setEnabled",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EnabledChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tares" : {
       "get" : {
         "tags" : [ "tare-box-controller" ],
@@ -317,6 +354,108 @@
         }
       }
     },
+    "/api/auth/login" : {
+      "post" : {
+        "tags" : [ "auth-controller" ],
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts" : {
+      "get" : {
+        "tags" : [ "account-controller" ],
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "account-controller" ],
+        "operationId" : "create_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewAccount"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WithPassword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}/reset-password" : {
+      "post" : {
+        "tags" : [ "account-controller" ],
+        "operationId" : "resetPassword",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WithPassword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health" : {
       "get" : {
         "tags" : [ "health-controller" ],
@@ -328,6 +467,24 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me" : {
+      "get" : {
+        "tags" : [ "auth-controller" ],
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CurrentUser"
                 }
               }
             }
@@ -554,6 +711,37 @@
           }
         }
       },
+      "EnabledChange" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "enabled" ]
+      },
+      "AccountView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "lastLoginAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "TareCreate" : {
         "type" : "object",
         "properties" : {
@@ -591,6 +779,65 @@
         },
         "required" : [ "eggCount", "name", "stdNetKg" ]
       },
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "phone" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "password" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "client" : {
+            "type" : "string",
+            "enum" : [ "APP", "WEB" ]
+          }
+        },
+        "required" : [ "client", "password", "phone" ]
+      },
+      "LoginResult" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "SCALE", "ADMIN" ]
+          }
+        }
+      },
+      "NewAccount" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "1\\d{10}"
+          }
+        },
+        "required" : [ "name", "phone" ]
+      },
+      "WithPassword" : {
+        "type" : "object",
+        "properties" : {
+          "account" : {
+            "$ref" : "#/components/schemas/AccountView"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        }
+      },
       "Health" : {
         "type" : "object",
         "properties" : {
@@ -614,6 +861,25 @@
             "items" : {
               "$ref" : "#/components/schemas/Item"
             }
+          }
+        }
+      },
+      "CurrentUser" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "SCALE", "ADMIN" ]
           }
         }
       }

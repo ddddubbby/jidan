@@ -1,5 +1,6 @@
 package com.egg.basics;
 
+import com.egg.common.CurrentUser;
 import java.util.List;
 import java.util.Map;
 
@@ -40,9 +41,8 @@ public class OptionsController {
     }
 
     @PutMapping("/api/settings")
-    public OptionList updateSettings(@Valid @RequestBody OptionsForm form) {
-        // 操作人：登录拦截（P1-2）合入后改传当前登录人，下同
-        service.update(form.values(), null, Group.SETTING);
+    public OptionList updateSettings(@Valid @RequestBody OptionsForm form, CurrentUser me) {
+        service.update(form.values(), me.id(), Group.SETTING);
         return settings();
     }
 
@@ -52,8 +52,8 @@ public class OptionsController {
     }
 
     @PutMapping("/api/options")
-    public OptionList updateOptions(@Valid @RequestBody OptionsForm form) {
-        service.update(form.values(), null, Group.ADAPTER, Group.POLICY);
+    public OptionList updateOptions(@Valid @RequestBody OptionsForm form, CurrentUser me) {
+        service.update(form.values(), me.id(), Group.ADAPTER, Group.POLICY);
         return options();
     }
 }

@@ -24,9 +24,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /**
  * P1-3 验收：同一天同一规格重复录入是覆盖；设置读写一致；没存过时打印时机为逐箱、标签内容为精简、
  * 两个设备型号为当前唯一型号，设备型号存入可选值之外的值被拒；没存过的选项返回默认值，改后立即生效。
- * 不依赖登录拦截（P1-2 并行开发，尚未合入）。
+ * 接口都是仅管理员，下面用初始管理员的 token 调；并核对操作人（updated_by）记的是登录的管理员。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"egg.admin.phone=13700000001", "egg.admin.password=boss-pass-1", "egg.admin.name=测试管理员"})
 @Import(MySqlTestConfig.class)
 class BasicsApiTest {
 
@@ -36,6 +37,21 @@ class BasicsApiTest {
     JdbcTemplate jdbc;
     @Autowired
     OptionService options;
+
+    private static volatile String adminToken;
+
+    @BeforeEach
+    void loginAsAdmin() {
+        if (adminToken == null) {
+            adminToken = http.postForObject("/api/auth/login",
+                    Map.of("phone", "13700000001", "password", "boss-pass-1", "client", "WEB"), JsonNode.class)
+                    .get("token").asText();
+            http.getRestTemplate().getInterceptors().add((req, body, ex) -> {
+                req.getHeaders().set("Authorization", "Bearer " + adminToken);
+                return ex.execute(req, body);
+            });
+        }
+    }
 
     @BeforeEach
     void clean() {
