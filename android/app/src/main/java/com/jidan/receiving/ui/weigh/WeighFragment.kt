@@ -57,6 +57,7 @@ class WeighFragment : Fragment() {
         b.changeTare.setOnClickListener { vm.openTarePicker() }
         b.retryTare.setOnClickListener { vm.retryTare() }
         b.startRetry.setOnClickListener { vm.startFromDraft() }
+        b.tareWeighBtn.setOnClickListener { vm.weighEmptyBox() }
         b.cancelReweigh.setOnClickListener { vm.cancelReweigh() }
         b.recordBtn.setOnClickListener { vm.pressRecord() }
         b.openLedger.setOnClickListener {
@@ -158,10 +159,13 @@ class WeighFragment : Fragment() {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 ).also { it.topMargin = 8 }
                 btn.isAllCaps = false
-                btn.text = "${t.name}\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()} kg"
+                val tag = if (t.id == state.lastTareId) " · 上一单用的" else ""
+                btn.text = "${t.name}$tag\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()} kg"
                 btn.setOnClickListener { vm.selectTare(t) }
                 b.tareChoices.addView(btn)
             }
+            b.tareWeighBtn.isEnabled = state.emptyBox.available
+            b.tareWeighBtn.text = com.jidan.receiving.core.EmptyBoxTare.label(state.emptyBox)
         }
 
         b.netLabel.text = if (state.k > 1) {
