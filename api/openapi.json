@@ -2170,62 +2170,6 @@
         },
         "required" : [ "productId", "specId", "vendorId" ]
       },
-      "Result" : {
-        "type" : "object",
-        "properties" : {
-          "boxCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "totalKg" : {
-            "type" : "number"
-          },
-          "rawAvgKg" : {
-            "type" : "number"
-          },
-          "avgKg" : {
-            "type" : "number"
-          },
-          "standardNetKg" : {
-            "type" : "number"
-          },
-          "basePrice" : {
-            "type" : "number"
-          },
-          "ruleId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "ruleName" : {
-            "type" : "string"
-          },
-          "coefficient" : {
-            "type" : "number"
-          },
-          "tailKg" : {
-            "type" : "number"
-          },
-          "priceDiff" : {
-            "type" : "number"
-          },
-          "unitPrice" : {
-            "type" : "number"
-          },
-          "amount" : {
-            "type" : "number"
-          },
-          "roundMode" : {
-            "type" : "string",
-            "enum" : [ "HALF", "FLOOR", "CEIL" ]
-          },
-          "issues" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          }
-        }
-      },
       "FailForm" : {
         "type" : "object",
         "properties" : {
