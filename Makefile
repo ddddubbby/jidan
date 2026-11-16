@@ -19,7 +19,7 @@ verify-web:
 
 verify-android:
 	@if [ -d android ]; then \
-		cd android && ./gradlew :core:test :app:assembleSimDebug :app:assembleRealDebug; \
+		cd android && ./gradlew :core:test :device:testDebugUnitTest :app:testSimDebugUnitTest :app:assembleSimDebug :app:assembleRealDebug; \
 	else \
 		echo "[跳过] android/ 尚未建立（P0-4），APP 未验证"; \
 	fi
