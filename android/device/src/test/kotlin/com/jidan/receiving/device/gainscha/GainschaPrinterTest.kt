@@ -159,9 +159,8 @@ class GainschaPrinterTest {
     }
 
     @Test
-    fun missingSdkNeverPretendsToConnectOrPrint() = runTest {
-        val p = GainschaPrinter(GainschaSdkMissing(), backgroundScope, "AA:01", log = { logs += it })
-        assertTrue(p.search().isEmpty())
+    fun failedConnectNeverPretendsToPrint() = runTest {
+        val p = printer(ScriptedSdk().apply { connectResult = false }, paired = "AA:01")
         p.connect("AA:01")
         assertEquals(LinkStatus.LOST, p.linkStatus.value)
         assertEquals(PrintOutcome.Failure("打印机未连接"), p.print(PrintPayload.Text("CLS\r\n")))
