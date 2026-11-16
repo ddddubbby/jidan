@@ -56,6 +56,12 @@ data class FarmerDto(
     val matchedPhones: List<String> = emptyList(),
 )
 
+data class RuleBindTargetDto(
+    val id: Long,
+    val name: String? = null,
+    val tail4: String? = null,
+)
+
 data class RuleViewDto(
     val id: Long,
     val name: String,
@@ -66,6 +72,20 @@ data class RuleViewDto(
     val specName: String? = null,
     val coef: Double? = null,
     val enabled: Boolean = true,
+    val binds: List<RuleBindTargetDto> = emptyList(),
+    val bindCount: Int = 0,
+)
+
+/** `PUT /api/farmers/{id}/rule-binding`；[ruleId] 为空即解绑。 */
+data class RuleBindingRequest(
+    val productId: Long,
+    val specId: Long,
+    val ruleId: Long? = null,
+)
+
+/** 磅秤员改系数：`PUT /api/rules/{id}` 只传 coef。 */
+data class RuleCoefPatch(
+    val coef: Double,
 )
 
 data class ArchiveRowDto(
