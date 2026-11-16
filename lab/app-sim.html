@@ -1,0 +1,1877 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>收蛋 APP 模拟</title>
+<style>
+:root {
+  --bg: #eceee9;
+  --surface: #ffffff;
+  --sunken: #f4f5f2;
+  --ink: #14181a;
+  --ink-2: #4a5357;
+  --line: #d5d9d3;
+  --edge: #8b9590;
+  --accent: #0b6b3a;
+  --accent-press: #095a31;
+  --ok-bg: #e1f2e6;
+  --ok-ink: #0a5a31;
+  --warn-bg: #fff1cf;
+  --warn-ink: #734600;
+  --err-bg: #fde4e1;
+  --err-ink: #9c1f18;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+.stage {
+  display: flex; flex-wrap: wrap; gap: 32px;
+  justify-content: center; align-items: flex-start;
+  padding: 24px 16px 96px;
+}
+
+/* ---------- 手机 ---------- */
+.phone {
+  position: relative; flex: none;
+  width: 390px; max-width: 100%; height: 800px;
+  background: var(--surface);
+  border: 10px solid #1d2123; border-radius: 40px;
+  overflow: hidden;
+}
+#app { height: 100%; display: flex; flex-direction: column; }
+.phone[data-large] #app, .phone[data-large] .sheet { zoom: 1.3; }
+
+.topbar { flex: none; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.topbar-row { display: flex; align-items: flex-start; gap: 4px; }
+.topbar h1 { margin: 0; min-width: 0; font-size: 18px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.topbar p { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.back {
+  flex: none; width: 44px; height: 44px; margin: -10px 0 -10px -12px;
+  border: 0; border-radius: 12px; background: none;
+  font-size: 28px; line-height: 1; color: var(--ink);
+}
+.back:active { background: var(--sunken); }
+.body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; }
+.footer {
+  flex: none; padding: 12px 16px 16px;
+  border-top: 1px solid var(--line); background: var(--surface);
+  display: flex; gap: 10px;
+}
+.pair { display: flex; gap: 10px; }
+.pair > * { flex: 1; min-width: 0; }
+
+.label { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.group { margin-bottom: 18px; }
+.input, .select {
+  width: 100%; height: 52px; padding: 0 14px;
+  border: 1.5px solid var(--edge); border-radius: 12px;
+  background: var(--surface); font-size: 18px;
+}
+.input:focus-visible, .select:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  flex: 1; min-height: 56px; padding: 6px 16px;
+  border: 1.5px solid var(--edge); border-radius: 14px;
+  background: var(--surface); font-size: 17px; font-weight: 600; line-height: 1.25;
+  transition: transform 120ms var(--ease-out);
+}
+.btn:active { transform: scale(0.97); background: var(--sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:active { background: var(--accent-press); }
+.btn.danger { color: var(--err-ink); border-color: var(--err-ink); }
+.btn.dark { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.ghost-link { border-color: transparent; background: none; color: var(--ink-2); }
+.btn.ghost-link.red { color: var(--err-ink); }
+.btn.small { min-height: 44px; font-size: 15px; flex: none; }
+.btn:disabled { background: #e3e6e1; border-color: #e3e6e1; color: #6b7471; cursor: default; transform: none; }
+.pair > .btn { flex: 1 1 0; }
+
+.seg { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px; }
+.seg button {
+  min-height: 48px; padding: 6px 10px; overflow-wrap: anywhere;
+  border: 1.5px solid var(--edge); border-radius: 12px;
+  background: var(--surface); font-size: 16px; font-weight: 600; line-height: 1.25;
+  transition: transform 120ms var(--ease-out);
+}
+.seg button:active { transform: scale(0.97); }
+.seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.seg button small { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--ok-ink); }
+.seg button small.warn { color: var(--warn-ink); }
+.seg button[aria-pressed="true"] small { color: #fff; }
+
+/* 建单步骤：同一时间只展开一步，填完的收成一行 */
+.steps { list-style: none; margin: 0; padding: 0; }
+.step { position: relative; padding: 0 0 6px 46px; }
+.step:not(:last-child)::before {                       /* 串起各步的竖线 */
+  content: ""; position: absolute; left: 15px; top: 34px; bottom: -2px; width: 2px; background: var(--line);
+}
+.step-num {
+  position: absolute; left: 2px; top: 3px; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 2px solid #a3aba6; background: var(--surface); color: #6b7471;
+  font-size: 15px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.step-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 34px; color: #6b7471; }
+.step[data-state="done"] .step-num { border-color: var(--ok-bg); background: var(--ok-bg); color: var(--ok-ink); }
+.step[data-state="active"] .step-num { border-color: var(--accent); background: var(--accent); color: #fff; }
+.step-card {
+  margin: 0 0 10px -10px; padding: 0 12px 14px 10px;
+  border: 2px solid var(--accent); border-radius: 14px; background: #f3f9f5;
+}
+.step[data-state="active"] .step-title { font-size: 17px; font-weight: 700; color: var(--ok-ink); line-height: 34px; }
+.step-done { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 10px; padding: 4px 0 10px; min-height: 44px; }
+.step-done .hints { grid-column: 1 / -1; }
+.step-done .step-label { font-size: 13px; color: var(--ink-2); line-height: 26px; }
+.step-done .row-main { margin-top: -2px; }
+.step-done .btn { flex: none; min-height: 40px; padding: 4px 14px; font-size: 15px; }
+.step-hint { display: block; margin: 4px 0 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.step-hint.ok { color: var(--ok-ink); }
+.step-hint.warn { color: var(--warn-ink); }
+.step .list { margin-top: 4px; background: var(--surface); }
+.step .input { border-color: var(--accent); }
+.btn.todo { background: var(--surface); border-color: var(--accent); color: var(--ok-ink); }
+
+/* —— 建单页：字号层级 13 / 15 / 17 / 19 / 26，步骤行等高，竖线随进度变绿 —— */
+.scr-create .topbar { padding: 20px 20px 14px; border-bottom: 0; }
+.scr-create .topbar h1 { font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; }
+.scr-create .topbar p { margin-top: 4px; font-size: 15px; }
+.scr-create .body { display: flex; flex-direction: column; padding: 4px 20px 16px; }
+.scr-create .step { padding-left: 50px; }
+.scr-create .step:not(:last-child)::before { left: 15px; top: 46px; bottom: -14px; background: var(--line); }
+.scr-create .step[data-state="done"]:not(:last-child)::before { background: var(--accent); }
+.scr-create .step-num { left: 0; top: 14px; width: 32px; height: 32px; font-size: 16px; }
+.scr-create .step[data-state="active"] .step-num { top: 18px; }
+.scr-create .step[data-state="done"] .step-num { top: 20px; border-color: var(--accent); background: var(--accent); color: #fff; }
+.scr-create .step-title { font-size: 17px; font-weight: 600; line-height: 60px; color: #7a837f; }
+.scr-create .step[data-state="active"] .step-title { font-size: 19px; line-height: 28px; margin: 0 0 12px; }
+.scr-create .step-card { margin: 8px 0 14px -12px; padding: 14px 14px 16px 12px; border-radius: 16px; }
+.step-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px;
+  width: 100%; min-height: 72px; padding: 12px 0; border: 0; background: none; text-align: left;
+}
+.step-row:active { background: var(--sunken); }
+.step-row .step-label { display: block; font-size: 13px; line-height: 18px; color: var(--ink-2); }
+.step-row .step-value { display: block; font-size: 19px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.step-row .step-sub { display: block; font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.step-row .chev { font-size: 24px; line-height: 1; color: #a3aba6; }
+.step-row .hints { grid-column: 1 / -1; }
+.scr-create .seg button { min-height: 56px; font-size: 17px; border-radius: 14px; }
+.scr-create .seg button small { font-size: 13px; }
+.scr-create .list { border-radius: 14px; }
+.scr-create .row-btn { min-height: 64px; }
+.scr-create .row-main { font-size: 17px; }
+.scr-create .row-sub { font-size: 15px; }
+.scr-create .label { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.scr-create .note { font-size: 15px; }
+.scr-create .footer { border-top: 0; padding: 8px 20px 20px; }
+.scr-create .footer .btn { min-height: 60px; font-size: 18px; border-radius: 16px; }
+.dev-card { margin-top: auto; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.dev-wrap { padding-top: 24px; margin-top: auto; }
+.dev-line {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 16px;
+  border: 0; background: var(--surface); text-align: left; font-size: 17px;
+}
+.dev-line + .dev-line { border-top: 1px solid var(--line); }
+.dev-line:active { background: var(--sunken); }
+.dev-line .name { font-weight: 600; white-space: nowrap; }
+.dev-line .model { flex: 1; min-width: 0; font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dev-line .st { flex: none; font-size: 15px; font-weight: 600; }
+.dev-line .st.ok { color: var(--ok-ink); } .dev-line .st.warn { color: var(--warn-ink); } .dev-line .st.err { color: var(--err-ink); } .dev-line .st.busy { color: var(--ink-2); }
+.dev-line .dot { margin-right: 0; }
+.dev-line .dot.warn { background: var(--warn-ink); }
+/* 正向反馈：填完一步圆标弹一下；全部填完按钮亮起来。一天几十次，所以轻、快 */
+@keyframes pop { from { transform: scale(0.55); } to { transform: scale(1); } }
+.step-num.pop { animation: pop 220ms var(--ease-out); }
+@keyframes ready { from { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(11, 107, 58, 0.45); } to { transform: none; box-shadow: 0 0 0 12px rgba(11, 107, 58, 0); } }
+.btn.ready-in { animation: ready 260ms var(--ease-out); }
+@keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.otp.bad { animation: shake 360ms ease-out; }
+.otp.bad .cell { border-color: var(--err-ink); color: var(--err-ink); }
+
+.list { list-style: none; margin: 8px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.list li + li { border-top: 1px solid var(--line); }
+.row-btn {
+  display: flex; width: 100%; min-height: 60px; padding: 8px 14px;
+  align-items: center; justify-content: space-between; gap: 12px;
+  border: 0; background: var(--surface); text-align: left;
+}
+.row-btn:active { background: var(--sunken); }
+.row-btn[aria-pressed="true"] { background: var(--ok-bg); }
+.row-text { min-width: 0; }
+.row-main { font-size: 17px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.row-sub { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.row-sub b { color: var(--ink); font-weight: 700; }
+.phones { display: flex; flex-wrap: wrap; gap: 0 14px; }
+.phones span { white-space: nowrap; }
+.row-side { flex: none; white-space: nowrap; }
+
+.note { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; overflow-wrap: anywhere; }
+.note.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.note.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.note.err { background: var(--err-bg); color: var(--err-ink); }
+.muted { color: var(--ink-2); font-size: 14px; }
+.nb { white-space: nowrap; }
+
+/* 称重屏 */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: var(--ok-bg); color: var(--ok-ink);
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chip::after { content: ""; position: absolute; inset: -9px -4px; }   /* 把可点范围撑到 44px 高 */
+.chip.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.chip.err { background: var(--err-bg); color: var(--err-ink); }
+
+.scale {
+  container-type: inline-size;
+  padding: 14px 16px 12px; border-radius: 16px;
+  background: var(--sunken); border: 2px solid var(--line);
+}
+.scale[data-state="recorded"] { border-color: var(--accent); background: var(--ok-bg); }
+.scale[data-state="hold"] { border-color: var(--warn-ink); background: var(--warn-bg); }
+.scale[data-state="off"] { border-color: var(--err-ink); background: var(--err-bg); }
+.scale[data-state="locked"] .weight { opacity: 0.3; }
+.scale[data-state="unstable"] #weight { color: var(--ink-2); }
+.scale-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.scale[data-state="recorded"] #stateText { color: var(--ok-ink); }
+.scale[data-state="off"] #stateText { color: var(--err-ink); }
+.scale[data-state="hold"] #stateText { color: var(--warn-ink); }
+.scale-off { display: grid; gap: 10px; padding: 18px 0 6px; }
+.scale-off .btn { min-height: 64px; font-size: 19px; background: var(--surface); border-color: var(--err-ink); color: var(--err-ink); }
+.step-card.solo { margin: 0 0 14px; padding: 0 12px 14px; }
+.tare-pick { display: grid; gap: 8px; }
+.tare-pick .weigh-tare { min-height: 52px; font-size: 17px; border-width: 1.5px; }
+.tare-pick .weigh-tare:disabled { background: transparent; border: 1.5px dashed var(--edge); color: var(--ink-2); }
+.weigh-tare .r { display: inline-block; min-width: 4.2em; text-align: left; font-variant-numeric: tabular-nums; }
+.badge {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; padding: 0 6px;
+  border-radius: 11px; background: var(--warn-ink); color: #fff; font-size: 13px; font-weight: 700; vertical-align: 1px;
+}
+.btn.warnfix { background: var(--warn-bg); border-color: var(--warn-ink); color: var(--warn-ink); }
+.preview { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 12px; margin: 0 0 12px; border-radius: 10px; background: var(--sunken); font-variant-numeric: tabular-nums; }
+.preview b { font-size: 20px; display: inline-block; min-width: 3.6em; text-align: right; }
+.preview s { color: var(--ink-2); }
+.tagline { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+.tagline.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.tagline.ok { background: var(--ok-bg); color: var(--ok-ink); }
+td .btn.small { min-height: 40px; }
+/* 手机尾号：4 个格子，一眼看出只要 4 位 */
+.otp { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: 286px; margin: 0 0 4px; }
+.otp input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; caret-color: transparent; border: 0; }
+.otp .cell {
+  height: 64px; display: grid; place-items: center; border: 1.5px solid var(--edge); border-radius: 14px;
+  background: var(--surface); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.otp:focus-within .cell.cur { border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.18); }
+.otp:focus-within .cell.cur:empty::after { content: ""; width: 2px; height: 28px; background: var(--accent); }
+.weight {
+  display: flex; align-items: baseline; justify-content: flex-end; gap: 6px;
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
+  font-size: min(84px, 25cqi); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.weight small { font-size: 26px; font-weight: 600; letter-spacing: 0; color: var(--ink-2); }
+.tare-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; }
+.tare-line .muted { min-width: 0; overflow-wrap: anywhere; }
+
+.event { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 17px; font-weight: 600; background: var(--sunken); color: var(--ink-2); overflow-wrap: anywhere; }
+.event.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.event.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.event.err { background: var(--err-bg); color: var(--err-ink); }
+.event .btn { display: block; width: 100%; margin-top: 10px; }
+
+.stepper { flex: none; display: flex; align-items: center; gap: 10px; }
+.stepper button {
+  width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--edge);
+  background: var(--surface); font-size: 24px; font-weight: 600; line-height: 1;
+  transition: transform 120ms var(--ease-out);
+}
+.stepper button:active { transform: scale(0.97); background: var(--sunken); }
+.stepper output { min-width: 64px; text-align: center; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.between > :first-child { min-width: 0; }
+
+.totals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-top: 14px; }
+.stat { padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.stat dt { font-size: 13px; color: var(--ink-2); }
+.stat dd { margin: 0; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.stat dd small { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+
+/* —— 称重页：沿用第 2 页的字号层级；称重框是主角，下面是最近几箱 —— */
+.scr-weigh .topbar { padding: 14px 16px 12px; }
+.scr-weigh .topbar h1 { font-size: 19px; line-height: 1.35; }
+.scr-weigh .topbar p { font-size: 15px; margin-top: 2px; }
+.scr-weigh .chips { margin-top: 10px; }
+.scr-weigh .scale { padding: 14px 16px; border-radius: 18px; }
+.scr-weigh .scale-top { font-size: 15px; }
+.scr-weigh .weight { font-size: min(96px, 28cqi); margin: 2px 0 4px; }
+.scale[data-state="idle"] #weight, .scale[data-state="unstable"] #weight { color: #9aa29e; }
+.scale-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; border-top: 1px solid rgba(20, 24, 26, 0.08); }
+.scale-row .k { font-size: 15px; color: var(--ink-2); flex: none; }
+.scale-row .v { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.scale-row .btn.small { min-height: 40px; padding: 4px 14px; }
+.scale-row .stepper { gap: 8px; }
+.scale-row .stepper button { width: 44px; height: 40px; font-size: 22px; background: transparent; }
+.scale-row .stepper output { min-width: 40px; font-size: 19px; }
+.recent { margin-top: 18px; }
+.recent-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 44px; }
+.recent-head { align-items: flex-start; padding-top: 4px; }
+.recent-stats { display: flex; flex-direction: column; min-width: 0; }
+.recent-head .sum { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.35; }
+.avg { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; line-height: 1.5; }
+.avg .k { font-size: 15px; color: var(--ink-2); }
+.avg b { font-size: 19px; font-weight: 700; }
+.avg .raw { font-size: 13px; color: var(--ink-2); }
+.avg.zero, .avg.zero b { color: #9aa29e; }
+.recent-head .btn.small { align-self: center; }
+.recent-head .btn.small { min-height: 40px; padding: 4px 12px; border: 0; background: none; color: var(--ok-ink); font-size: 15px; }
+.recent .list { margin-top: 4px; border-radius: 14px; }
+.box-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px 6px 14px; }
+.box-row .seq { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.box-row .net { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.box-row .net .p { margin-left: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.box-row .net .p.no { color: var(--warn-ink); }
+.box-row .btn.small { min-height: 40px; padding: 4px 12px; }
+.box-row.grp { background: #fbfcfa; }
+button.box-row { width: 100%; border: 0; background: var(--surface); text-align: left; font: inherit; color: inherit; }
+button.box-row.grp { background: #fbfcfa; }
+button.box-row:active { background: var(--sunken); }
+.box-row .chev { color: #a3aba6; font-size: 20px; text-align: right; padding-right: 6px; }
+.mtag { display: inline-block; margin-left: 8px; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--sunken); color: var(--ink-2); font-size: 12px; font-weight: 600; vertical-align: 2px; }
+.scale[data-state="ask"] { border-color: var(--warn-ink); background: var(--warn-bg); }
+.scale[data-state="ask"] #stateText { color: var(--warn-ink); }
+.ask-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0 4px; }
+.ask-row .btn { min-height: 52px; font-size: 18px; background: var(--surface); border-color: var(--warn-ink); color: var(--ink); }
+.reweigh-row .v { color: var(--warn-ink); }
+.box-info { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
+.box-info .big { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.box-acts { display: grid; gap: 10px; margin-top: 16px; }
+.box-acts .btn { min-height: 52px; }
+.kpick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 4px 0 6px; }
+.kpick button { min-height: 44px; border: 1.5px solid var(--edge); border-radius: 10px; background: var(--surface); font-size: 17px; font-weight: 600; }
+.kpick button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.print-prog { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--sunken); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.print-prog .bar { height: 6px; margin-top: 8px; border-radius: 3px; background: #dfe3dd; overflow: hidden; }
+.print-prog .bar i { display: block; height: 100%; background: var(--ink-2); }
+.log tr.tap { cursor: pointer; }
+.log tr.tap:active td { background: var(--sunken); }
+.log .pend { font-size: 13px; color: var(--ink-2); }
+.box-row.slot i { display: block; height: 10px; border-radius: 5px; background: #eef0ec; }
+.box-row.slot i.w1 { width: 3.2em; } .box-row.slot i.w2 { width: 5.5em; }
+.recent-head .sum.zero { color: #9aa29e; }
+.scr-weigh .event { font-size: 15px; padding: 10px 14px; }
+.scr-weigh .footer { border-top: 0; padding: 8px 16px 16px; }
+dl { margin: 0; }
+
+/* 汇总 */
+.sheet-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.sheet-table th { text-align: left; vertical-align: top; font-weight: 500; color: var(--ink-2); padding: 9px 8px 9px 0; width: 38%; }
+.sheet-table td { text-align: right; font-weight: 600; padding: 9px 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sheet-table tr + tr { border-top: 1px solid var(--line); }
+.sheet-table tr.total td { font-size: 28px; font-weight: 700; }
+.card { border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; }
+.how { margin: 10px 0 0; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* —— 汇总页：金额主卡 + 次要明细，入口挂在它影响的那一行上 —— */
+.back-text { display: inline-flex; align-items: center; min-height: 44px; margin: -6px 0 2px -8px; padding: 0 12px 0 8px; border: 0; border-radius: 12px; background: none; color: var(--ink); font-size: 17px; font-weight: 600; }
+.back-text:active { background: var(--sunken); }
+.scr-summary .topbar, .scr-done .topbar { padding: 14px 16px 12px; }
+.scr-summary .topbar h1 { font-size: 19px; line-height: 1.35; }
+.scr-summary .topbar p { font-size: 15px; margin-top: 2px; }
+.scr-summary .body { display: flex; flex-direction: column; }
+.money-card { container-type: inline-size; padding: 16px 18px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--sunken); }
+.money-card .k { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.amt { display: flex; align-items: baseline; gap: 6px; margin: 2px 0 4px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: min(64px, calc(100cqi * 1.55 / var(--chars, 5))); line-height: 1.1; }
+.amt small { font-size: 19px; font-weight: 600; letter-spacing: 0; color: var(--ink-2); }
+.money-card .calc { font-size: 17px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.money-card.warn { background: var(--warn-bg); border-color: var(--warn-ink); }
+.money-card .fix { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.money-card .fix .tagline { font-size: 15px; }
+.facts { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.facts > li { border-bottom: 1px solid var(--line); }
+.fact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; width: 100%; min-height: 64px; padding: 10px 2px; border: 0; background: none; text-align: left; }
+button.fact:active { background: var(--sunken); }
+.fact .k { display: block; font-size: 13px; line-height: 18px; color: var(--ink-2); }
+.fact .v { display: block; font-size: 17px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.fact .v .n { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fact .f { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.fact .chev { font-size: 24px; line-height: 1; color: #a3aba6; }
+.scr-summary .footer { border-top: 0; padding: 8px 16px 16px; }
+.scr-summary .footer .btn { min-height: 60px; font-size: 18px; border-radius: 16px; }
+.sum-tail { margin-top: auto; padding-top: 14px; }
+
+/* —— 完成页：偏上居中；只有对勾动一下 —— */
+.scr-done .body { display: flex; flex-direction: column; }
+.done-main { container-type: inline-size; margin: auto 0; padding: 24px 4px 9vh; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.done-check { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 34px; font-weight: 700; animation: doneIn 220ms var(--ease-out) both; }
+@keyframes doneIn { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fadeOnly { from { opacity: 0; } to { opacity: 1; } }
+.done-res { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; font-size: 19px; }
+.tagline.gray { background: var(--sunken); color: var(--ink-2); }
+.done-name { margin: 18px 0 0; font-size: 19px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.done-main .amt { justify-content: center; margin: 4px 0 2px; }
+.done-line { min-height: 44px; padding: 0 8px; border: 0; border-radius: 12px; background: none; font-size: 17px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.done-line:active { background: var(--sunken); }
+.done-line .chev { margin-left: 6px; color: #a3aba6; font-size: 20px; }
+.done-sub { margin: 0; font-size: 17px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.done-batch { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); }
+.scr-done .footer, .scr-login .footer { border-top: 0; padding: 8px 16px 16px; }
+.scr-done .footer .btn, .scr-login .footer .btn { min-height: 60px; font-size: 18px; border-radius: 16px; }
+
+/* —— 登录 —— */
+.scr-login .body { display: flex; flex-direction: column; padding: 16px 24px; }
+.login-main { margin: auto 0; padding: 24px 0 8vh; }
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
+.brand .mark { width: 40px; height: 50px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: var(--accent); }
+.brand b { font-size: 26px; letter-spacing: 0.04em; }
+.lfield { display: block; margin-bottom: 18px; }
+.lfield .k { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.lfield input { width: 100%; height: 56px; padding: 0 14px; border: 1.5px solid var(--edge); border-radius: 14px; background: var(--surface); font-size: 19px; font-variant-numeric: tabular-nums; }
+.lfield input:focus-visible { outline: none; border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.18); }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 56px; }
+.eye { position: absolute; right: 6px; top: 6px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--ink-2); }
+.lfields.bad input { border-color: var(--err-ink); }
+.lfields.bad { animation: shake 360ms ease-out; }
+.lerr { min-height: 22px; margin: -10px 0 0; font-size: 15px; font-weight: 600; color: var(--err-ink); }
+.acct { flex: none; max-width: 42%; min-height: 44px; margin: -6px -8px 0 auto; padding: 0 8px; border: 0; background: none; color: var(--ink-2); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct:active { color: var(--ink); }
+
+/* 底部弹层：进来 250ms，出去 200ms；把手和标题栏可以往下拖着关 */
+.scrim {
+  position: absolute; inset: 0; background: rgba(10, 14, 16, 0.45);
+  opacity: 0; visibility: hidden;
+  transition: opacity 200ms ease, visibility 0s linear 200ms;
+}
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%;
+  display: flex; flex-direction: column;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  transform: translateY(100%); visibility: hidden;
+  transition: transform 200ms var(--ease-drawer), visibility 0s linear 200ms;
+}
+.phone[data-sheet] .scrim { opacity: 1; visibility: visible; transition: opacity 250ms ease, visibility 0s; }
+.phone[data-sheet] .sheet { transform: none; visibility: visible; transition: transform 250ms var(--ease-drawer), visibility 0s; }
+.sheet-grab { flex: none; display: grid; place-items: center; height: 20px; touch-action: none; cursor: grab; }
+.sheet-grab span { width: 40px; height: 5px; border-radius: 3px; background: #c9cec8; }
+.sheet-head { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 8px 8px 16px; touch-action: none; cursor: grab; }
+.sheet-head h2 { margin: 0; min-width: 0; font-size: 19px; line-height: 1.35; overflow-wrap: anywhere; }
+.sheet-close { flex: none; min-width: 64px; min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--ink-2); font-size: 17px; font-weight: 600; }
+.sheet-close:active { color: var(--ink); }
+.sheet-body { overflow-y: auto; padding: 0 16px 20px; overscroll-behavior: contain; }
+.sheet .label { font-size: 15px; margin: 0 0 8px; }
+.sheet .seg button { min-height: 56px; font-size: 17px; border-radius: 14px; }
+.sheet .seg button small { font-size: 13px; }
+.sheet .row-main { font-size: 17px; }
+.sheet .row-sub, .sheet .muted { font-size: 15px; }
+.sheet .btn.small { min-height: 44px; font-size: 15px; }
+.sheet .sheet-table { font-size: 17px; }
+.sheet .sheet-table th { font-size: 15px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.tag { padding: 3px 10px; border-radius: 8px; background: var(--sunken); border: 1px solid var(--line); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.log { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 17px; font-variant-numeric: tabular-nums; }
+.log th { position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 4px; white-space: nowrap; box-shadow: inset 0 -1px 0 var(--line); }
+.log td { padding: 4px 4px; height: 52px; border-top: 1px solid var(--line); white-space: nowrap; }
+.log td .ok { color: var(--ink-2); font-weight: 700; margin-right: 2px; }
+.log .btn.ghost { min-height: 40px; border: 0; background: none; color: var(--ink-2); font-weight: 600; }
+.log .num { font-weight: 700; }
+.log small { font-size: 13px; color: var(--ink-2); }
+.log td:last-child { text-align: right; white-space: normal; }
+.log .btn { min-height: 40px; padding: 4px 12px; }
+.log .unprinted { color: var(--warn-ink); border-color: var(--warn-ink); background: var(--warn-bg); }
+.dev-sec + .dev-sec { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.dev { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0 8px; }
+.dev-btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.dev-extra { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 2px; }
+.dev-read { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: #a3aba6; vertical-align: 1px; }
+.dot.ok { background: var(--accent); }
+.dot.err { background: var(--err-ink); }
+.bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; margin-right: 10px; vertical-align: -1px; }
+.bars i { width: 4px; border-radius: 1px; background: #c9cec8; }
+.bars i:nth-child(1) { height: 5px; } .bars i:nth-child(2) { height: 9px; } .bars i:nth-child(3) { height: 14px; }
+.bars i.on { background: var(--ink); }
+.spin {
+  display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.chip.busy { background: var(--sunken); color: var(--ink-2); }
+.btn.big { width: 100%; min-height: 64px; font-size: 19px; }
+.step-card.lost { border-color: var(--err-ink); background: var(--err-bg); }
+.step-card.lost .step-title { color: var(--err-ink) !important; }
+
+/* ---------- 模拟台 ---------- */
+.bench { flex: 1 1 320px; max-width: 400px; }
+.bench h2 { margin: 0 0 4px; font-size: 20px; }
+.bench > p { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.panel h3 { margin: 0 0 10px; font-size: 15px; }
+.panel .btn { min-height: 44px; font-size: 15px; }
+.panel .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 15px; padding: 4px 0; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.bench .select { height: 44px; font-size: 15px; margin-bottom: 10px; }
+#platform { font-size: 14px; color: var(--ink-2); margin: 0 0 10px; font-variant-numeric: tabular-nums; }
+.sticker {
+  aspect-ratio: 60 / 40; width: 100%; max-width: 300px; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  padding: 10px 12px; border: 1px dashed var(--edge); border-radius: 6px;
+  background: #fff; color: #000; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere;
+}
+.sticker b { font-size: 14px; }
+.sticker svg { width: 84px; height: 84px; }
+.sticker-empty { color: var(--ink-2); font-size: 14px; }
+
+/* 测试数据开关：实验用的外壳，不属于设计 */
+.lab-toggle {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10;
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: #d6d9d4; border-radius: 10px; max-width: calc(100vw - 16px);
+  font: 13px/1 system-ui, sans-serif;
+}
+.lab-toggle button { border: 0; border-radius: 7px; background: none; padding: 8px 10px; color: #333; white-space: nowrap; }
+.lab-toggle button[aria-pressed="true"] { background: #fff; color: #000; }
+.lab-toggle .sep { width: 1px; align-self: stretch; margin: 4px; background: #aeb3ac; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .seg button, .stepper button { transition: none; }
+  .step-card, .step-num.pop, .btn.ready-in, .otp.bad, .lfields.bad { animation: none !important; }
+  .done-check { animation-name: fadeOnly; }
+  .btn:active, .seg button:active, .stepper button:active { transform: none; }
+  .sheet, .phone[data-sheet] .sheet, .scrim, .phone[data-sheet] .scrim { transition: visibility 0s; }
+}
+</style>
+</head>
+<body>
+<main class="stage">
+  <section class="phone" id="phone" aria-label="收蛋 APP">
+    <div id="app"></div>
+    <div class="scrim" data-act="closeSheet"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  </section>
+
+  <aside class="bench" aria-label="模拟硬件">
+    <h2>模拟台</h2>
+    <p>这一侧不属于 APP，用来代替真实的秤和打印机。</p>
+
+    <div class="panel">
+      <h3>手机</h3>
+      <label class="check"><input type="checkbox" id="bt" checked> 蓝牙已打开</label>
+      <label class="check"><input type="checkbox" id="perm" checked> 已允许 APP 使用蓝牙</label>
+      <div class="row" style="margin:10px 0 0"><button class="btn" data-hw="unpair">清除配对（模拟第一次使用）</button></div>
+    </div>
+
+    <div class="panel">
+      <h3>账号</h3>
+      <p class="muted" style="margin:0 0 8px">磅秤员 139 0000 1111 / egg123<br>管理员 139 0000 2222 / admin123</p>
+      <div class="row" style="margin:0">
+        <button class="btn" data-hw="logoutBench">退出登录</button>
+        <button class="btn" data-hw="expire">登录失效</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>电子秤台面</h3>
+      <p id="platform"></p>
+      <select class="select" id="weightSource" aria-label="箱重来源">
+        <option value="case">按验收算例（李四 10 箱，共 460.5kg）</option>
+        <option value="random">随机重量（44.5–47.5kg）</option>
+      </select>
+      <select class="select" id="placeN" aria-label="一次放几箱">
+        <option value="1">一次放 1 箱</option><option value="2">一次放 2 箱</option><option value="3">一次放 3 箱</option>
+        <option value="5h">一次放 5 箱（偏重，识别不准）</option>
+      </select>
+      <div class="row">
+        <button class="btn primary" data-hw="next">放上去</button>
+        <button class="btn" data-hw="remove">拿走</button>
+        <button class="btn" data-hw="empty">放空箱</button>
+      </div>
+      <label class="check"><input type="checkbox" id="scaleRange" checked> 秤开机，在手机附近</label>
+      <label class="check"><input type="checkbox" id="battLow"> 秤电量低</label>
+      <p class="muted" style="margin:6px 0 0">附近还有两台别人的秤：··B812 上放着一箱（49.2kg），··0C47 空着。</p>
+    </div>
+
+    <div class="panel">
+      <h3>标签打印机</h3>
+      <label class="check"><input type="checkbox" id="printerRange" checked> 打印机开机，在手机附近</label>
+      <select class="select" id="printerState" aria-label="打印机状态" style="margin-top:6px">
+        <option value="ok">正常</option><option value="nopaper">缺纸</option><option value="open">开盖</option><option value="hot">过热</option>
+      </select>
+      <p class="muted" id="printCount" style="margin:8px 0">还没有打印</p>
+      <div id="sticker" class="sticker-empty">最近打印的标签会显示在这里</div>
+    </div>
+
+    <div class="panel">
+      <h3>系统设置（Web 端）</h3>
+      <select class="select" id="setRound" aria-label="均重取整规则">
+        <option value="half">均重取整：四舍五入</option><option value="floor">均重取整：抹零</option><option value="ceil">均重取整：进位</option>
+      </select>
+      <select class="select" id="setPrint" aria-label="标签打印方式" style="margin:0">
+        <option value="batch">标签打印：完成后一次打印</option><option value="each">标签打印：逐箱打印</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h3>试验开关</h3>
+      <label class="check"><input type="checkbox" id="sound" checked> 提示音</label>
+      <label class="check"><input type="checkbox" id="netDown"> 网络故障（提交会失败）</label>
+      <div class="row" style="margin:10px 0 0"><button class="btn" data-hw="setM0">管理员录入缺的基准价</button></div>
+      <div class="row" style="margin:10px 0 0"><button class="btn" data-hw="reset">全部重置</button></div>
+    </div>
+  </aside>
+</main>
+
+<div class="lab-toggle" role="group" aria-label="测试数据">
+  <button data-mode="demo">演示数据</button>
+  <button data-mode="worst">最坏情况</button>
+  <button data-mode="worst100">最坏 + 100 箱</button>
+  <span class="sep"></span>
+  <button data-big>大字号</button>
+</div>
+
+<script>
+/* ============ 数据 ============
+   演示数据里 240/480 规格的标准净含量和基准价是为演示编的。
+   最坏情况是把每个字段换成现实中可能出现的最难看的值，用来找界面的破绽。 */
+const BOX_KG_C = 200; // 模拟台上每只包装箱的真实重量：2kg
+const CASE_NETS_C = [4650, 4580, 4600, 4600, 4600, 4560, 4560, 4560, 4560, 4780];
+
+const DEMO = () => ({
+  farmers: [
+    { id: 'f1', name: '李四', phones: ['13603511234'] },
+    { id: 'f2', name: '王秀英', phones: ['15803511234', '13935107788'] },
+    { id: 'f3', name: '张三', phones: ['13800005678'] },
+    { id: 'f4', name: '李四', phones: ['13099995678'] },
+  ],
+  products: ['粉蛋', '红蛋'],
+  specs: [
+    { id: '240', name: '240枚/箱', w0: 30, m0: 120 },
+    { id: '360', name: '360枚/箱', w0: 45, m0: 180 },
+    { id: '480', name: '480枚/箱', w0: 60, m0: null },
+  ],
+  warehouses: ['1号仓库', '2号仓库'],
+  tares: [
+    { id: 't1', name: '1号包装箱', c: 150 },
+    { id: 't2', name: '2号包装箱', c: 200 },
+    { id: 't3', name: '3号包装箱', c: 250 },
+  ],
+  rules: [
+    { id: 'r1', name: '粉蛋李四收购定价方案', product: '粉蛋', spec: '360', n: 1, farmers: ['f1'] },
+    { id: 'r2', name: '红蛋张三收购定价方案', product: '红蛋', spec: '360', n: 1.5, farmers: ['f3'] },
+    { id: 'r3', name: '粉蛋360通用收购方案', product: '粉蛋', spec: '360', n: 0.8, farmers: [] },
+    { id: 'r5', name: '粉蛋王秀英收购定价方案', product: '粉蛋', spec: '360', n: 1, farmers: ['f2'] },
+    { id: 'r6', name: '红蛋王秀英小箱收购方案', product: '红蛋', spec: '240', n: 0.5, farmers: ['f2'] },
+  ],
+});
+
+const WORST = () => ({
+  farmers: [
+    { id: 'f1', name: '山西省晋中市太谷区鑫源生态养殖专业合作社（第二分社）', phones: ['13603511234', '15503541234', '0354-6221234'] },
+    { id: 'f2', name: '山西省晋中市太谷区鑫源生态养殖专业合作社（第三分社）', phones: ['13903541234'] },
+    { id: 'f3', name: '阿卜杜热合曼·买买提依明', phones: ['18699011234'] },
+    { id: 'f4', name: '李四', phones: ['13111111234'] },
+    { id: 'f5', name: '李四', phones: ['13222221234'] },
+    { id: 'f6', name: '欧', phones: ['13333331234'] },
+    { id: 'f7', name: 'Zhang Wei（张伟）', phones: ['13444441234'] },
+    { id: 'f8', name: '王秀英', phones: ['15803511234', '13935107788'] },
+  ],
+  products: ['粉壳鲜鸡蛋（散养）', '红壳鲜鸡蛋', '绿壳乌鸡蛋', '初生蛋'],
+  specs: [
+    { id: '240', name: '240枚/箱', w0: 30, m0: 121.5 },
+    { id: '300', name: '300枚/箱', w0: 37.5, m0: 152.25 },
+    { id: '360', name: '360枚/箱', w0: 45, m0: 183.5 },
+    { id: '480', name: '480枚/箱', w0: 60, m0: null },
+  ],
+  warehouses: ['太谷 A&B 冷链周转仓（东区 2 号库）', '1号仓库'],
+  tares: [
+    { id: 't1', name: '1号包装箱', c: 150 },
+    { id: 't2', name: '2号包装箱', c: 200 },
+    { id: 't5', name: '5号加厚瓦楞包装箱（带隔板）', c: 275 },
+  ],
+  rules: [
+    { id: 'r1', name: '粉壳散养蛋360枚鑫源合作社2026年冬季收购定价方案（含运费补贴）', product: '粉壳鲜鸡蛋（散养）', spec: '360', n: 1.25, farmers: ['f1'] },
+    { id: 'r3', name: '粉壳散养蛋360枚通用收购方案', product: '粉壳鲜鸡蛋（散养）', spec: '360', n: 0.8, farmers: [] },
+    { id: 'r4', name: '粉壳散养蛋李四收购定价方案', product: '粉壳鲜鸡蛋（散养）', spec: '360', n: 1, farmers: ['f4'] },
+  ],
+});
+
+/* 开关的选择记在网址参数里，刷新不丢；内嵌预览里记不住，会回到演示数据 */
+let MODE = 'demo', BIG = false;
+(function loadPref() {
+  let pref = {};
+  try { const u = new URLSearchParams(location.search); if (u.get('data')) pref = { data: u.get('data'), big: u.get('big') === '1' }; } catch (e) {}
+  if (!pref.data) { try { pref = JSON.parse(localStorage.getItem('eggsim') || '{}'); } catch (e) {} }
+  if (['demo', 'worst', 'worst100'].includes(pref.data)) MODE = pref.data;
+  BIG = !!pref.big;
+})();
+function savePref() {
+  try { const u = new URL(location.href); u.searchParams.set('data', MODE); u.searchParams.set('big', BIG ? '1' : '0'); history.replaceState(null, '', u); } catch (e) {}
+  try { localStorage.setItem('eggsim', JSON.stringify({ data: MODE, big: BIG })); } catch (e) {}
+}
+
+/* 手机附近能搜到的蓝牙设备。mine 是自己这台，其余是隔壁收购点的 */
+const NEARBY = {
+  scale: [
+    { id: 'A3F1', model: 'LS-S2', rssi: 3, mine: true },
+    { id: 'B812', model: 'LS-S2', rssi: 2, staticC: 4920 },
+    { id: '0C47', model: 'LS-S2', rssi: 1, staticC: 0 },
+  ],
+  printer: [
+    { id: '7C20', model: 'GP-M32B', rssi: 3, mine: true },
+    { id: '91D5', model: 'GP-M32B', rssi: 1 },
+  ],
+};
+const PRINTER_ISSUE = { nopaper: '缺纸', open: '开盖', hot: '过热' };
+
+/* 磅秤员账号由管理员在 Web 端开；这里是模拟用的测试账号（模拟台上有列出） */
+const ACCOUNTS = [
+  { phone: '13900001111', pw: 'egg123', name: '张师傅', role: 'scale' },
+  { phone: '13900002222', pw: 'admin123', name: '王会计', role: 'admin' },
+];
+let SESSION = { user: null, lastPhone: '', expired: false };
+try { SESSION = Object.assign(SESSION, JSON.parse(localStorage.getItem('eggsim-session') || '{}')); } catch (e) {}
+const saveSession = () => { try { localStorage.setItem('eggsim-session', JSON.stringify(SESSION)); } catch (e) {} };
+const me = () => ACCOUNTS.find((a) => a.phone === SESSION.user);
+
+/* 系统设置（真系统在 Web 端维护，全公司一份） */
+const SETTINGS_DEFAULT = { round: 'half', printMode: 'batch' };
+let SETTINGS = { ...SETTINGS_DEFAULT };
+const ROUND_NAME = { half: '四舍五入', floor: '抹零', ceil: '进位' };
+/* 均重取整：tC 为累计净重（单位 0.01kg），n 为箱数；只算一处，称重页实时均重和计价共用 */
+function roundW(tC, n) {
+  const d = n * 100;
+  if (SETTINGS.round === 'floor') return Math.floor(tC / d);
+  if (SETTINGS.round === 'ceil') return Math.floor((tC + d - 1) / d);
+  return Math.floor((2 * tC + d) / (2 * d));   // 四舍五入，.5 进位
+}
+
+let DATA, S, HW, batchSeq = 1;
+
+function freshState() {
+  DATA = MODE === 'demo' ? DEMO() : WORST();
+  S = {
+    screen: 'create', query: '', farmerId: null, product: null, spec: null, warehouse: null, lastWarehouse: null, open: null, lastTare: null, draftN: null, amb: null, reweigh: null, confirmed: false, printJob: null, boxSeq: null, boxMode: null, boxInput: '', farmerPhone: '', noMatch: '', justDone: [], justReady: false,
+    recent: MODE === 'demo' ? ['f1', 'f3', 'f2'] : ['f1', 'f3', 'f6', 'f7', 'f8'],
+    batch: null, boxes: [], groupSeq: 0, k: 1, sheet: null, event: null, armed: true, recorded: null,
+    submitting: false, submitError: false, changeRule: false, showSingles: false, scan: null, scanning: false,
+  };
+  HW = {
+    bt: true, perm: true, scaleRange: true, printerRange: true, battLow: false, printerState: 'ok', gen: (HW ? HW.gen : 0) + 1,
+    link: { scale: { paired: 'A3F1', status: 'idle' }, printer: { paired: '7C20', status: 'idle' } },
+    scaleOn: false, printerOn: false, loadC: 0, readingC: 0, stable: true, settleAt: 0, loadText: '空',
+    tareMode: 'none', tareUnitC: 0, tareC: 0, tareName: '',
+    sound: true, netDown: false, printed: 0, caseIdx: 0,
+  };
+  if (MODE === 'worst100') prefill100();
+  Object.assign(S, { lphone: SESSION.lastPhone || '', lpw: '', lerr: '', lbusy: false, showPw: false, afterLogin: null });
+  if (!me()) { S.afterLogin = S.screen; S.screen = 'login'; }
+}
+
+function prefill100() {
+  const t = DATA.tares[DATA.tares.length - 1];
+  batchSeq = 12;
+  Object.assign(S, { farmerId: 'f1', farmerPhone: DATA.farmers[0].phones[0], product: DATA.products[0], spec: '360', warehouse: DATA.warehouses[0], batch: `SG${today().compact}-${batchSeq}`, screen: 'weigh' });
+  applyTare('digital', t.c, t.name);
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  while (S.boxes.length < 100) {
+    const k = S.boxes.length < 97 && rnd() < 0.12 ? 3 : 1;
+    const netC = k === 3 ? 13600 + Math.round(rnd() * 40) * 10 : 4450 + Math.round(rnd() * 30) * 10;
+    const printed = eachMode() && rnd() > 0.08;
+    addWeighing(netC, k, t.c * k, t.name, { grossC: netC + t.c * k, unitC: t.c }).forEach((b) => { b.printed = printed; });
+  }
+}
+
+/* ============ 工具 ============ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const kg = (c) => String(Math.round(c) / 100);            // 去掉末尾的 0：46、45.6、15.33
+const kg1 = (c) => (c / 100).toFixed(1);                  // 称重窗固定 1 位小数，宽度不跳
+const num = (n) => String(Math.round(n * 100) / 100);
+const money = (n) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+const farmer = () => DATA.farmers.find((f) => f.id === S.farmerId);
+const spec = () => DATA.specs.find((s) => s.id === S.spec);
+const dispC = () => HW.readingC - HW.tareC;               // 假定秤回调的是已扣皮读数（需求里的 Q-03，待真机确认）
+const totalC = () => S.boxes.reduce((sum, b) => sum + b.netC, 0);
+const farmerRules = () => DATA.rules.filter((r) => r.farmers.includes(S.farmerId));
+const boundRule = () => DATA.rules.find((r) => r.farmers.includes(S.farmerId) && r.product === S.product && r.spec === S.spec);
+const lastGroup = () => { const g = S.boxes.length && S.boxes[S.boxes.length - 1].group; return S.boxes.filter((b) => b.group === g); };
+const seqRange = (boxes) => boxes.length === 1 ? `第 ${boxes[0].seq} 箱` : `第 ${boxes[0].seq}–${boxes[boxes.length - 1].seq} 箱`;
+
+function today() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return { compact: `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`, dotted: `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}` };
+}
+
+/* 计价：均重按系统设置取整到整数 kg，价格和金额四舍五入到分。真系统里这一段只在后端实现。 */
+function pricing() {
+  const count = S.boxes.length, sp = spec(), rule = boundRule();
+  if (!count) return { count, sp, rule };
+  const tC = totalC();
+  const W = roundW(tC, count);
+  const out = { count, tC, W, sp, rule };
+  if (sp.m0 == null || !rule) return out;
+  const X = Math.round((W - sp.w0) * 100) / 100;
+  const Y = Math.round(rule.n * X * 100) / 100;
+  const M = Math.round((sp.m0 + Y) * 100) / 100;
+  return { ...out, X, Y, M, amount: Math.round(count * M * 100) / 100 };
+}
+
+function sameWeightGroups() {
+  const map = new Map();
+  S.boxes.forEach((b) => map.set(b.netC, (map.get(b.netC) || 0) + 1));
+  return [...map.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+}
+
+/* ============ 声音与震动：只留给“记上了”和“出问题了”两种时刻 ============ */
+let audio;
+function beep(kind) {
+  try { if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 60 : [80, 60, 80]); } catch (e) {}
+  if (!HW.sound) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const tones = kind === 'ok' ? [[880, 0, 0.12]] : [[300, 0, 0.14], [300, 0.2, 0.14]];
+    tones.forEach(([freq, at, len]) => {
+      const osc = audio.createOscillator(), gain = audio.createGain();
+      osc.frequency.value = freq; osc.type = 'square'; gain.gain.value = 0.06;
+      osc.connect(gain).connect(audio.destination);
+      osc.start(audio.currentTime + at); osc.stop(audio.currentTime + at + len);
+    });
+  } catch (e) { /* 浏览器不让出声就算了 */ }
+}
+
+/* ============ 打印 ============ */
+function printLabel(box) {
+  if (!printerReady()) { box.printed = false; return false; }
+  box.printed = true;
+  if (!linkedDev('printer').mine) { $('printCount').textContent = `另一台打印机（··${HW.link.printer.paired}）出了一张标签`; return true; }
+  HW.printed += 1;
+  const code = `${S.batch}#${box.seq}`;
+  $('printCount').textContent = `已打印 ${HW.printed} 张`;
+  $('sticker').className = 'sticker';
+  $('sticker').innerHTML = `<div><b>${esc(S.product)}　${esc(spec().name)}</b><br>净重：${kg(box.netC)}kg　农户：${esc(farmer().name)}<br>收购日期：${today().dotted}<br>收购仓库：${esc(S.warehouse)}<br>批次：${esc(S.batch)}　第${box.seq}箱</div>${fakeQR(code)}`;
+  return true;
+}
+function fakeQR(text) { // 只是占位图案，不是真的二维码
+  let h = 2166136261;
+  for (const ch of text) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  let cells = '';
+  for (let y = 0; y < 17; y++) for (let x = 0; x < 17; x++) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    const corner = (x < 5 && y < 5) || (x > 11 && y < 5) || (x < 5 && y > 11);
+    const on = corner ? (x % 12 === 0 || x % 12 === 4 || y % 12 === 0 || y % 12 === 4 || (x % 12 === 2 && y % 12 === 2)) : (h & 1);
+    if (on) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="0 0 17 17" role="img" aria-label="二维码 ${esc(text)}" shape-rendering="crispEdges">${cells}</svg>`;
+}
+
+/* ============ 记录一次称重（一次可以是 k 箱，平摊成 k 条流水） ============ */
+function makeBoxes(netC, k, tareC, tareName, extra = {}) {
+  const perNet = Math.round(netC / k), perTare = Math.round(tareC / k);
+  const group = ++S.groupSeq, out = [];
+  for (let i = 0; i < k; i++) {
+    const last = i === k - 1;
+    out.push({
+      seq: 0, group,
+      netC: last ? netC - perNet * (k - 1) : perNet,       // 零头记入最后一箱
+      tareC: last ? tareC - perTare * (k - 1) : perTare,
+      tareName, printed: false, manual: false, rawC: null, grossC: null, unitC: null, ...extra,
+    });
+  }
+  return out;
+}
+const renumber = () => S.boxes.forEach((b, i) => { b.seq = i + 1; });
+function addWeighing(netC, k, tareC, tareName, extra) {
+  const added = makeBoxes(netC, k, tareC, tareName, extra);
+  S.boxes.push(...added); renumber();
+  return added;
+}
+/* 合并称重：按重量识别箱数。取每箱净重最接近标准净含量的 k；
+   相邻两个箱数下每箱净重都在标准 ±10% 以内时，算“识别不准”，交给磅秤员二选一 */
+function detectK() {
+  const T = HW.tareUnitC || 0, G = HW.readingC, W0 = spec().w0 * 100;
+  if (G - T < 500) return { k: 1, amb: null };
+  let best = null; const ok = [];
+  for (let k = 1; k <= 8; k++) {
+    const dev = Math.abs((G - k * T) / k - W0);
+    if (!best || dev < best.dev) best = { k, dev };
+    if (dev * 10 <= W0) ok.push(k);
+  }
+  const nb = ok.find((k) => Math.abs(k - best.k) === 1);
+  return { k: best.k, amb: best.dev * 10 <= W0 && nb ? [Math.min(best.k, nb), Math.max(best.k, nb)] : null };
+}
+function canRecord() {
+  return S.screen === 'weigh' && HW.tareMode !== 'none' && HW.scaleOn && HW.stable && S.armed && !S.amb && dispC() >= 500;
+}
+const eachMode = () => SETTINGS.printMode === 'each';
+function record() {
+  if (!canRecord()) return;
+  const netC = dispC();
+  if (S.reweigh) {   // 重称：新读数替换这一箱
+    const b = S.boxes.find((x) => x.seq === S.reweigh), old = b.netC;
+    Object.assign(b, { netC, tareC: HW.tareUnitC, grossC: HW.readingC, unitC: HW.tareUnitC, manual: false, rawC: null, printed: false });
+    const failed = eachMode() && !printLabel(b);
+    S.event = { type: '', text: `第 ${b.seq} 箱已重称：${kg(netC)} kg（原 ${kg(old)} kg）` };
+    S.reweigh = null; S.armed = false; S.recorded = `第 ${b.seq} 箱`;
+    beep(failed ? 'warn' : 'ok'); render(); return;
+  }
+  const added = addWeighing(netC, S.k, HW.tareC, HW.tareName, { grossC: HW.readingC, unitC: HW.tareUnitC });
+  S.armed = false; S.recorded = seqRange(added);
+  const failed = eachMode() ? added.filter((b) => !printLabel(b)) : [];   // 完成后一次打印时，这里不打
+  S.event = null;                       // 正常记录的反馈就是称重框变绿加提示音，不再另写一句
+  beep(failed.length ? 'warn' : 'ok');
+  render();
+}
+
+/* ============ 蓝牙连接 ============
+   APP 记住上次连过的秤和打印机：一打开就在后台连；断了以后，只要设备回到附近就自动重连。 */
+const devOf = (kind, id) => NEARBY[kind].find((d) => d.id === id);
+const inRange = (kind, d) => (d.mine ? HW[kind === 'scale' ? 'scaleRange' : 'printerRange'] : true);
+const reachable = (kind, id) => { const d = id && devOf(kind, id); return !!(HW.bt && HW.perm && d && inRange(kind, d)); };
+const linkedDev = (kind) => (HW[kind === 'scale' ? 'scaleOn' : 'printerOn'] ? devOf(kind, HW.link[kind].paired) : null);
+function connect(kind, id) {
+  const L = HW.link[kind], gen = HW.gen;
+  L.status = 'connecting'; L.target = id;
+  syncLinks(); render();
+  setTimeout(() => {
+    if (gen !== HW.gen) return;
+    if (reachable(kind, id)) {
+      L.status = 'connected'; L.paired = id;
+      if (kind === 'scale') {
+        const d = devOf('scale', id);
+        HW.readingC = d.mine ? HW.loadC : d.staticC; HW.stable = true;
+        S.armed = HW.readingC - HW.tareC < 500;   // 连上时秤上已经有东西，要先拿下再放，免得重复记
+        S.recorded = null;
+      }
+      if (S.scan === kind) S.scan = null;
+    } else L.status = L.paired ? 'lost' : 'idle';
+    syncLinks(); render();
+  }, 1000);
+}
+function syncLinks() {
+  let dropped = false;
+  ['scale', 'printer'].forEach((kind) => {
+    const L = HW.link[kind];
+    if (L.status === 'connected' && !reachable(kind, L.paired)) { L.status = 'lost'; dropped = dropped || kind === 'scale'; }
+    if (L.status === 'lost' && reachable(kind, L.paired) && !L.retry) {
+      const gen = HW.gen;
+      L.retry = setTimeout(() => { L.retry = null; if (gen === HW.gen && L.status === 'lost') connect(kind, L.paired); }, 1500);
+    }
+  });
+  HW.scaleOn = HW.bt && HW.perm && HW.link.scale.status === 'connected';
+  HW.printerOn = HW.bt && HW.perm && HW.link.printer.status === 'connected';
+  if (dropped && S.screen === 'weigh') beep('warn');
+  return dropped;
+}
+function startLinks() { ['scale', 'printer'].forEach((kind) => { if (HW.link[kind].paired) connect(kind, HW.link[kind].paired); }); }
+/* 每台设备任何时候只给一个操作，按钮本身就是下一步 */
+function linkAction(kind) {
+  if (!HW.bt) return { label: '打开蓝牙', act: 'btOn' };
+  if (!HW.perm) return { label: '允许使用蓝牙', act: 'permGrant' };
+  const L = HW.link[kind];
+  if (L.status === 'connected') return null;
+  if (L.status === 'connecting') return { busy: true, label: '正在连接…' };
+  if (!L.paired) return { label: kind === 'scale' ? '搜索秤' : '搜索打印机', act: 'scan', v: kind };
+  return { label: '重新搜索', act: 'scan', v: kind };
+}
+function actionBtn(a, small) {
+  if (!a) return '';
+  const cls = small ? 'btn small' : 'btn primary big';
+  if (a.busy) return `<button class="${cls}" disabled><span class="spin" aria-hidden="true"></span>${a.label}</button>`;
+  return `<button class="${cls}" data-act="${a.act}" ${a.v ? `data-v="${a.v}"` : ''}>${a.label}</button>`;
+}
+
+/* ============ 秤的模拟 ============ */
+function setLoad(c, text) {
+  HW.loadC = c; HW.loadText = text; HW.stable = false; HW.settleAt = Date.now() + 900;
+}
+function tick() {
+  if (syncLinks()) render();
+  const sd = linkedDev('scale');
+  if (sd && !sd.mine) { HW.readingC = sd.staticC; HW.stable = true; }
+  else if (!HW.stable) {
+    if (Date.now() >= HW.settleAt) { HW.readingC = HW.loadC; HW.stable = true; if (S.sheet === 'tare') renderSheet(); }
+    else HW.readingC = HW.loadC + Math.round((Math.random() - 0.5) * 12) * 10;
+  }
+  if (HW.scaleOn && HW.stable && HW.readingC - (HW.tareUnitC || 0) < 500) { S.armed = true; S.recorded = null; }   // 台面空了，才允许记下一次
+  if (S.screen === 'weigh' && !S.sheet && HW.scaleOn && HW.stable && S.armed && HW.tareMode !== 'none') {
+    const d = S.reweigh ? { k: 1, amb: null } : detectK();   // 等待记录时按重量识别箱数
+    if (d.k !== S.k || String(d.amb) !== String(S.amb)) {
+      S.k = d.k; S.amb = d.amb; HW.tareC = HW.tareUnitC * S.k; render();
+    }
+  }
+  if (!S.sheet && canRecord()) record();   // 读数稳定就自动记录，不用点按钮
+  live();
+}
+function applyTare(mode, unitC, name) {
+  HW.tareMode = mode; HW.tareUnitC = unitC; HW.tareName = name;
+  HW.tareC = unitC * (S.k || 1);
+}
+
+/* ============ 界面 ============ */
+function render() {
+  const fn = { login: screenLogin, create: screenCreate, weigh: screenWeigh, summary: screenSummary, done: screenDone }[S.screen];
+  $('app').className = `scr-${S.screen}`; lastDevCard = '';
+  $('app').innerHTML = fn();
+  renderSheet();
+  live();
+}
+
+const STEPS = [
+  { key: 'farmer', title: '农户', ask: '请选择农户' },
+  { key: 'product', title: '商品', ask: '请选择商品' },
+  { key: 'spec', title: '规格', ask: '请选择规格' },
+  { key: 'warehouse', title: '收购仓库', ask: '请选择收购仓库' },
+];
+const stepValue = { farmer: () => S.farmerId, product: () => S.product, spec: () => S.spec, warehouse: () => S.warehouse };
+const missingSteps = () => STEPS.filter((st) => !stepValue[st.key]());
+const activeStep = () => S.open || (missingSteps()[0] || {}).key || null;
+
+function screenCreate() {
+  const active = activeStep(), missing = missingSteps();
+  const items = STEPS.map((st, i) => {
+    const done = !!stepValue[st.key](), isActive = st.key === active;
+    const state = isActive ? 'active' : done ? 'done' : 'todo';
+    const pop = state === 'done' && S.justDone.includes(st.key) ? ' pop' : '';
+    const num = `<span class="step-num${pop}" aria-hidden="true">${state === 'done' ? '✓' : i + 1}</span>`;
+    let inner;
+    if (state === 'active') inner = `<div class="step-card"><h2 class="step-title" id="st-${st.key}">${st.ask}</h2>${stepBody(st.key)}</div>`;
+    else if (state === 'done') inner = `<button class="step-row" data-act="edit" data-v="${st.key}" aria-label="修改${st.title}"><span class="row-text"><span class="step-label">${st.title}</span>${stepSummary(st.key)}</span>
+      <span class="chev" aria-hidden="true">›</span>${stepHints(st.key)}</button>`;
+    else inner = `<h2 class="step-title">${st.title}</h2>`;
+    return `<li class="step" data-step="${st.key}" data-state="${state}" ${isActive ? 'aria-current="step"' : ''}>${num}${inner}</li>`;
+  }).join('');
+  const ready = !missing.length, readyIn = ready && S.justReady;
+  S.justDone = []; S.justReady = false;
+  return `
+  <header class="topbar"><div class="topbar-row"><div class="row-text"><h1>新建收购单</h1><p>${today().dotted}</p></div>
+    <button class="acct" data-act="openAccount">${esc(me() ? me().name : '')} ›</button></div></header>
+  <div class="body"><ol class="steps">${items}</ol>
+    <div class="dev-wrap"><div class="dev-card" id="devCard">${devCardHtml()}</div></div>
+  </div>
+  <footer class="footer"><button class="btn ${ready ? 'primary' : 'todo'}${readyIn ? ' ready-in' : ''}" data-act="${ready ? 'start' : 'nudge'}">${ready ? '开始收蛋' : `还差 ${missing.length} 步`}</button></footer>`;
+}
+
+function stepBody(key) {
+  const rules = farmerRules();
+  if (key === 'farmer') return `
+    <label class="label" for="q">手机尾号</label>
+    <div class="otp" id="otp"><input id="q" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="${esc(S.query)}"><span id="otpCells" style="display:contents">${otpCells()}</span></div>
+    <div id="results">${farmerResults()}</div>`;
+  if (key === 'product') return `
+    <div class="seg" style="--cols:${segCols(DATA.products)}">${DATA.products.map((p) => `<button data-act="product" data-v="${esc(p)}" aria-pressed="${S.product === p}">${esc(p)}${
+      rules.some((r) => r.product === p) ? '<small>有规则</small>' : ''}</button>`).join('')}</div>`;
+  if (key === 'spec') return `
+    <div class="seg" style="--cols:${segCols(DATA.specs, (x) => x.name)}">${DATA.specs.map((sp) => `<button data-act="spec" data-v="${esc(sp.id)}" aria-pressed="${S.spec === sp.id}">${esc(sp.name)}${
+      sp.m0 == null ? '<small class="warn">无基准价</small>'
+      : rules.some((r) => r.product === S.product && r.spec === sp.id) ? '<small>有规则</small>' : ''}</button>`).join('')}</div>`;
+  return `<ul class="list">${DATA.warehouses.map((w) => `<li><button class="row-btn" data-act="warehouse" data-v="${esc(w)}" aria-pressed="${S.warehouse === w}">
+    <span class="row-text row-main">${esc(w)}</span>${S.lastWarehouse === w ? '<span class="row-sub row-side">上一单用的</span>' : ''}</button></li>`).join('')}</ul>`;
+}
+
+function stepHints(key) {   // 规则和基准价的提醒挂在规格这一步，因为两者都由“商品 + 规格”决定
+  if (key !== 'spec') return '';
+  const sp = spec(), rule = boundRule(), hints = [];
+  if (rule) hints.push(`<span class="step-hint ok">${esc(rule.name)}</span>`);
+  else hints.push('<span class="step-hint"><span class="tagline warn">无收购规则</span></span>');
+  if (sp.m0 == null) hints.push('<span class="step-hint"><span class="tagline warn">无基准价</span></span>');
+  return `<span class="hints">${hints.join('')}</span>`;
+}
+function stepSummary(key) {
+  if (key === 'farmer') return `<span class="step-value">${esc(farmer().name)}</span><span class="step-sub">${esc(fmtPhone(S.farmerPhone))}</span>`;
+  if (key === 'product') return `<span class="step-value">${esc(S.product)}</span>`;
+  if (key === 'spec') return `<span class="step-value">${esc(spec().name)}</span>`;
+  return `<span class="step-value">${esc(S.warehouse)}</span>`;
+}
+
+const otpCells = () => [0, 1, 2, 3].map((i) => `<span class="cell ${i === Math.min(S.query.length, 3) ? 'cur' : ''}" aria-hidden="true">${esc(S.query[i] || '')}</span>`).join('');
+const segCols = (items, label = (x) => x) => {   // 名字越长，一行放的越少，免得挤成竖条
+  const longest = Math.max(...items.map((x) => [...label(x)].length));
+  const cols = items.length <= 3 ? items.length : 2;
+  return longest > 10 ? 1 : longest > 5 ? Math.min(cols, 2) : cols;
+};
+function phoneHtml(p) {   // 把匹配上的后四位加粗，同名的人靠号码区分
+  return S.query.length === 4 && p.replace(/\D/g, '').endsWith(S.query) ? `${esc(p.slice(0, -4))}<b>${esc(p.slice(-4))}</b>` : esc(p);
+}
+const fmtPhone = (p) => (/^1\d{10}$/.test(p) ? p.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3') : p);
+const tailHits = (q) => DATA.farmers.filter((f) => f.phones.some((p) => p.endsWith(q)));
+function farmerResults() {
+  if (!S.query.length) {
+    const miss = S.noMatch ? `<p class="note warn" style="margin:4px 0 0">没有尾号 ${esc(S.noMatch)} 的农户</p>` : '';
+    const recent = S.recent.map((id) => DATA.farmers.find((f) => f.id === id)).filter(Boolean);
+    if (!recent.length) return miss;
+    return `${miss}<span class="label" style="margin:18px 0 8px">最近</span><ul class="list">${recent.map((f) => `<li><button class="row-btn" data-act="farmer" data-v="${f.id}">
+      <span class="row-text"><span class="row-main">${esc(f.name)}</span><span class="row-sub phones"><span>${esc(fmtPhone(f.phones[0]))}</span></span></span></button></li>`).join('')}</ul>`;
+  }
+  if (S.query.length < 4) return '';
+  const hits = tailHits(S.query);
+  if (!hits.length) return '';
+  return `<ul class="list">${hits.map((f) => `<li><button class="row-btn" data-act="farmer" data-v="${f.id}" aria-pressed="${S.farmerId === f.id}">
+    <span class="row-text"><span class="row-main">${esc(f.name)}</span><span class="row-sub phones">${f.phones.filter((p) => p.endsWith(S.query)).map((p) => `<span>${phoneHtml(fmtPhone(p))}</span>`).join('')}</span></span>
+    <span class="row-sub row-side">${S.farmerId === f.id ? '已选' : ''}</span></button></li>`).join('')}</ul>`;
+}
+
+/* 建单页底部的设备卡片：后台自动连接的进度在这里就能看到 */
+function devLine(kind) {
+  const L = HW.link[kind], on = kind === 'scale' ? HW.scaleOn : HW.printerOn;
+  const busy = HW.bt && HW.perm && L.status === 'connecting';
+  let st, tone;
+  if (on) [st, tone] = kind === 'scale' ? (HW.battLow ? ['电量低', 'warn'] : ['已连接', 'ok']) : (HW.printerState === 'ok' ? ['就绪', 'ok'] : [PRINTER_ISSUE[HW.printerState], 'warn']);
+  else if (busy) [st, tone] = ['连接中', 'busy'];
+  else [st, tone] = [!HW.bt ? '蓝牙未打开' : !HW.perm ? '未授权' : !L.paired ? '未配对' : '未连接', kind === 'scale' ? 'err' : 'warn'];
+  const id = on ? L.paired : (busy ? L.target : L.paired);
+  const model = id ? `${devOf(kind, id).model} ··${id}` : '';
+  return `<button class="dev-line" data-act="openDevices"><span class="dot ${tone === 'busy' ? '' : tone}"></span><span class="name">${kind === 'scale' ? '电子秤' : '标签打印机'}</span><span class="model">${model}</span><span class="st ${tone}">${busy ? '<span class="spin" aria-hidden="true"></span>' : ''}${st}</span></button>`;
+}
+const devCardHtml = () => devLine('scale') + devLine('printer');
+let lastDevCard = '';
+
+const printerReady = () => HW.printerOn && HW.printerState === 'ok';
+const printerIssue = () => (!HW.printerOn ? '打印机未连接' : `打印机${PRINTER_ISSUE[HW.printerState]}`);
+const printWarnable = () => eachMode() || S.confirmed;   // 完成后一次打印：确认之前不算“漏打”
+const unprintedCount = () => (printWarnable() ? S.boxes.filter((b) => !b.printed).length : 0);
+let printTimer = null;
+function stopPrint() { clearTimeout(printTimer); printTimer = null; if (S) S.printJob = null; }
+function runPrintQueue() {   // 按箱序号依次打；缺纸、开盖、断开就停，剩下的保持未打印
+  if (printTimer) return;
+  const total = S.boxes.filter((b) => !b.printed).length;
+  if (!total) return;
+  S.printJob = { done: 0, total }; render();
+  const step = () => {
+    if (!S.printJob) { printTimer = null; return; }
+    const next = S.boxes.find((b) => !b.printed);
+    if (!next) { S.printJob = null; printTimer = null; render(); return; }
+    if (!printerReady()) { S.printJob = null; printTimer = null; beep('warn'); render(); return; }
+    printLabel(next); S.printJob.done += 1; render();
+    printTimer = setTimeout(step, 260);
+  };
+  printTimer = setTimeout(step, 260);
+}
+function unprintedBlock() {   // 漏打的标签：打印机好了就给“补打”按钮，没好就给一键去看打印机
+  if (S.printJob) {
+    const { done, total } = S.printJob;
+    return `<div class="print-prog" role="status">正在打印 ${done} / ${total}<div class="bar"><i style="width:${Math.round(done / total * 100)}%"></i></div></div>`;
+  }
+  const n = unprintedCount();
+  if (!n) return '';
+  if (printerReady()) return `<button class="btn warnfix" style="width:100%;margin-top:12px" data-act="reprintAll">补打 ${n} 张标签</button>`;
+  return `<button class="btn warnfix" style="width:100%;margin-top:12px" data-act="openDevices">${n} 张标签没打出来 · ${printerIssue()}</button>`;
+}
+function tareChoices() {
+  return `<div class="tare-pick">
+    <div class="seg" style="--cols:${segCols(DATA.tares, (t) => t.name)}">${DATA.tares.map((t) => `<button data-act="tareDigital" data-v="${t.id}" aria-pressed="${HW.tareMode === 'digital' && HW.tareName === t.name}">${esc(t.name)}<small>${kg(t.c)} kg${S.lastTare === t.id ? ' · 上一单' : ''}</small></button>`).join('')}</div>
+    <button class="btn small weigh-tare" data-act="tareWeigh" disabled>称空箱</button>
+  </div>`;
+}
+function screenWeigh() {
+  const f = farmer(), n = S.boxes.length, noTare = HW.tareMode === 'none';
+  const lost = HW.link.scale.status === 'lost' || (HW.link.scale.status === 'connecting' && n > 0);
+  const ev = S.event ? `<div class="event ${S.event.type}" role="status">${esc(S.event.text)}</div>` : '';
+  const panel = !HW.scaleOn
+    ? `<div class="step-card solo ${lost ? 'lost' : ''}" id="scaleStep"><h2 class="step-title" style="font-size:17px;font-weight:700;color:var(--ok-ink)">${lost ? '秤断开了' : '连接电子秤'}</h2>${actionBtn(linkAction('scale'))}
+        <button class="btn small ghost-link" style="width:100%;margin-top:8px" data-act="manualAdd">手工加一箱</button></div>`
+    : `<div class="scale" id="scaleBox">
+        <div class="scale-top"><span id="netLabel">净重</span><span id="stateText"></span></div>
+        <div class="weight"><span id="weight">0.0</span><small>kg</small></div>
+        ${S.amb ? `<div class="ask-row">${S.amb.map((k) => `<button class="btn" data-act="chooseK" data-v="${k}">${k} 箱</button>`).join('')}</div>` : ''}
+        ${noTare ? '' : `<div class="scale-row"><span class="k">皮重</span><span class="v" id="tareText"></span><button class="btn small" data-act="openTare">换</button></div>`}
+        ${S.reweigh ? `<div class="scale-row reweigh-row"><span class="k">重称</span><span class="v">第 ${S.reweigh} 箱 · 原 ${kg(S.boxes.find((b) => b.seq === S.reweigh).netC)} kg</span><button class="btn small" data-act="cancelReweigh">取消</button></div>` : ''}
+      </div>`;
+  return `
+  <header class="topbar">
+    <div class="topbar-row"><button class="back" data-act="leave" aria-label="返回">‹</button><h1>${esc(f.name)}</h1></div>
+    <p>${esc(S.product)} <span class="nb">${esc(spec().name)}</span> · <span class="nb">批次 ${esc(S.batch)}</span></p>
+    <div class="chips"><button class="chip" id="chipScale" data-act="openDevices"></button><button class="chip" id="chipPrinter" data-act="openDevices"></button></div>
+  </header>
+  <div class="body">
+    ${noTare && HW.scaleOn ? `<div class="step-card solo" id="tareCard"><h2 class="step-title" style="color:var(--ok-ink);font-size:17px;font-weight:700">请选择皮重</h2>${tareChoices()}</div>` : ''}
+    ${panel}
+    ${ev}${recentBoxes()}${unprintedBlock()}
+  </div>
+  <footer class="footer">
+    <button class="btn" data-act="finish" ${n && !S.reweigh ? '' : 'disabled'}>确认计量完毕</button>
+  </footer>`;
+}
+/* 最近几箱：每放一箱都能看到“记上了没”；点任意一行可以重称、手工录入、删除 */
+function printMark(b) {   // 完成后一次打印时，确认前的箱不显示打印状态（都还没到打的时候）
+  if (b.printed) return '<span class="p">✓</span>';
+  return printWarnable() ? '<span class="p no">未打印</span>' : '';
+}
+/* 实时批次均重：累计净重 ÷ 箱数，取整方式和计价用同一个 roundW */
+function batchAvg() {
+  const n = S.boxes.length;
+  return { n, W: roundW(totalC(), n) };
+}
+function recentBoxes() {   // 没称之前先留 4 个空位：记一箱填一格，版面从头到尾不跳
+  const n = S.boxes.length;
+  if (!n && (HW.tareMode === 'none' || !HW.scaleOn)) return '';
+  const lg = n ? lastGroup() : [], shown = S.boxes.slice(-Math.max(4, lg.length)).reverse();
+  const unp = unprintedCount();
+  const slots = Array.from({ length: Math.max(0, 4 - shown.length) }, () => '<li class="box-row slot" aria-hidden="true"><i class="w1"></i><i class="w2"></i><span></span></li>').join('');
+  return `<section class="recent">
+    <div class="recent-head"><span class="recent-stats">
+        <span class="sum ${n ? '' : 'zero'}">已称 ${n} 箱${n ? ` · ${kg(totalC())} kg` : ''}</span>
+        <span class="avg ${n ? '' : 'zero'}"><span class="k">均重</span><b>${n ? `${batchAvg().W} kg` : '—'}</b>${n ? `<span class="raw">${(totalC() / n / 100).toFixed(2)}</span>` : ''}</span></span>
+      ${n ? `<button class="btn small" data-act="openLog">全部${unp ? `<span class="badge" aria-label="${unp} 张未打印">${unp}</span>` : ''} ›</button>` : ''}</div>
+    <ul class="list">${shown.map((b) => `<li><button class="box-row ${lg.length > 1 && lg.includes(b) ? 'grp' : ''}" data-act="openBox" data-v="${b.seq}" aria-label="调整第 ${b.seq} 箱">
+      <span class="seq">第 ${b.seq} 箱</span>
+      <span class="net">${kg(b.netC)} kg${b.manual ? '<span class="mtag">手录</span>' : ''}${printMark(b)}</span>
+      <span class="chev" aria-hidden="true">›</span>
+    </button></li>`).join('')}${slots}</ul>
+  </section>`;
+}
+
+function moneyBlock(p, warnHtml) {   // 金额按位数自动缩小，“元”用小字；不用绿色
+  if (warnHtml) return `<div class="money-card warn"><span class="k">金额</span>${warnHtml}</div>`;
+  const a = money(p.amount);
+  return `<div class="money-card"><span class="k">金额</span>
+    <div class="amt" style="--chars:${[...a].length + 1}"><span>${a}</span><small>元</small></div>
+    <span class="calc">${num(p.M)} 元/箱 × ${p.count} 箱</span></div>`;
+}
+function formulaLine(p) {
+  if (p.M == null) return '';
+  return `均重 ${(p.tC / p.count / 100).toFixed(2)} ${ROUND_NAME[SETTINGS.round]}为 ${p.W}kg · ${priceLine(p)}`;
+}
+function priceLine(p) {
+  if (p.X === 0) return `基准 ${num(p.sp.m0)}，均重正好 ${p.W}kg = ${num(p.M)} 元/箱`;
+  return `基准 ${num(p.sp.m0)} ${p.X > 0 ? '+ 多' : '− 少'} ${num(Math.abs(p.X))}kg × ${num(p.rule.n)} 元 = ${num(p.M)} 元/箱`;
+}
+function screenSummary() {
+  const p = pricing(), f = farmer();
+  const noM0 = p.sp.m0 == null, noRule = !p.rule;
+  // 缺什么，主卡就直接给修复入口；底部按钮也是同一个修复动作
+  let warn = '';
+  if (noM0) warn = `<div class="fix"><span class="tagline warn">${S.m0Retried ? '仍无基准价' : '无基准价'}</span></div>`;
+  else if (noRule) warn = '<div class="fix"><span class="tagline warn">无收购规则</span><button class="btn small warnfix" data-act="openRule">绑定收购规则</button></div>';
+  let submit;
+  if (S.submitting) submit = '<button class="btn primary" disabled><span class="spin" aria-hidden="true"></span>提交中</button>';
+  else if (noM0) submit = `<button class="btn todo" data-act="refreshM0" ${S.refreshing ? 'disabled' : ''}>${S.refreshing ? '<span class="spin" aria-hidden="true"></span>正在刷新' : '刷新基准价'}</button>`;
+  else if (noRule) submit = '<button class="btn todo" data-act="openRule">绑定收购规则</button>';
+  else submit = `<button class="btn primary" data-act="submit">${S.submitError ? '重新提交' : '提交单据'}</button>`;
+  return `
+  <header class="topbar">
+    <button class="back-text" data-act="back">‹ 返回计量</button>
+    <h1>${esc(f.name)}</h1>
+    <p><span class="nb">批次 ${esc(S.batch)}</span> · ${esc(S.warehouse)}</p>
+  </header>
+  <div class="body">
+    ${moneyBlock(p, noM0 || noRule ? warn : '')}
+    <ul class="facts">
+      <li><div class="fact"><span><span class="k">商品</span><span class="v">${esc(S.product)} <span class="n">${esc(p.sp.name)}</span></span></span></div></li>
+      <li><button class="fact" data-act="openRule"><span><span class="k">定价规则</span>
+        <span class="v">${p.rule ? esc(p.rule.name) : '<span class="tagline warn">未绑定</span>'}</span>
+        ${p.M != null ? `<span class="f">${formulaLine(p)}</span>` : ''}</span><span class="chev" aria-hidden="true">›</span></button></li>
+      <li><button class="fact" data-act="openLog"><span><span class="k">收购流水</span>
+        <span class="v"><span class="n">${p.count} 箱</span> · <span class="n">${kg(p.tC)} kg</span></span></span><span class="chev" aria-hidden="true">›</span></button></li>
+      <li><div class="fact"><span><span class="k">均重</span><span class="v"><span class="n">${p.W} kg</span></span></span></div></li>
+    </ul>
+    <div class="sum-tail">
+      ${unprintedBlock()}
+      ${S.submitError ? '<p class="note err" role="alert">提交失败：连不上服务器</p>' : ''}
+    </div>
+  </div>
+  <footer class="footer">${submit}</footer>`;
+}
+
+function screenDone() {
+  const p = pricing(), f = farmer(), a = money(p.amount);
+  return `
+  <div class="body">
+    <div class="done-main">
+      <div class="done-check" aria-hidden="true">✓</div>
+      <p class="done-res"><b>已提交</b><span class="tagline gray">待审核</span></p>
+      <h1 class="done-name">${esc(f.name)}</h1>
+      <div class="amt" style="--chars:${[...a].length + 1}"><span>${a}</span><small>元</small></div>
+      <button class="done-line" data-act="openLog"><span class="nb">${esc(S.product)} ${esc(p.sp.name)}</span> · <span class="nb">${p.count} 箱</span><span class="chev" aria-hidden="true">›</span></button>
+      <p class="done-sub"><span class="nb">均重 ${p.W}kg</span> · <span class="nb">${num(p.M)} 元/箱</span></p>
+      <p class="done-batch">批次 ${esc(S.batch)}</p>
+    </div>
+    <div class="done-tail">${unprintedBlock()}</div>
+  </div>
+  <footer class="footer"><button class="btn primary" data-act="again">再收一单</button></footer>`;
+}
+
+/* ============ 登录 ============ */
+const typingPhone = (d) => d.slice(0, 3) + (d.length > 3 ? ' ' + d.slice(3, 7) : '') + (d.length > 7 ? ' ' + d.slice(7, 11) : '');
+const LOGIN_ERR = { bad: '手机号或密码不对', admin: '这个账号只能用 Web 管理端', net: '连不上服务器', expired: '登录已失效' };
+const EYE = (open) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${open ? '' : '<path d="M4 4l16 16"/>'}</svg>`;
+function loginBtn() {   // 缺什么，按钮就写什么，点了把光标送过去
+  if (S.lbusy) return '<button class="btn primary" disabled><span class="spin" aria-hidden="true"></span>登录中</button>';
+  if (S.lphone.length < 11) return '<button class="btn todo" data-act="focusField" data-v="lp">填写手机号</button>';
+  if (!S.lpw) return '<button class="btn todo" data-act="focusField" data-v="lw">填写密码</button>';
+  return `<button class="btn primary" data-act="login">${S.lerr === 'net' ? '重新登录' : '登录'}</button>`;
+}
+function screenLogin() {
+  return `
+  <div class="body">
+    <div class="login-main">
+      <div class="brand"><span class="mark" aria-hidden="true"></span><b>收蛋</b></div>
+      <div class="lfields ${S.lerr === 'bad' ? 'bad' : ''}" id="lfields">
+        <label class="lfield"><span class="k">手机号</span><input id="lp" inputmode="numeric" autocomplete="username" value="${esc(typingPhone(S.lphone))}"></label>
+        <label class="lfield"><span class="k">密码</span><span class="pw-wrap" style="display:block">
+          <input id="lw" type="${S.showPw ? 'text' : 'password'}" autocomplete="current-password" enterkeyhint="go" value="${esc(S.lpw)}">
+          <button class="eye" data-act="togglePw" aria-label="${S.showPw ? '隐藏密码' : '显示密码'}" type="button">${EYE(!S.showPw)}</button></span></label>
+        <p class="lerr" id="lerr" role="alert">${S.lerr ? LOGIN_ERR[S.lerr] : ''}</p>
+      </div>
+    </div>
+  </div>
+  <footer class="footer" id="lfoot">${loginBtn()}</footer>`;
+}
+function loginInput(e) {
+  if (e.target.id === 'lp') {
+    S.lphone = e.target.value.replace(/\D/g, '').slice(0, 11); e.target.value = typingPhone(S.lphone);
+  } else S.lpw = e.target.value;
+  if (S.lerr && S.lerr !== 'expired') { S.lerr = ''; $('lerr').textContent = ''; $('lfields').classList.remove('bad'); }
+  $('lfoot').innerHTML = loginBtn();
+  if (e.target.id === 'lp' && S.lphone.length === 11) $('lw').focus();   // 手机号满 11 位自动跳到密码
+}
+function sheetAccount() {
+  const u = me();
+  return [u ? u.name : '', `<p class="muted" style="margin:0 0 16px">${u ? esc(fmtPhone(u.phone)) : ''}</p>
+    <button class="btn danger" style="width:100%" data-act="logout">退出登录</button>`];
+}
+
+/* 称重屏上跟着秤变的部分单独刷新，不重画整屏 */
+function live() {
+  $('platform').textContent = `台面：${HW.loadText}`;
+  const d = dispC(), raw = HW.readingC;
+  document.querySelectorAll('[data-act="tareWeigh"]').forEach((b) => {   // 秤上确实是一只空箱时才能按
+    const ok = HW.scaleOn && HW.stable && raw >= 20 && raw < 1000;
+    b.disabled = !ok;
+    b.innerHTML = ok ? `称空箱 · 按 <span class="r">${kg1(raw)}kg</span> 去皮` : `称空箱 · 秤上 <span class="r">${HW.scaleOn ? kg1(raw) : '--.-'}kg</span>`;
+  });
+  if ($('devReading')) $('devReading').textContent = `${kg1(HW.readingC)} kg`;
+  if ($('devCard')) { const h = devCardHtml(); if (h !== lastDevCard) { $('devCard').innerHTML = h; lastDevCard = h; } }
+  const cs = $('chipScale'), cp = $('chipPrinter');
+  if (!cs) return;
+  const busy = (k) => HW.bt && HW.perm && HW.link[k].status === 'connecting';
+  if (HW.scaleOn) { cs.className = 'chip' + (HW.battLow ? ' warn' : ''); cs.textContent = HW.battLow ? '秤电量低' : '秤已连接'; }
+  else { cs.className = 'chip ' + (busy('scale') ? 'busy' : 'err'); cs.textContent = busy('scale') ? '秤连接中' : '秤未连接'; }
+  if (busy('printer')) { cp.className = 'chip busy'; cp.textContent = '打印机连接中'; }
+  else { cp.className = 'chip' + (printerReady() ? '' : ' warn'); cp.textContent = printerReady() ? '打印机就绪' : printerIssue(); }
+  if (S.screen !== 'weigh' || !$('weight')) return;
+  const loaded = d >= 500;
+  let state, text;
+  if (HW.tareMode === 'none') [state, text] = ['locked', '未设皮重'];
+  else if (!HW.stable) [state, text] = ['unstable', '读数未稳定'];
+  else if (!loaded) [state, text] = ['idle', '空秤'];
+  else if (S.recorded) [state, text] = ['recorded', `✓ ${S.recorded}${S.event && S.event.text.includes('重称') ? '已重称' : '已记录'}`];
+  else if (!S.armed) [state, text] = ['hold', '↑ 待拿下'];
+  else if (S.amb) [state, text] = ['ask', '几箱？'];
+  else [state, text] = ['ready', '已稳定'];
+  $('scaleBox').dataset.state = state;
+  $('stateText').textContent = text;
+  $('weight').textContent = kg1(d);
+  $('netLabel').textContent = S.reweigh ? `净重（重称第 ${S.reweigh} 箱）` : S.k > 1 ? `净重（${S.k} 箱）` : '净重';
+  if ($('tareText')) $('tareText').textContent = `${HW.tareName} ${kg(HW.tareUnitC)}kg${S.k > 1 ? ` × ${S.k} = ${kg(HW.tareC)}kg` : ''}`;
+}
+
+/* ============ 底部弹层 ============ */
+const SHEETS = { tare: sheetTare, log: sheetLog, rule: sheetRule, devices: sheetDevices, leave: sheetLeave, account: sheetAccount, box: sheetBox };
+const validKg = (v) => /^\d{1,3}(\.\d{1,2})?$/.test(v) && parseFloat(v) > 0;
+function boxSaveBtn() {
+  return validKg(S.boxInput) ? '<button class="btn primary" data-act="boxSave">保存</button>'
+    : '<button class="btn todo" data-act="focusField" data-v="boxIn">填写净重</button>';
+}
+function sheetBox() {
+  if (S.boxMode) {   // 手工录入 / 手工加一箱：用数字键盘输入净重
+    const b = S.boxes.find((x) => x.seq === S.boxSeq);
+    const title = S.boxMode === 'add' ? '手工加一箱' : `手工录入 · 第 ${b.seq} 箱`;
+    return [title, `
+      ${S.boxMode === 'manual' ? `<p class="muted" style="margin:0 0 12px">秤的读数 ${kg(b.manual ? b.rawC : b.netC)} kg</p>` : ''}
+      <label class="lfield"><span class="k">净重（kg）</span><input id="boxIn" inputmode="decimal" autocomplete="off" value="${esc(S.boxInput)}"></label>
+      <div class="pair"><button class="btn" data-act="boxCancel">取消</button><span id="boxSaveWrap" style="display:flex">${boxSaveBtn()}</span></div>`];
+  }
+  const b = S.boxes.find((x) => x.seq === S.boxSeq);
+  if (!b) return ['', ''];
+  const grp = S.boxes.filter((x) => x.group === b.group), many = grp.length > 1;
+  const canRegroup = b.grossC != null && grp.every((x) => !x.manual);
+  const facts = [`皮重 ${kg(b.tareC)} kg`];
+  if (b.manual && b.rawC != null) facts.push(`秤原始读数 ${kg(b.rawC)} kg`);
+  if (many) facts.push(`和${seqRange(grp.filter((x) => x !== b))}是同一次称的`);
+  return [`第 ${b.seq} 箱`, `
+    <div class="box-info"><span class="big">${kg(b.netC)} kg</span>${b.manual ? '<span class="mtag">手录</span>' : ''}</div>
+    <p class="muted" style="margin:0">${facts.join(' · ')}</p>
+    ${canRegroup ? `<span class="label" style="margin-top:16px">这一次称的是几箱</span>
+      <div class="kpick">${[1, 2, 3, 4, 5, 6].map((k) => `<button data-act="regroup" data-v="${k}" aria-pressed="${k === grp.length}">${k}</button>`).join('')}</div>` : ''}
+    <div class="box-acts">
+      ${!many && HW.scaleOn && HW.tareMode !== 'none' ? '<button class="btn dark" data-act="reweigh">重称</button>' : ''}
+      <button class="btn" data-act="manualEdit">手工录入</button>
+      <button class="btn ghost-link red" data-act="boxDelete">${many ? `删除这 ${grp.length} 箱` : '删除这一箱'}</button>
+    </div>`];
+}
+function openSheet(name) { S.sheet = name; S.changeRule = false; S.draftN = null; S.scan = null; S.scanning = false; renderSheet(); }
+function closeSheet() {
+  S.sheet = null; S.scan = null;
+  $('sheet').style.transform = ''; $('sheet').style.transition = '';   // 从拖到的位置接着往下收
+  $('phone').removeAttribute('data-sheet');
+}
+
+/* 往下拖关闭弹层（gestures）：把手和标题栏随时可拖；内容区只在滚到顶、往下拉时才接手，免得和列表滚动打架。
+   监听挂在 #sheet 本身：弹层内容会因秤读数变化整块重画，挂在把手上会拖到一半丢掉。 */
+(function sheetDrag() {
+  const el = $('sheet');
+  let g = null;
+  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.addEventListener('pointerdown', (e) => {
+    if (!S.sheet || g || e.button > 0 || e.target.closest('button, input, select, a')) return;
+    const fromHead = !!e.target.closest('.sheet-grab, .sheet-head');
+    const body = el.querySelector('.sheet-body');
+    if (!fromHead && body && body.scrollTop > 0) return;
+    g = { id: e.pointerId, y0: e.clientY, fromHead, on: false, dy: 0, hist: [] };
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!g || e.pointerId !== g.id) return;
+    const dy = e.clientY - g.y0;
+    if (!g.on) {
+      if (g.fromHead ? Math.abs(dy) < 6 : dy < 8) { if (!g.fromHead && dy < -4) g = null; return; }
+      g.on = true; try { el.setPointerCapture(e.pointerId); } catch (err) {} el.style.transition = 'none';
+    }
+    const h = el.offsetHeight;   // 往上拖：越拖越拖不动
+    g.dy = dy > 0 ? dy : -(Math.abs(dy) * h * 0.55) / (h + 0.55 * Math.abs(dy)) * 0.25;
+    el.style.transform = `translateY(${g.dy}px)`;
+    const now = performance.now();
+    g.hist.push([now, g.dy]); while (g.hist.length > 2 && now - g.hist[0][0] > 100) g.hist.shift();
+  });
+  const end = (e) => {
+    if (!g || e.pointerId !== g.id) return;
+    const done = g; g = null;
+    if (!done.on) return;
+    const [t0, d0] = done.hist[0] || [performance.now(), done.dy];   // 只看松手前 100ms 的速度：慢慢拖一段再松手会弹回
+    const v = (done.dy - d0) / Math.max(1, performance.now() - t0);   // 像素/毫秒
+    if (done.dy > el.offsetHeight * 0.35 || (v > 0.4 && done.dy > 24)) { closeSheet(); return; }
+    el.style.transition = reduce() ? 'none' : 'transform 200ms cubic-bezier(0.23, 1, 0.32, 1)';
+    el.style.transform = '';
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+})();
+function renderSheet() {
+  if (!S.sheet) { $('phone').removeAttribute('data-sheet'); return; }
+  const keep = $('sheet').querySelector('.sheet-body');
+  const top = keep && $('phone').dataset.sheet === S.sheet ? keep.scrollTop : 0;
+  const [title, body] = SHEETS[S.sheet]();
+  $('sheet').setAttribute('aria-label', title);
+  const close = S.sheet === 'leave' ? '' : '<button class="sheet-close" data-act="closeSheet">关闭</button>';   // 确认弹层只有两个答案，不再放关闭
+  $('sheet').innerHTML = `<div class="sheet-grab" aria-hidden="true"><span></span></div><div class="sheet-head"><h2>${title}</h2>${close}</div><div class="sheet-body">${body}</div>`;
+  $('sheet').querySelector('.sheet-body').scrollTop = top;
+  $('phone').dataset.sheet = S.sheet;
+}
+function sheetTare() {
+  return ['换皮重', tareChoices()];
+}
+function sheetLog() {
+  const groups = sameWeightGroups(), editable = S.screen === 'weigh';
+  const sameTare = S.boxes.every((b) => b.tareC === S.boxes[0].tareC);
+  const fold = groups.length > 8;                        // 重量种类太多时先只列箱数最多的 6 种
+  const shown = fold && !S.showSingles ? groups.slice(0, 6) : groups;
+  return [`收购流水 · ${S.boxes.length} 箱`, `
+    <span class="label">相同重量归类</span>
+    <div class="tags">${shown.map(([c, n]) => `<span class="tag">${kg(c)}kg-${n}箱</span>`).join('')}</div>
+    ${fold ? `<button class="btn small" style="width:100%;margin-bottom:12px" data-act="toggleSingles">${S.showSingles ? '只看箱数最多的 6 种' : `还有 ${groups.length - 6} 种重量，点开查看`}</button>` : ''}
+    ${sameTare ? `<p class="muted" style="margin:0 0 6px">每箱皮重 ${kg(S.boxes[0].tareC)} kg${S.boxes[0].tareName ? `（${esc(S.boxes[0].tareName)}）` : ''}</p>` : ''}
+    ${editable ? '<button class="btn small" style="width:100%;margin:4px 0 0" data-act="manualAdd">手工加一箱</button>' : ''}
+    ${unprintedBlock()}
+    <table class="log"><thead><tr><th>箱序号</th><th>净重</th><th>标签</th></tr></thead><tbody>
+    ${S.boxes.map((b) => `<tr ${editable ? `class="tap" data-act="openBox" data-v="${b.seq}"` : ''}><td>第${b.seq}箱</td><td><span class="num">${kg(b.netC)} kg</span>${b.manual ? '<span class="mtag">手录</span>' : ''}${b.manual && b.rawC != null ? `<br><small>原 ${kg(b.rawC)} kg</small>` : ''}${sameTare ? '' : `<br><small>皮重 ${kg(b.tareC)} kg</small>`}</td>
+      <td>${b.printed
+        ? '<span class="ok">✓</span><button class="btn small ghost" data-act="reprint" data-v="' + b.seq + '">再打</button>'
+        : printWarnable() ? '<button class="btn small unprinted" data-act="reprint" data-v="' + b.seq + '">补打</button>' : '<span class="pend">待打印</span>'}</td></tr>`).join('')}
+    </tbody></table>`];
+}
+function priceWith(n) {   // 这一单如果按系数 n 算，收购价是多少
+  const p = pricing();
+  if (!p.count || p.sp.m0 == null) return null;
+  const X = Math.round((p.W - p.sp.w0) * 100) / 100;
+  return Math.round((p.sp.m0 + Math.round(n * X * 100) / 100) * 100) / 100;
+}
+const priceTag = (n) => { const m = priceWith(n); return m == null ? '' : `本单 ${num(m)} 元/箱`; };
+function sheetRule() {
+  const rule = boundRule(), sp = spec();
+  const scope = `${esc(S.product)} <span class="nb">${esc(sp.name)}</span>`;
+  const others = DATA.rules.filter((r) => r.product === S.product && r.spec === S.spec && r !== rule);
+  const list = others.length
+    ? `<ul class="list">${others.map((r) => `<li><button class="row-btn" data-act="ruleBind" data-v="${r.id}">
+        <span class="row-text"><span class="row-main">${esc(r.name)}</span><br><span class="row-sub">每 kg 尾差 ${num(r.n)} 元</span></span><span class="row-sub row-side"><b>${priceTag(r.n)}</b></span></button></li>`).join('')}</ul>`
+    : '<p class="muted" style="margin:4px 0 0">没有可用规则</p>';
+  if (!rule) return ['选择收购规则', `<p class="muted" style="margin:0 0 4px">${scope}</p>${list}`];
+  const n = S.draftN ?? rule.n, dirty = S.draftN != null && S.draftN !== rule.n;
+  const before = priceWith(rule.n), after = priceWith(n);
+  return ['定价规则', `
+    <table class="sheet-table">
+      <tr><th>规则名称</th><td>${esc(rule.name)}</td></tr>
+      <tr><th>适用</th><td>${scope}</td></tr>
+      <tr><th>标准净含量</th><td>${num(sp.w0)} kg/箱</td></tr>
+      <tr><th>今日基准价</th><td>${sp.m0 == null ? '<span class="tagline warn">无基准价</span>' : num(sp.m0) + ' 元/箱'}</td></tr>
+    </table>
+    <div class="between" style="padding:10px 0;border-top:1px solid var(--line)">
+      <span class="muted" style="font-size:17px">每 kg 尾差</span>
+      <span class="stepper"><button data-act="ruleN" data-v="-0.1" aria-label="调低">−</button><output>${num(n)} 元</output><button data-act="ruleN" data-v="0.1" aria-label="调高">+</button></span>
+    </div>
+    ${after != null ? `<div class="preview"><span class="muted">本单收购价</span><span>${dirty ? `<s>${num(before)}</s> → ` : ''}<b>${num(after)}</b> 元/箱</span></div>` : ''}
+    ${dirty ? `<div class="pair" style="margin-bottom:14px">
+      <button class="btn small" data-act="ruleRevert">还原</button>
+      <button class="btn small primary" data-act="ruleSave">保存到规则${rule.farmers.length > 1 ? ` · ${rule.farmers.length} 户共用` : ''}</button>
+    </div>` : `<div class="pair" style="margin-bottom:6px">
+      <button class="btn small ghost-link" data-act="ruleChange" aria-expanded="${S.changeRule}">更换规则</button>
+      <button class="btn small ghost-link red" data-act="ruleUnbind">解绑</button>
+    </div>${S.changeRule ? list : ''}`}`];
+}
+function sheetDevices() {
+  return ['秤和打印机', devSection('scale') + devSection('printer')];
+}
+const bars = (n) => `<span class="bars" aria-label="信号 ${n} 格">${[1, 2, 3].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+function devSection(kind) {
+  const L = HW.link[kind], title = kind === 'scale' ? '蓝牙电子秤' : '标签打印机';
+  const d = linkedDev(kind);
+  let row;
+  if (d) {
+    const extra = kind === 'scale'   // 连上后显示这台秤的实时读数：按一下自己的秤盘，数字跟着动，就是连对了
+      ? `<span class="dev-read" id="devReading">${kg1(HW.readingC)} kg</span>${HW.battLow ? '<span class="tagline warn">电量低</span>' : ''}`
+      : (HW.printerState !== 'ok' ? `<span class="tagline warn">${PRINTER_ISSUE[HW.printerState]}</span>` : '');
+    const btns = (kind === 'printer' ? '<button class="btn small" data-act="testPrint">打一张测试标签</button>' : '')
+      + `<button class="btn small" data-act="scan" data-v="${kind}" aria-expanded="${S.scan === kind}">换一台</button>`;
+    row = `<div class="dev"><div class="row-text"><div class="row-main"><span class="dot ok"></span>${d.model} ··${d.id}</div><div class="dev-extra">${extra}</div></div><div class="dev-btns">${btns}</div></div>`;
+  } else {
+    const label = L.paired ? `${devOf(kind, L.paired).model} ··${L.paired}` : '未配对';
+    row = `<div class="dev"><div class="row-text"><div class="row-main"><span class="dot ${L.status === 'lost' ? 'err' : ''}"></span>${label}</div></div>${actionBtn(linkAction(kind), true)}</div>`;
+  }
+  return `<section class="dev-sec"><h3 class="label">${title}</h3>${row}${S.scan === kind ? scanList(kind) : ''}</section>`;
+}
+function scanList(kind) {
+  const what = kind === 'scale' ? '秤' : '打印机';
+  if (S.scanning) return `<p class="muted" style="margin:8px 0"><span class="spin" aria-hidden="true"></span>正在搜索附近的${what}</p>`;
+  const cur = linkedDev(kind);
+  const found = NEARBY[kind].filter((d) => inRange(kind, d) && d !== cur).sort((a, b) => b.rssi - a.rssi);
+  if (!found.length) return `<div class="between" style="margin-top:8px"><span class="muted">附近没有${what}</span><button class="btn small" data-act="scan" data-v="${kind}">重新搜索</button></div>`;
+  const L = HW.link[kind];
+  return `<ul class="list">${found.map((d) => {
+    const busy = L.status === 'connecting' && L.target === d.id;
+    return `<li><button class="row-btn" data-act="connect" data-v="${kind}:${d.id}" ${busy ? 'disabled' : ''}>
+      <span class="row-text">${bars(d.rssi)}<span class="row-main">${d.model} ··${d.id}</span></span>
+      <span class="row-sub row-side">${busy ? '<span class="spin" aria-hidden="true"></span>正在连接' : '连接'}</span></button></li>`;
+  }).join('')}</ul>`;
+}
+function sheetLeave() {
+  return ['放弃这一单？', `
+    <p style="margin:0 0 16px;font-size:17px">已称的 ${S.boxes.length} 箱记录会全部删除。</p>
+    <div class="pair">
+      <button class="btn danger" data-act="abandon">放弃这一单</button>
+      <button class="btn dark" data-act="closeSheet">继续称</button>
+    </div>`];
+}
+
+/* ============ 操作 ============ */
+const doneKeys = () => STEPS.filter((st) => stepValue[st.key]()).map((st) => st.key);
+function advance(before) {   // before：操作前已完成的步骤，用来判断这次新完成了哪几步
+  if (before) {
+    const now = doneKeys();
+    S.justDone = now.filter((k) => !before.includes(k));
+    S.justReady = before.length < STEPS.length && now.length === STEPS.length;
+    if (S.justReady) { try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {} }
+  }
+  S.open = null; render(); focusStep();
+}
+function focusStep(flash) {   // 把正在填的一步滚到眼前；点“还差几步”时再轻闪一下，表示按钮听到了
+  const el = document.querySelector('.step[data-state="active"]');
+  if (!el) return;
+  el.scrollIntoView({ block: 'nearest' });
+  if (el.dataset.step === 'farmer') $('q').focus({ preventScroll: true });
+  if (flash && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.querySelector('.step-card').animate(
+      [{ boxShadow: '0 0 0 0 rgba(11, 107, 58, 0.45)' }, { boxShadow: '0 0 0 10px rgba(11, 107, 58, 0)' }],
+      { duration: 500, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }
+}
+function newOrder() {
+  stopPrint();
+  Object.assign(S, { amb: null, reweigh: null, confirmed: false, screen: 'create', query: '', noMatch: '', farmerPhone: '', farmerId: null, product: null, spec: null, warehouse: S.lastWarehouse, open: null, batch: null, boxes: [], groupSeq: 0, k: 1, event: null, armed: true, recorded: null, submitError: false, sheet: null });
+  applyTare('none', 0, ''); HW.caseIdx = 0;
+}
+const ACT = {
+  farmer(v) {   // 只有一条规则时，商品和规格直接按规则填好
+    const before = doneKeys();
+    if (v === S.farmerId) { advance(); return; }        // 点回同一位，原样收起
+    const f = DATA.farmers.find((x) => x.id === v);
+    S.farmerId = v; S.noMatch = '';
+    S.farmerPhone = f.phones.find((p) => S.query.length === 4 && p.endsWith(S.query)) || f.phones[0];
+    const rules = farmerRules();
+    if (rules.length === 1) { S.product = rules[0].product; S.spec = rules[0].spec; }
+    else { S.product = null; S.spec = null; }
+    advance(before);
+  },
+  product(v) {
+    const before = doneKeys();
+    S.product = v;
+    const rules = farmerRules().filter((r) => r.product === v);
+    if (rules.length === 1) S.spec = rules[0].spec;
+    advance(before);
+  },
+  spec(v) { const before = doneKeys(); S.spec = v; advance(before); },
+  warehouse(v) { const before = doneKeys(); S.warehouse = v; advance(before); },
+  edit(v) { S.open = v; render(); focusStep(); },
+  nudge() { S.open = null; render(); focusStep(true); },
+  start() {
+    S.lastWarehouse = S.warehouse;
+    S.batch = S.batch || `SG${today().compact}-${batchSeq}`; S.screen = 'weigh'; S.event = null;
+    S.armed = dispC() < 500; S.recorded = null; render();
+  },
+  leave() { if (S.boxes.length) openSheet('leave'); else { S.screen = 'create'; render(); } },
+  abandon() { newOrder(); render(); },
+  openTare() { openSheet('tare'); },
+  openLog() { S.showSingles = false; openSheet('log'); },
+  openRule() { openSheet('rule'); },
+  openDevices() { openSheet('devices'); },
+  btOn() { HW.bt = true; $('bt').checked = true; syncLinks(); render(); },
+  permGrant() { HW.perm = true; $('perm').checked = true; syncLinks(); render(); },
+  scan(kind) {
+    if (S.sheet !== 'devices') openSheet('devices');
+    S.scan = kind; S.scanning = true; renderSheet();
+    const gen = HW.gen;
+    setTimeout(() => { if (gen === HW.gen) { S.scanning = false; renderSheet(); } }, 1200);
+  },
+  connect(v) { const [kind, id] = v.split(':'); connect(kind, id); },
+  testPrint() {
+    if (!printerReady()) { beep('warn'); return; }
+    if (!linkedDev('printer').mine) { $('printCount').textContent = `另一台打印机（··${HW.link.printer.paired}）出了一张测试标签`; return; }
+    $('sticker').className = 'sticker';
+    $('sticker').innerHTML = `<div><b>测试标签</b><br>GP-M32B ··${HW.link.printer.paired}<br>${today().dotted}</div>${fakeQR('TEST')}`;
+  },
+  closeSheet() { closeSheet(); },
+  toggleSingles() { S.showSingles = !S.showSingles; renderSheet(); },
+  tareDigital(v) { const t = DATA.tares.find((x) => x.id === v); applyTare('digital', t.c, t.name); S.lastTare = t.id; closeSheet(); render(); },
+  tareWeigh() { S.k = 1; applyTare('weigh', HW.readingC, '空箱'); closeSheet(); render(); },
+  chooseK(v) { S.k = Number(v); S.amb = null; HW.tareC = HW.tareUnitC * S.k; record(); },
+  openBox(v) { if (S.screen !== 'weigh') return; openSheet('box'); S.boxSeq = Number(v); S.boxMode = null; renderSheet(); },
+  reweigh() { S.reweigh = S.boxSeq; S.amb = null; closeSheet(); render(); },
+  cancelReweigh() { S.reweigh = null; render(); },
+  manualEdit() { const b = S.boxes.find((x) => x.seq === S.boxSeq); S.boxMode = 'manual'; S.boxInput = kg(b.netC); renderSheet(); $('boxIn').focus(); $('boxIn').select(); },
+  manualAdd() { openSheet('box'); S.boxSeq = null; S.boxMode = 'add'; S.boxInput = ''; renderSheet(); $('boxIn').focus(); },
+  boxCancel() { if (S.boxMode === 'add') closeSheet(); else { S.boxMode = null; renderSheet(); } },
+  boxSave() {
+    const val = Math.round(parseFloat(S.boxInput) * 100);
+    if (S.boxMode === 'add') {
+      const [b] = addWeighing(val, 1, HW.tareUnitC || 0, HW.tareName || '', { manual: true });
+      if (eachMode()) printLabel(b);
+      S.event = { type: '', text: `已手工加第 ${b.seq} 箱：${kg(val)} kg` };
+    } else {
+      const b = S.boxes.find((x) => x.seq === S.boxSeq);
+      if (!b.manual) b.rawC = b.netC;   // 秤的原始读数只记第一次的
+      Object.assign(b, { netC: val, manual: true, printed: false });
+      if (eachMode()) printLabel(b);
+      S.event = { type: '', text: `第 ${b.seq} 箱已改为 ${kg(val)} kg（手录）` };
+    }
+    closeSheet(); render();
+  },
+  boxDelete() {   // 合并称重的几箱作为一组整体删除
+    const b = S.boxes.find((x) => x.seq === S.boxSeq), grp = S.boxes.filter((x) => x.group === b.group);
+    const text = `已删除${seqRange(grp)}（${kg(grp.reduce((s, x) => s + x.netC, 0))} kg）`;
+    S.boxes = S.boxes.filter((x) => x.group !== b.group); renumber();
+    S.event = { type: '', text }; S.recorded = null; closeSheet(); render();
+  },
+  regroup(v) {   // 识别错了：按新的箱数重新均摊这一次称重
+    const k = Number(v), b = S.boxes.find((x) => x.seq === S.boxSeq), grp = S.boxes.filter((x) => x.group === b.group);
+    if (k === grp.length) return;
+    const i0 = S.boxes.indexOf(grp[0]), T = grp[0].unitC;
+    const fresh = makeBoxes(grp[0].grossC - k * T, k, T * k, grp[0].tareName, { grossC: grp[0].grossC, unitC: T });
+    S.boxes.splice(i0, grp.length, ...fresh); renumber();
+    if (eachMode()) fresh.forEach((x) => printLabel(x));
+    S.event = { type: '', text: `这一次称重改为 ${k} 箱：${seqRange(fresh)}` }; S.recorded = null;
+    closeSheet(); render();
+  },
+  reprint(v) {
+    const b = S.boxes.find((x) => x.seq === Number(v));
+    if (!printLabel(b)) beep('warn');
+    render();
+  },
+  reprintAll() { runPrintQueue(); },
+  finish() {   // 确认计量完毕：锁定流水、算价；按设置一次性打印
+    S.confirmed = true; S.screen = 'summary'; S.submitError = false; S.m0Retried = false; S.amb = null; render();
+    if (!eachMode()) runPrintQueue();
+  },
+  back() { stopPrint(); S.confirmed = false; S.screen = 'weigh'; S.event = null; render(); },
+  ruleN(v) { const r = boundRule(); S.draftN = Math.max(0, Math.round(((S.draftN ?? r.n) + Number(v)) * 100) / 100); renderSheet(); },
+  ruleRevert() { S.draftN = null; renderSheet(); },
+  refreshM0() {   // 基准价由管理员在 Web 端录入，这里只能重新拉一次
+    S.refreshing = true; render();
+    setTimeout(() => { S.refreshing = false; S.m0Retried = spec().m0 == null; if (S.m0Retried) beep('warn'); render(); }, 700);
+  },
+  ruleSave() { boundRule().n = S.draftN; S.draftN = null; render(); },
+  ruleChange() { S.changeRule = !S.changeRule; renderSheet(); },
+  ruleUnbind() { const r = boundRule(); r.farmers = r.farmers.filter((id) => id !== S.farmerId); S.changeRule = false; render(); },
+  ruleBind(v) {
+    const old = boundRule();
+    if (old) old.farmers = old.farmers.filter((id) => id !== S.farmerId);
+    DATA.rules.find((r) => r.id === v).farmers.push(S.farmerId);
+    S.changeRule = false; render();
+  },
+  submit() {
+    S.submitting = true; S.submitError = false; render();
+    setTimeout(() => {
+      S.submitting = false;
+      if (SESSION.expired) {   // 登录失效：先登录，登录后回到这张汇总页，单据数据不丢
+        Object.assign(S, { afterLogin: 'summary', screen: 'login', lerr: 'expired', lpw: '', lphone: SESSION.lastPhone });
+        closeSheet(); render(); $('lw').focus(); return;
+      }
+      if (HW.netDown) { S.submitError = true; beep('warn'); }
+      else {
+        S.screen = 'done'; S.doneAt = Date.now(); closeSheet(); beep('ok');
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+        S.recent = [S.farmerId, ...S.recent.filter((id) => id !== S.farmerId)].slice(0, 5);
+      }
+      render();
+    }, 700);
+  },
+  again() {
+    if (Date.now() - (S.doneAt || 0) < 500) return;   // 提交按钮和这个按钮在同一位置：防止连点直接跳过完成页
+    batchSeq += 1; newOrder(); render(); focusStep();
+  },
+  focusField(id) { $(id).focus(); },
+  togglePw() {
+    S.showPw = !S.showPw; const w = $('lw'), pos = w.selectionStart;
+    w.type = S.showPw ? 'text' : 'password'; w.focus(); try { w.setSelectionRange(pos, pos); } catch (e) {}
+    const b = document.querySelector('[data-act="togglePw"]'); b.innerHTML = EYE(!S.showPw); b.setAttribute('aria-label', S.showPw ? '隐藏密码' : '显示密码');
+  },
+  login() {
+    S.lbusy = true; $('lfoot').innerHTML = loginBtn();
+    setTimeout(() => {
+      S.lbusy = false;
+      const acct = ACCOUNTS.find((a) => a.phone === S.lphone);
+      if (HW.netDown) S.lerr = 'net';                                   // 连不上：密码留着
+      else if (!acct || acct.pw !== S.lpw) { S.lerr = 'bad'; S.lpw = ''; beep('warn'); }
+      else if (acct.role !== 'scale') S.lerr = 'admin';
+      else {
+        Object.assign(SESSION, { user: acct.phone, lastPhone: acct.phone, expired: false }); saveSession();
+        S.lerr = ''; S.lpw = ''; S.screen = S.afterLogin || 'create'; S.afterLogin = null;
+        render();
+        if (['scale', 'printer'].every((k) => HW.link[k].status !== 'connected' && HW.link[k].status !== 'connecting')) startLinks();
+        if (S.screen === 'create') focusStep();
+        return;
+      }
+      render();
+      if (S.lerr === 'bad') $('lw').focus();
+    }, 700);
+  },
+  openAccount() { openSheet('account'); },
+  logout() {
+    SESSION.user = null; saveSession();
+    HW.gen += 1; ['scale', 'printer'].forEach((k) => { HW.link[k].status = 'idle'; }); syncLinks();
+    closeSheet();
+    Object.assign(S, { screen: 'login', lphone: SESSION.lastPhone, lpw: '', lerr: '', afterLogin: null });
+    render(); $('lw').focus();
+  },
+};
+
+function resetAll() {
+  batchSeq = 1; freshState();
+  ['bt', 'perm', 'scaleRange', 'printerRange', 'sound'].forEach((id) => { $(id).checked = true; });
+  $('netDown').checked = false; $('battLow').checked = false; $('printerState').value = 'ok';
+  $('weightSource').value = 'case'; $('placeN').value = '1';
+  stopPrint(); SETTINGS = { ...SETTINGS_DEFAULT }; $('setRound').value = SETTINGS.round; $('setPrint').value = SETTINGS.printMode;
+  $('printCount').textContent = '还没有打印';
+  $('sticker').className = 'sticker-empty'; $('sticker').textContent = '最近打印的标签会显示在这里';
+  syncToggle(); render(); if (me()) startLinks();
+}
+const HWACT = {
+  logoutBench() { if (me()) ACT.logout(); },
+  expire() { if (me()) { SESSION.expired = true; saveSession(); } },
+  setM0() { DATA.specs.forEach((sp) => { if (sp.m0 == null) sp.m0 = Math.round(sp.w0 * 4); }); },
+  unpair() {
+    HW.gen += 1;
+    ['scale', 'printer'].forEach((k) => { HW.link[k] = { paired: null, status: 'idle' }; });
+    syncLinks(); render();
+  },
+  next() {
+    const v = $('placeN').value, heavy = v === '5h', n = heavy ? 5 : Number(v);
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const net = heavy ? 4900
+        : n === 1 && $('weightSource').value === 'case' ? CASE_NETS_C[HW.caseIdx++ % CASE_NETS_C.length]
+        : 4450 + Math.round(Math.random() * 30) * 10;
+      total += net + BOX_KG_C;
+    }
+    const place = () => setLoad(total, `${n} 箱，毛重 ${kg(total)}kg`);
+    if (HW.loadC > 0) { setLoad(0, '空'); setTimeout(place, 1100); } else place();   // 先拿走上一箱，再放新的
+  },
+  remove() { setLoad(0, '空'); },
+  empty() { setLoad(BOX_KG_C, '一只空箱，2kg'); },
+  reset: resetAll,
+};
+
+function syncToggle() {
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === MODE)));
+  document.querySelector('[data-big]').setAttribute('aria-pressed', String(BIG));
+  $('phone').toggleAttribute('data-large', BIG);
+}
+
+document.addEventListener('click', (e) => {
+  const mode = e.target.closest('[data-mode]');
+  if (mode) { MODE = mode.dataset.mode; savePref(); resetAll(); return; }
+  if (e.target.closest('[data-big]')) { BIG = !BIG; savePref(); syncToggle(); return; }
+  const hw = e.target.closest('[data-hw]');
+  if (hw) { HWACT[hw.dataset.hw](); return; }
+  const el = e.target.closest('[data-act]');
+  if (el && !el.disabled) ACT[el.dataset.act](el.dataset.v);
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'lp' || e.target.id === 'lw') { loginInput(e); return; }
+  if (e.target.id === 'boxIn') { S.boxInput = e.target.value.trim(); $('boxSaveWrap').innerHTML = boxSaveBtn(); return; }
+  if (e.target.id === 'q') {
+    S.query = e.target.value.replace(/\D/g, ''); e.target.value = S.query; S.noMatch = '';
+    $('otpCells').innerHTML = otpCells();
+    $('results').innerHTML = farmerResults();
+    if (S.query.length < 4) return;
+    const hits = tailHits(S.query);
+    if (hits.length === 1) { ACT.farmer(hits[0].id); return; }
+    if (hits.length > 1) { e.target.blur(); return; }
+    const otp = $('otp'), missed = S.query;
+    otp.classList.add('bad'); beep('warn');
+    setTimeout(() => {
+      if (S.query !== missed || !$('q')) return;
+      S.query = ''; S.noMatch = missed; $('q').value = '';
+      otp.classList.remove('bad');
+      $('otpCells').innerHTML = otpCells(); $('results').innerHTML = farmerResults(); $('q').focus();
+    }, 450);
+  }
+});
+document.addEventListener('change', (e) => {
+  const id = e.target.id;
+  if (['bt', 'perm', 'scaleRange', 'printerRange', 'battLow', 'sound', 'netDown'].includes(id)) {
+    HW[id] = e.target.checked;
+    syncLinks(); render();
+  }
+  if (id === 'printerState') { HW.printerState = e.target.value; render(); }
+  if (id === 'setRound') { SETTINGS.round = e.target.value; render(); }
+  if (id === 'setPrint') { SETTINGS.printMode = e.target.value; render(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && S.sheet) closeSheet();
+  if (e.key === 'Enter' && e.target.id === 'boxIn' && validKg(S.boxInput)) { e.preventDefault(); ACT.boxSave(); }
+  if (e.key === 'Enter' && (e.target.id === 'lp' || e.target.id === 'lw')) { e.preventDefault(); const b = $('lfoot').querySelector('button:not([disabled])'); if (b) b.click(); }
+});
+
+freshState();
+syncToggle();
+render();
+if (me()) startLinks();
+setInterval(tick, 100);
+</script>
+</body>
+</html>

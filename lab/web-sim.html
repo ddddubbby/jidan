@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>收蛋管理端</title>
+<style>
+:root {
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --sunken: #f4f5f2;
+  --ink: #14181a;
+  --ink-2: #4a5357;
+  --ink-3: #6b7471;
+  --line: #dde1db;
+  --edge: #8b9590;
+  --accent: #0b6b3a;
+  --accent-press: #095a31;
+  --ok-bg: #e1f2e6;
+  --ok-ink: #0a5a31;
+  --warn-bg: #fff1cf;
+  --warn-ink: #734600;
+  --err-bg: #fde4e1;
+  --err-ink: #9c1f18;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --side: 224px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.nb { white-space: nowrap; }
+.muted { color: var(--ink-2); }
+h1, h2, h3 { margin: 0; }
+
+/* ---------- 外框：侧栏固定，背景铺满 ---------- */
+.shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh;
+  background: linear-gradient(to right, var(--surface) var(--side), var(--line) var(--side), var(--line) calc(var(--side) + 1px), var(--bg) calc(var(--side) + 1px)); }
+.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 18px 12px; }
+.side .me .book { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.t.ft .hf { display: none; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; }
+.brand .mark { width: 26px; height: 32px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: var(--accent); }
+.brand b { font-size: 19px; letter-spacing: 0.04em; }
+.brand small { display: block; font-size: 13px; color: var(--ink-2); letter-spacing: 0; }
+.nav { display: grid; gap: 2px; }
+.nav button { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: none; text-align: left; font-size: 15px; color: var(--ink-2); }
+.nav button:hover { background: var(--sunken); color: var(--ink); }
+.nav button[aria-current="page"] { background: var(--ink); color: #fff; }
+.nav .grp { margin: 14px 12px 4px; font-size: 13px; color: var(--ink-3); }
+.nav .badges { display: inline-flex; align-items: center; gap: 6px; }
+.cnt { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--sunken); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.nav button[aria-current="page"] .cnt { background: rgba(255,255,255,.18); color: #fff; }
+.reddot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #d33a2c; }
+.side .me { margin-top: auto; padding: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.side .me b { display: block; font-size: 15px; color: var(--ink); }
+.side .me button { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--ink-2); font-size: 13px; text-decoration: underline; }
+
+.main { min-width: 0; padding: 24px 32px 80px; overflow-x: clip; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.top h1 { font-size: 26px; line-height: 1.25; }
+.top p { margin: 4px 0 0; color: var(--ink-2); }
+.top .acts { display: flex; align-items: center; gap: 10px; flex: none; }
+.crumb { display: inline-flex; align-items: center; min-height: 36px; margin: -6px 0 6px -8px; padding: 0 10px 0 8px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-size: 15px; font-weight: 600; }
+.crumb:hover { background: var(--surface); color: var(--ink); }
+.narrow { max-width: 760px; }
+
+/* ---------- 按钮 ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--surface); font-size: 15px; font-weight: 600; white-space: nowrap; transition: transform 120ms var(--ease-out); }
+.btn:hover { background: var(--sunken); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-press); }
+.btn.dark { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.todo { border-color: var(--accent); background: var(--surface); color: var(--ok-ink); }
+.btn.fix { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.btn.ghost { border-color: transparent; background: none; color: var(--ink-2); }
+.btn.ghost:hover { background: var(--sunken); color: var(--ink); }
+.btn.red { border-color: transparent; background: none; color: var(--err-ink); }
+.btn.sm { min-height: 32px; padding: 0 10px; border-radius: 9px; font-size: 13px; }
+.btn.lg { min-height: 48px; padding: 0 22px; font-size: 17px; border-radius: 14px; }
+.btn:disabled { background: #e8eae6; border-color: #e8eae6; color: var(--ink-3); cursor: default; transform: none; }
+
+/* ---------- 卡片、标签、表格 ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; background: var(--sunken); color: var(--ink-2); }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.pill.err { background: var(--err-bg); color: var(--err-ink); }
+.pill.plain::before { display: none; }
+.tag { display: inline-block; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--sunken); color: var(--ink-2); font-size: 12px; font-weight: 600; white-space: nowrap; vertical-align: 1px; }
+.tag.warn { border-color: transparent; background: var(--warn-bg); color: var(--warn-ink); }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+.tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-size: 15px; font-weight: 600; }
+.tabs button:hover { background: var(--surface); color: var(--ink); }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.search { width: 300px; height: 40px; padding: 0 12px 0 36px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7471' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='M11 11l4 4'/%3E%3C/svg%3E") no-repeat 12px center; }
+.search:focus-visible { border-color: var(--accent); outline: none; }
+
+table.t { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.t thead th:first-child { border-top-left-radius: 15px; } .t thead th:last-child { border-top-right-radius: 15px; }
+.t th { position: sticky; top: 0; z-index: 1; padding: 10px 14px; background: #fafbf9; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.t td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.t tr:last-child td { border-bottom: 0; }
+.t .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t tbody tr.go { cursor: pointer; }
+.t tbody tr.go:hover td { background: #fafbf9; }
+.t .name { font-weight: 600; max-width: 240px; }
+.t .name .nm { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t .sub { display: block; font-size: 13px; color: var(--ink-2); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t .errline { display: block; font-size: 13px; color: var(--err-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t td.fill { max-width: 0; width: 34%; }
+.t .clip { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ambdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c98a00; }
+.t tr.warnrow td { background: #fffaf0; }
+.empty { padding: 40px; text-align: center; color: var(--ink-2); }
+
+/* ---------- 输入、开关 ---------- */
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.in { height: 42px; padding: 0 12px; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--surface); font-size: 15px; width: 100%; }
+.in:focus-visible { outline: none; border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(11,107,58,.15); }
+.in.bad { border-color: var(--err-ink); }
+.in.numin { text-align: right; font-variant-numeric: tabular-nums; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg button { min-height: 40px; padding: 0 14px; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--surface); font-weight: 600; }
+.seg button small { margin-left: 6px; font-size: 12px; color: var(--ok-ink); font-weight: 600; }
+.seg button small.w { color: var(--warn-ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.seg button[aria-pressed="true"] small { color: #fff; }
+.seg.sm button { min-height: 34px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+.switch { position: relative; width: 44px; height: 26px; border: 0; border-radius: 13px; background: #c9cec8; flex: none; vertical-align: middle; transition: background-color 150ms ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform 150ms var(--ease-out); }
+.switch[aria-checked="true"] { background: var(--ink); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.inline-err { font-size: 13px; font-weight: 600; color: var(--err-ink); }
+.datefield { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pop .datefield, .pop .seg { flex-wrap: nowrap; }
+.pop .datefield .in { width: 132px; }
+.info > .cell:nth-child(4n) .pop, .info > .cell:nth-child(4n-1) .pop { left: auto; right: -1px; }
+.datefield .in { width: 132px; height: 38px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ---------- 状态条 ---------- */
+.strip { display: flex; flex-wrap: wrap; gap: 10px; margin: -4px 0 16px; }
+.sitem { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 14px; border-radius: 12px; font-weight: 600; background: var(--warn-bg); color: var(--warn-ink); }
+.sitem .btn { min-height: 34px; }
+.backbtn { margin: -6px 0 10px; }
+
+/* ---------- 单据详情 ---------- */
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.info { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.info > .cell { position: relative; padding: 14px 18px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; text-align: left; background: none; }
+.info > .cell:nth-child(4n) { border-right: 0; }
+.info > .cell:nth-last-child(-n+4) { border-bottom: 0; }
+.cell .k { display: block; font-size: 13px; color: var(--ink-2); }
+.cell .v { display: block; margin-top: 2px; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.cell .v.small { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.cell { cursor: pointer; font: inherit; color: inherit; }
+button.cell:hover { background: #fafbf9; }
+button.cell .v, .ecell .ev, .icell .iv, .netbtn { text-decoration: underline dashed #b3bab5; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+button.cell:hover .v::after, .ecell:hover .ev::after { content: " 改"; font-size: 13px; font-weight: 600; color: var(--ink-3); text-decoration: none; display: inline-block; margin-left: 4px; }
+.cell.editing, td.editing { position: relative; background: #f3f9f5; box-shadow: inset 0 0 0 2px var(--accent); z-index: 4; }
+.pop { position: absolute; left: -1px; top: calc(100% + 4px); z-index: 6; width: max-content; min-width: calc(100% + 2px); max-width: 440px; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.12); text-align: left; font-weight: 400; }
+.pop .in { width: 300px; }
+.pop .list { margin-top: 6px; max-height: 260px; overflow-y: auto; }
+.pop .list button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 40px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; text-align: left; }
+.pop .list button:hover { background: var(--sunken); }
+.dropdown { position: absolute; z-index: 6; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.12); max-height: 260px; overflow-y: auto; }
+.dropdown button, .pick button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 40px; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; }
+.dropdown button:last-child, .pick button:last-child { border-bottom: 0; }
+.dropdown button:hover, .pick button:hover { background: var(--sunken); }
+.pick { margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; max-height: 260px; overflow-y: auto; background: var(--surface); }
+.sec-title { margin: 22px 0 10px; font-size: 17px; font-weight: 700; }
+.ecell { cursor: pointer; }
+.ecell:hover { background: #fafbf9; }
+.ops { display: flex; gap: 6px; justify-content: flex-end; flex: none; }
+.twrap { overflow-x: auto; border-radius: 16px; }
+.underrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.underrow .formula { margin: 6px 0 0; }
+.side-panel { position: sticky; top: 24px; padding: 20px; }
+.side-panel .k { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.amt { margin: 4px 0 2px; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.amt small { font-size: 17px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
+.calc { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.was { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.side-panel hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+.side-panel .row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 15px; }
+.side-panel .row .v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.side-panel .act { display: grid; gap: 8px; margin-top: 18px; }
+.side-panel .act .btn { width: 100%; }
+.result { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 15px; }
+.result.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.result.err { background: var(--err-bg); color: var(--err-ink); }
+.result b { display: block; }
+.formula { margin-top: 8px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.fixline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- 单箱表格（流水与新建单共用） ---------- */
+.boxes td { padding: 4px 12px; height: 46px; }
+.boxes .seqc { width: 96px; white-space: nowrap; }
+.netbtn { padding: 4px 8px; margin-left: -8px; border: 0; border-radius: 8px; background: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+.netbtn:hover { background: var(--sunken); }
+.boxes .orig { display: block; font-size: 12px; color: var(--ink-2); }
+.boxes .edin { height: 34px; width: 110px; border-radius: 9px; }
+.boxes .del { opacity: 0; color: var(--ink-2); }
+.boxes tr:hover .del, .boxes tr:focus-within .del { opacity: 1; }
+.addrow td { background: #fafbf9; }
+.boxes .addrow input.in { height: 36px; width: 200px; }
+.pastebox { display: block; width: 100%; min-height: 96px; margin-top: 8px; padding: 10px 12px; border: 1.5px dashed var(--edge); border-radius: 12px; background: var(--surface); resize: vertical; font-variant-numeric: tabular-nums; }
+.groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.groups span, .groups button { padding: 2px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--sunken); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---------- 抽屉、对话框 ---------- */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(10,14,16,.32); opacity: 0; visibility: hidden; transition: opacity 200ms ease, visibility 0s linear 200ms; }
+.scrim.on { opacity: 1; visibility: visible; transition: opacity 250ms ease, visibility 0s; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 41; width: min(560px, 100vw); display: flex; flex-direction: column; background: var(--surface); box-shadow: -12px 0 32px rgba(0,0,0,.12); transform: translateX(100%); visibility: hidden; transition: transform 200ms var(--ease-drawer), visibility 0s linear 200ms; }
+.drawer.on { transform: none; visibility: visible; transition: transform 250ms var(--ease-drawer), visibility 0s; }
+.drawer .hd { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+.drawer .hd h2 { font-size: 19px; line-height: 1.35; overflow-wrap: anywhere; }
+.drawer .hd p { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); }
+.drawer .bd { flex: 1; overflow-y: auto; padding: 18px 22px 28px; overscroll-behavior: contain; }
+.mfilter { min-height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mfilter[aria-pressed="true"] { background: var(--warn-ink); color: #fff; }
+.drawer .bd .t th { top: -18px; }
+.drawer .ft { flex: none; display: flex; gap: 10px; justify-content: flex-end; align-items: center; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface); }
+.drawer .ft.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; background: #fafbf9; }
+.ft.stats .k { display: block; font-size: 13px; color: var(--ink-2); }
+.ft.stats .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ft.stats .v s { color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.dialog { position: fixed; z-index: 51; left: 50%; top: 50%; width: min(460px, calc(100vw - 32px)); padding: 24px; border-radius: 18px; background: var(--surface); box-shadow: 0 24px 60px rgba(0,0,0,.22); transform: translate(-50%, -50%) scale(0.97); opacity: 0; visibility: hidden; transition: transform 150ms var(--ease-out), opacity 150ms ease, visibility 0s linear 150ms; }
+.dialog.on { transform: translate(-50%, -50%); opacity: 1; visibility: visible; transition: transform 180ms var(--ease-out), opacity 180ms ease, visibility 0s; }
+.dscrim { z-index: 50; }
+.dialog h2 { font-size: 19px; }
+.dialog .amt { margin: 12px 0 2px; }
+.dialog .acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.pwshow { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; }
+.pwshow b { font-size: 34px; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.toast { position: fixed; left: 50%; bottom: 28px; z-index: 60; transform: translate(-50%, 16px); opacity: 0; padding: 10px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 600; transition: transform 200ms var(--ease-out), opacity 200ms ease; pointer-events: none; }
+.toast.on { transform: translate(-50%, 0); opacity: 1; }
+
+/* 规则抽屉 */
+.formgrid { display: grid; gap: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--line); font-weight: 600; }
+.chip button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--ink-2); }
+.chip button:hover { background: #e3e6e1; }
+.chip.bad { background: var(--err-bg); border-color: var(--err-ink); color: var(--err-ink); }
+.conflict { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--err-bg); color: var(--err-ink); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.preview { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px; border-radius: 10px; background: var(--sunken); font-variant-numeric: tabular-nums; }
+.preview b { font-size: 19px; }
+.preview s { color: var(--ink-3); }
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper button { width: 40px; height: 40px; border: 1.5px solid var(--edge); border-radius: 10px; background: var(--surface); font-size: 20px; font-weight: 600; }
+.stepper .in { width: 96px; text-align: center; font-size: 17px; font-weight: 700; }
+.lbl2 { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+/* 新建入库单 */
+.form-steps { display: grid; gap: 14px; }
+.fstep { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: start; gap: 16px; padding: 16px 20px; }
+.fstep .lbl { padding-top: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.fstep .lbl i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; border: 2px solid #a3aba6; color: var(--ink-3); }
+.fstep.done .lbl i { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fstep.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.fstep.active .lbl i { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fstep.todo { opacity: .55; }
+.combo { position: relative; max-width: 420px; }
+.combo .pick { position: absolute; left: 0; right: 0; top: 46px; z-index: 5; box-shadow: 0 10px 24px rgba(0,0,0,.1); }
+.setrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rulepick { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); }
+.rulepick .t2 { font-weight: 600; color: var(--warn-ink); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+/* 设置 */
+.setgrid { display: grid; gap: 16px; max-width: 880px; }
+.setcard { padding: 18px 22px; }
+.setcard h3 { font-size: 17px; margin-bottom: 10px; }
+.opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.opt { display: grid; gap: 4px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; }
+.opt b { font-size: 15px; }
+.opt span { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.opt[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.savebar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; padding: 12px 0; background: linear-gradient(to bottom, rgba(243,244,241,0), var(--bg) 30%); }
+.icell { cursor: pointer; }
+.icell:hover { background: #fafbf9; }
+.icell:hover::after { content: " 改"; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.cellin { height: 34px; width: 120px; padding: 0 10px; border: 2px solid var(--accent); border-radius: 9px; font: inherit; text-align: right; font-variant-numeric: tabular-nums; }
+.cellin.wide { width: 180px; text-align: left; }
+
+/* 登录 */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.login .card { width: 400px; padding: 32px; }
+.login .brand { padding: 0 0 24px; }
+
+/* 模拟控制（不属于产品） */
+.lab { position: fixed; right: 16px; bottom: 16px; z-index: 30; font: 13px/1.4 system-ui, sans-serif; }
+.lab > button { padding: 6px 10px; border: 0; border-radius: 8px; background: #e3e6e1; color: #333; font-weight: 600; }
+.lab .panel { position: absolute; right: 0; bottom: 38px; width: 260px; padding: 12px; border-radius: 12px; background: #2a2f31; color: #e8ebe7; box-shadow: 0 10px 30px rgba(0,0,0,.25); display: none; }
+.lab.open .panel { display: grid; gap: 8px; }
+.lab .panel button { padding: 8px 10px; border: 0; border-radius: 8px; background: #3b4245; color: #fff; text-align: left; }
+.lab .panel label { display: flex; align-items: center; gap: 8px; }
+.lab .panel .seg2 { display: flex; gap: 4px; }
+.lab .panel .seg2 button { flex: 1; text-align: center; }
+.lab .panel .seg2 button[aria-pressed="true"] { background: #fff; color: #000; }
+.lab .panel p { margin: 0; color: #b9c0bb; }
+
+@media (max-width: 1100px) {
+  :root { --side: 188px; }
+  .main { padding: 20px 20px 80px; }
+  .dgrid { grid-template-columns: minmax(0, 1fr); }
+  .side-panel { position: static; order: -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; }
+  .side-panel > hr { display: none; }
+  .side-panel > .k, .side-panel > .amt, .side-panel > .calc, .side-panel > .was, .side-panel > .fixline { grid-column: 1; }
+  .side-panel > .row, .side-panel > .result { grid-column: 2; }
+  .side-panel > .act { grid-column: 1 / -1; }
+  .t .narrowhide { display: none; }
+  .t .name { max-width: 170px; }
+  .search { width: 240px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .drawer, .drawer.on, .dialog, .dialog.on, .scrim, .scrim.on, .toast, .switch, .switch::after { transition: none !important; }
+  .btn:active { transform: none; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="scrim" id="scrim" data-act="closeDrawer"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true"></aside>
+<div class="scrim dscrim" id="dscrim"></div>
+<div class="dialog" id="dialog" role="alertdialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<div class="lab" id="lab">
+  <div class="panel">
+    <p>模拟控制（不属于产品）</p>
+    <div class="seg2"><button data-lab="demo">演示数据</button><button data-lab="worst">最坏情况</button></div>
+    <button data-lab="newOrder">APP 提交一张新单</button>
+    <label><input type="checkbox" id="labPushFail"> 好生意回传失败</label>
+    <label><input type="checkbox" id="labSyncFail"> 档案同步失败</label>
+    <button data-lab="reset">全部重置</button>
+    <p>管理员 139 0000 2222 / admin123<br>磅秤员 139 0000 1111 / egg123</p>
+  </div>
+  <button data-lab="toggle">模拟</button>
+</div>
+
+<script>
+/* ================= 工具 ================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const kg = (c) => String(Math.round(c) / 100);
+const num = (n) => String(Math.round(n * 100) / 100);
+const money = (n) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+const fmtPhone = (p) => (/^1\d{10}$/.test(p) ? p.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3') : p);
+const pad = (n) => String(n).padStart(2, '0');
+const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const TODAY = isoOf(new Date());
+const dayShift = (iso, k) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + k); return isoOf(d); };
+const dot = (iso) => iso.replace(/-/g, '.');
+const compact = (iso) => iso.replace(/-/g, '');
+const parseDot = (t) => {   // 接受 2026.11.15 / 2026-11-15 / 2026/11/15，不接受未来日期
+  const m = String(t).trim().match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/);
+  if (!m) return null;
+  const iso = `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`, d = new Date(iso + 'T00:00:00');
+  return isNaN(d) || isoOf(d) !== iso || iso > TODAY ? null : iso;
+};
+const validKg = (v) => /^\d{1,3}(\.\d{1,2})?$/.test(String(v).trim()) && parseFloat(v) > 0;
+const ROUND_NAME = { half: '四舍五入', floor: '抹零', ceil: '进位' };
+function roundW(tC, n, rule) {   // 均重取整：tC 单位 0.01kg；规则定义只此一处
+  const d = n * 100;
+  if (rule === 'floor') return Math.floor(tC / d);
+  if (rule === 'ceil') return Math.floor((tC + d - 1) / d);
+  return Math.floor((2 * tC + d) / (2 * d));
+}
+
+/* ================= 数据 ================= */
+const CASE = [4650, 4580, 4600, 4600, 4600, 4560, 4560, 4560, 4560, 4780];
+let seed = 11;
+const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+const boxesFrom = (nets, tare = 200, name = '2号包装箱') => nets.map((n, i) => ({ seq: i + 1, netC: n, tareC: tare, tareName: name, manual: false, rawC: null }));
+const randNets = (k, base = 4600, span = 30) => Array.from({ length: k }, () => base - span * 5 + Math.round(rnd() * span) * 10);
+
+function demoData() {
+  seed = 11;
+  const D = {
+    book: '鑫源蛋品 2026 账套',
+    products: [{ id: '粉蛋', code: 'SP0001' }, { id: '红蛋', code: 'SP0002' }],
+    specs: [
+      { id: '240', name: '240枚/箱', count: 240, w0: 30, on: true },
+      { id: '360', name: '360枚/箱', count: 360, w0: 45, on: true },
+      { id: '480', name: '480枚/箱', count: 480, w0: 60, on: true },
+    ],
+    prices: { [dayShift(TODAY, -1)]: { 240: 118, 360: 178, 480: 236 }, [TODAY]: { 240: 120, 360: 180 } },
+    tares: [
+      { id: 't1', name: '1号包装箱', c: 150, hot: true, on: true },
+      { id: 't2', name: '2号包装箱', c: 200, hot: true, on: true },
+      { id: 't3', name: '3号包装箱', c: 250, hot: true, on: true },
+      { id: 't4', name: '旧款木箱', c: 420, hot: false, on: false },
+    ],
+    farmers: [
+      { id: 'f1', name: '李四', phones: ['13603511234'], code: 'GYS0001' },
+      { id: 'f2', name: '王秀英', phones: ['15803511234', '13935107788'], code: 'GYS0002' },
+      { id: 'f3', name: '张三', phones: ['13800005678'], code: 'GYS0003' },
+      { id: 'f4', name: '李四', phones: ['13099995678'], code: 'GYS0004' },
+    ],
+    customers: [{ id: 'c1', name: '郑州永丰农产品批发市场', code: 'KH0001' }, { id: 'c2', name: '北京新发地蛋品行', code: 'KH0002' }],
+    warehouses: [{ id: 'w1', name: '1号仓库', code: 'CK01' }, { id: 'w2', name: '2号仓库', code: 'CK02' }],
+    rules: [
+      { id: 'r1', name: '粉蛋李四收购定价方案', kind: 'buy', product: '粉蛋', spec: '360', n: 1, binds: ['f1'] },
+      { id: 'r2', name: '红蛋张三收购定价方案', kind: 'buy', product: '红蛋', spec: '360', n: 1.5, binds: ['f3'] },
+      { id: 'r3', name: '粉蛋360通用收购方案', kind: 'buy', product: '粉蛋', spec: '360', n: 0.8, binds: [] },
+      { id: 'r5', name: '粉蛋王秀英收购定价方案', kind: 'buy', product: '粉蛋', spec: '360', n: 1, binds: ['f2'] },
+      { id: 'r6', name: '红蛋王秀英小箱收购方案', kind: 'buy', product: '红蛋', spec: '240', n: 0.5, binds: ['f2'] },
+      { id: 'r7', name: '粉蛋大箱收购方案', kind: 'buy', product: '粉蛋', spec: '480', n: 1, binds: ['f4'] },
+      { id: 'd1', name: '永丰市场粉蛋发货方案', kind: 'sell', product: '粉蛋', spec: '360', n: 1.2, binds: ['c1'] },
+    ],
+    accounts: [
+      { id: 'a1', name: '张师傅', phone: '13900001111', role: 'scale', on: true, last: `${dot(TODAY)} 07:42` },
+      { id: 'a2', name: '刘师傅', phone: '13900003333', role: 'scale', on: false, last: `${dot(dayShift(TODAY, -30))} 16:10` },
+      { id: 'a0', name: '王会计', phone: '13900002222', role: 'admin', on: true, last: '' },
+    ],
+    settings: { round: 'half', printMode: 'batch', noteType: 'NO_INVOICE', tax: 0, labelW: 60, labelH: 40, gap: 2, threshold: 10 },
+    lastSync: `${dot(TODAY)} 07:30`,
+    orders: [],
+  };
+  D.rules.forEach((r) => { r.on = true; });
+  let seq = 0;
+  const add = (o) => {
+    seq += 1;
+    const date = o.date || TODAY;
+    D.orders.push({ id: `o${seq}`, code: `CGRK${compact(date)}${String(seq).padStart(3, '0')}`, date, warehouse: 'w1', operator: '张师傅',
+      source: 'APP', status: 'pending', round: null, hsId: '', err: '', frozen: null, submitted: null, ...o });
+  };
+  add({ batch: `SG${compact(TODAY)}-1`, farmer: 'f1', product: '粉蛋', spec: '360', at: '08:16', boxes: boxesFrom(CASE) });
+  const wang = boxesFrom(randNets(8, 3050, 20), 150, '1号包装箱');
+  wang[5] = { ...wang[5], manual: true, rawC: wang[5].netC, netC: wang[5].netC - 120 };
+  add({ batch: `SG${compact(TODAY)}-2`, farmer: 'f2', product: '红蛋', spec: '240', at: '08:51', boxes: wang });
+  add({ batch: `SG${compact(TODAY)}-3`, farmer: 'f3', product: '红蛋', spec: '360', at: '09:20', boxes: boxesFrom(randNets(6, 4520)) });
+  add({ batch: `SG${compact(TODAY)}-4`, farmer: 'f2', product: '粉蛋', spec: '360', at: '07:58', boxes: boxesFrom(randNets(12, 4590)), status: 'failed', err: '好生意返回：openToken 已过期（openapi.e1003）' });
+  const y = dayShift(TODAY, -1);
+  [['f1', '粉蛋', '360', 10], ['f3', '红蛋', '360', 7], ['f2', '红蛋', '240', 9]].forEach(([f, p, s, k], i) => {
+    add({ date: y, batch: `SG${compact(y)}-${i + 1}`, farmer: f, product: p, spec: s, at: `1${4 + i}:0${i}`, status: 'sent', hsId: `CGRK-HSY-${compact(y)}-${i + 31}`, boxes: boxesFrom(randNets(k, s === '240' ? 3050 : 4560)) });
+  });
+  finishOrders(D, D.orders);
+  // 张三这张：APP 提交后管理员改过规则系数，审核页会标出原金额
+  const zs = D.orders.find((o) => o.farmer === 'f3' && o.status === 'pending');
+  zs.submitted = { M: zs.submitted.M - 1.5, amount: Math.round((zs.submitted.M - 1.5) * zs.boxes.length * 100) / 100 };
+  return D;
+}
+function finishOrders(D, list) {   // 已审核的单（已回传、回传失败）按审核时锁定；待审核的单记下 APP 提交时的金额
+  list.forEach((o) => {
+    if (o.status === 'sent' || o.status === 'failed') { o.round = 'half'; o.frozen = calc({ ...o, frozen: null }, D); o.approvedBy = '王会计'; }
+    else { const c = calc(o, D); o.submitted = c.M != null ? { M: c.M, amount: c.amount } : null; }
+  });
+}
+function worstData() {
+  const D = demoData();
+  D.book = '山西省晋中市太谷区鑫源生态养殖专业合作社联合社 2026 年度正式账套';
+  D.farmers.push(
+    { id: 'f5', name: '山西省晋中市太谷区鑫源生态养殖专业合作社（第二分社）', phones: ['13603511234', '15503541234', '0354-6221234'], code: 'GYS0005' },
+    { id: 'f6', name: '阿卜杜热合曼·买买提依明', phones: ['18699011234'], code: 'GYS0006' },
+  );
+  ['赵大强', '钱二', '孙小梅', '周建国', '吴家养殖场', '郑氏蛋鸡合作社'].forEach((n, i) => D.farmers.push({ id: `g${i}`, name: n, phones: [`137000${String(10000 + i)}`], code: `GYS01${i}` }));
+  D.rules.push({ id: 'r9', name: '粉壳散养蛋360枚鑫源合作社2026年冬季收购定价方案（含运费补贴）', kind: 'buy', product: '粉蛋', spec: '360', n: 1.25, on: true, binds: ['f5', 'f6', 'g0', 'g1', 'g2', 'g3', 'g4', 'g5'] });
+  const base = D.orders[0], more = [];
+  for (let i = 0; i < 46; i++) {
+    const f = i % 3 === 0 ? 'f5' : i % 3 === 1 ? 'f6' : 'f1', failed = i % 9 === 0;
+    more.push({ ...base, id: `w${i}`, code: `CGRK${compact(TODAY)}${String(100 + i)}`, batch: `SG${compact(TODAY)}-${20 + i}`, farmer: f,
+      at: `1${i % 10}:${pad((i * 7) % 60)}`, operator: i % 2 ? '张师傅' : '刘师傅', boxes: boxesFrom(randNets(i % 5 === 0 ? 108 : 10 + (i % 7))),
+      status: failed ? 'failed' : 'pending', frozen: null, submitted: null,
+      err: failed ? '好生意返回：采购入库单明细第 3 行仓库编码 CK09 不存在于账套，请在好生意中检查仓库档案后重试（openapi.e2041）' : '' });
+  }
+  D.orders.push(...more); finishOrders(D, more);
+  return D;
+}
+
+/* ================= 计价（真系统在后端，只此一处） ================= */
+const farmerOf = (id, D = DATA) => D.farmers.find((f) => f.id === id);
+const specOf = (id, D = DATA) => D.specs.find((s) => s.id === id);
+const ruleFor = (o, D = DATA) => D.rules.find((r) => r.on !== false && r.kind === 'buy' && r.binds.includes(o.farmer) && r.product === o.product && r.spec === o.spec);
+const priceOn = (date, spec, D = DATA) => (D.prices[date] || {})[spec];
+function calc(o, D = DATA) {
+  if (o.frozen) return o.frozen;
+  const n = o.boxes.length, tC = o.boxes.reduce((s, b) => s + b.netC, 0);
+  const round = o.round || D.settings.round, sp = specOf(o.spec, D), rule = ruleFor(o, D), m0 = priceOn(o.date, o.spec, D);
+  const out = { n, tC, raw: n ? tC / n / 100 : 0, W: n ? roundW(tC, n, round) : 0, round, w0: sp.w0, rule, m0, ruleName: rule ? rule.name : '', ruleN: rule ? rule.n : null };
+  if (!n || m0 == null || !rule) return out;
+  const X = out.W - sp.w0, Y = Math.round(rule.n * X * 100) / 100, M = Math.round((m0 + Y) * 100) / 100;
+  return { ...out, X, Y, M, amount: Math.round(n * M * 100) / 100 };
+}
+const formula = (c) => {
+  if (c.M == null) return '';
+  const head = `均重 ${c.raw.toFixed(2)} ${ROUND_NAME[c.round]}为 ${c.W}kg`;
+  if (c.X === 0) return `${head} · 正好标准，按基准 ${num(c.m0)} 元/箱`;
+  return `${head} · 基准 ${num(c.m0)} ${c.X > 0 ? '+ 多' : '− 少'} ${Math.abs(c.X)}kg × ${num(c.ruleN)} 元 = ${num(c.M)} 元/箱`;
+};
+const changed = (o, c) => o.status === 'pending' && o.submitted && c.amount != null && o.submitted.amount !== c.amount;
+const issues = (o) => {
+  if (o.status !== 'pending') return [];
+  const c = calc(o), out = [];
+  if (c.m0 == null) out.push('缺基准价');
+  if (!c.rule) out.push('缺收购规则');
+  return out;
+};
+const sameWeight = (boxes) => { const m = new Map(); boxes.forEach((b) => m.set(b.netC, (m.get(b.netC) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]); };
+function bindName(id) {   // 重名的农户带上手机尾号，免得两个“李四”分不清
+  const f = farmerOf(id);
+  if (f) return DATA.farmers.some((x) => x !== f && x.name === f.name) ? `${f.name}（${f.phones[0].slice(-4)}）` : f.name;
+  const c = DATA.customers.find((x) => x.id === id); return c ? c.name : id;
+}
+const nextBatch = (date) => { const nums = DATA.orders.filter((o) => o.batch.startsWith(`SG${compact(date)}-`)).map((o) => Number(o.batch.split('-')[1])); return `SG${compact(date)}-${(nums.length ? Math.max(...nums) : 0) + 1}`; };
+const nextCode = (date) => `CGRK${compact(date)}${String(DATA.orders.filter((o) => o.code.startsWith(`CGRK${compact(date)}`)).length + 1).padStart(3, '0')}`;
+const firstSentence = (t) => String(t).replace(/^好生意返回：/, '').split(/[，。,]/)[0];
+
+/* ================= 状态 ================= */
+let DATA, V, MODE = 'demo';
+const LABF = { pushFail: false, syncFail: false };
+function reset(mode = MODE) {
+  MODE = mode;
+  DATA = mode === 'worst' ? worstData() : demoData();
+  V = { user: V ? V.user : null, login: V ? V.login : null, page: 'orders', id: null, tab: 'pending', q: '', drawer: null, dialog: null,
+    ruleKind: 'all', ruleProduct: 'all', ruleSpec: 'all', ruleQ: '', priceDate: TODAY, priceSaved: {}, returnTo: null, archTab: 'farmers', archQ: '',
+    syncing: false, syncErr: '', setDraft: null, newo: null, fe: null, feQ: '', boxEdit: null, addErr: '', paste: false, onlyManual: false, cell: null };
+}
+const pendingOrders = () => DATA.orders.filter((o) => o.status === 'pending');
+const failedOrders = () => DATA.orders.filter((o) => o.status === 'failed');
+const missingPrices = () => DATA.specs.filter((s) => s.on !== false && priceOn(TODAY, s.id) == null);
+const curOrder = () => DATA.orders.find((x) => x.id === V.id);
+
+/* ================= 外框 ================= */
+const NAV = [['-', '日常'], ['orders', '采购入库单'], ['prices', '每日基准价'], ['-', '配置'], ['rules', '定价规则'], ['basics', '规格与皮重'], ['-', '系统'], ['archive', '好生意档案'], ['accounts', '磅秤员账号'], ['settings', '系统设置']];
+function navBadge(k) {   // 数字只表示待审核；有回传失败、基准价未录齐另加红点
+  if (k === 'orders') { const n = pendingOrders().length, f = failedOrders().length; return `<span class="badges">${f ? '<span class="reddot" title="有回传失败"></span>' : ''}${n ? `<span class="cnt">${n}</span>` : ''}</span>`; }
+  if (k === 'prices') return missingPrices().length ? '<span class="ambdot" title="今日基准价未录齐"></span>' : '';
+  return '';
+}
+function shell(inner) {
+  const me = DATA.accounts.find((a) => a.phone === V.user);
+  const cur = V.page === 'order' || V.page === 'neworder' ? 'orders' : V.page;
+  return `<div class="shell">
+    <nav class="side" aria-label="主导航">
+      <div class="brand"><span class="mark" aria-hidden="true"></span><span><b>收蛋</b><small>管理端</small></span></div>
+      <div class="nav">${NAV.map(([k, t]) => k === '-' ? `<div class="grp">${t}</div>` : `<button data-act="go" data-v="${k}" ${cur === k ? 'aria-current="page"' : ''}><span>${t}</span>${navBadge(k)}</button>`).join('')}</div>
+      <div class="me"><b>${esc(me ? me.name : '')}</b><span class="book" title="${esc(DATA.book)}">${esc(DATA.book)}</span><button data-act="logout">退出登录</button></div>
+    </nav>
+    <main class="main" id="main">${inner}</main>
+  </div>`;
+}
+
+/* ================= 采购入库单列表 ================= */
+const STATUS = { pending: ['待审核', ''], failed: ['已审核 · 回传失败', 'err'], sent: ['已回传', 'ok'], sending: ['已审核 · 回传中', ''] };
+function statusStrip() {   // 今天要先处理的事：基准价没录（回传失败有自己的页签，不重复）
+  const miss = missingPrices();
+  return miss.length ? `<div class="strip"><div class="sitem">今日基准价未录：${miss.map((s) => esc(s.name)).join('、')}<button class="btn sm fix" data-act="fixM0" data-v="${miss[0].id}|${TODAY}">录入</button></div></div>` : '';
+}
+function pageOrders() {
+  const tabs = [['pending', '待审核', pendingOrders().length, false], ['failed', '回传失败', failedOrders().length, true], ['sent', '已回传', 0], ['all', '全部', 0]];
+  return `
+  <div class="top"><div><h1>采购入库单</h1></div><div class="acts"><button class="btn dark" data-act="newOrder">新建入库单</button></div></div>
+  ${statusStrip()}
+  <div class="tabs" role="tablist">${tabs.map(([k, t, n, red]) => `<button role="tab" data-act="tab" data-v="${k}" aria-pressed="${V.tab === k}">${t}${n ? `${red ? '<span class="reddot"></span>' : ''}<span class="cnt">${n}</span>` : ''}</button>`).join('')}</div>
+  <div class="bar"><input class="search" id="oq" placeholder="农户、手机号、单据号或批次" value="${esc(V.q)}" aria-label="搜索单据"></div>
+  <div id="olist">${orderTable()}</div>`;
+}
+function orderTable() {
+  const q = V.q.trim();
+  let list = DATA.orders.filter((o) => V.tab === 'all' || o.status === V.tab);
+  if (q) list = list.filter((o) => [farmerOf(o.farmer).name, o.code, o.batch, ...farmerOf(o.farmer).phones].some((t) => t.includes(q)));
+  list.sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at));
+  if (!list.length) return `<div class="card empty">${q ? '没有匹配的单据' : V.tab === 'pending' ? '✓ 待审核已清空' : '没有单据'}</div>`;
+  const lastCol = V.tab === 'pending' ? '提示' : V.tab === 'failed' ? '失败原因' : '状态';
+  return `<div class="twrap"><table class="t ${V.tab === 'failed' ? 'ft' : ''}"><thead><tr><th>单据</th><th>农户</th><th class="narrowhide">商品规格</th><th class="r">箱数</th><th class="r narrowhide hf">均重</th><th class="r narrowhide hf">单价</th><th class="r">金额</th><th class="narrowhide hf">磅秤员</th><th>${lastCol}</th></tr></thead><tbody>
+  ${list.map((o) => {
+    const c = calc(o), f = farmerOf(o.farmer), iss = issues(o), [st, tone] = STATUS[o.status], manual = o.boxes.filter((b) => b.manual).length;
+    let last;
+    if (V.tab === 'pending') last = [...iss.map((x) => `<span class="tag warn">${x}</span>`), manual ? `<span class="tag warn">手录 ${manual} 箱</span>` : ''].join(' ');   // 只显示例外
+    else if (V.tab === 'failed') last = `<span class="errline" title="${esc(o.err)}">${esc(firstSentence(o.err))}</span>`;
+    else last = `<span class="pill ${tone}">${st}</span>`;
+    return `<tr class="go ${iss.length ? 'warnrow' : ''}" data-act="open" data-v="${o.id}" tabindex="0">
+      <td><span class="num nb">${esc(o.code)}</span><span class="sub num">${dot(o.date)} ${o.at} · ${esc(o.batch)}</span></td>
+      <td class="name" title="${esc(f.name)}"><span class="nm">${esc(f.name)}</span><span class="sub num">${fmtPhone(f.phones[0])}</span></td>
+      <td class="narrowhide"><span class="nb">${esc(o.product)} ${esc(specOf(o.spec).name)}</span></td>
+      <td class="r">${c.n}</td><td class="r narrowhide hf">${c.W} kg</td>
+      <td class="r narrowhide hf">${c.M != null ? num(c.M) : '—'}</td>
+      <td class="r"><b>${c.M != null ? money(c.amount) : '—'}</b>${changed(o, c) ? `<span class="sub">原 ${money(o.submitted.amount)}</span>` : ''}</td>
+      <td class="nb narrowhide hf">${esc(o.operator)}${o.source === 'Web' ? '<span class="sub">管理端自建</span>' : ''}</td>
+      <td class="${V.tab === 'failed' ? 'fill' : 'nb'}">${last}</td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+/* ================= 单据详情：待审核时字段点了就地改 ================= */
+function dateField(id, iso) {   // 统一显示 2026.11.15；今天/昨天/前天一点即选
+  return `<span class="datefield"><span class="seg sm">${[[0, '今天'], [-1, '昨天'], [-2, '前天']].map(([k, t]) => `<button data-act="pickDate" data-v="${id}|${dayShift(TODAY, k)}" aria-pressed="${iso === dayShift(TODAY, k)}">${t}</button>`).join('')}</span>
+    <input class="in" id="${id}" value="${dot(iso)}" aria-label="日期"></span>`;
+}
+const farmerHits = (q) => (q ? DATA.farmers.filter((x) => x.name.includes(q) || x.phones.some((p) => p.endsWith(q))) : []);
+function pageOrder() {
+  const o = curOrder(), f = farmerOf(o.farmer), sp = specOf(o.spec), c = calc(o);
+  const editable = o.status === 'pending';   // 审核后（含回传失败）锁定
+  const manual = o.boxes.filter((b) => b.manual).length, [st, tone] = STATUS[o.status];
+  const wh = DATA.warehouses.find((w) => w.id === o.warehouse);
+  const missM0 = editable && c.m0 == null, missRule = editable && !c.rule;
+  let act;
+  if (o.status === 'sending') act = '<button class="btn primary lg" disabled><span class="spin"></span> 正在回传</button>';
+  else if (o.status === 'sent') act = nextPendingBtn(o);
+  else if (o.status === 'failed') act = '<button class="btn primary lg" data-act="approveGo">重新回传</button><button class="btn ghost" data-act="unapprove">退回待审核</button>';   // 单据内容要改才能回传成功时走这条
+  else if (missM0) act = `<button class="btn fix lg" data-act="fixM0" data-v="${o.spec}|${o.date}">录入 ${esc(sp.name)} 基准价</button>`;
+  else if (missRule) act = '<button class="btn fix lg" data-act="openRule">绑定收购规则</button>';
+  else act = '<button class="btn primary lg" data-act="approve">审核并回传</button>';
+  const cell = (key, label, val, extraCls = '') => {
+    if (!editable || !key) return `<div class="cell"><span class="k">${label}</span><span class="v ${extraCls}">${val}</span></div>`;
+    if (V.fe === key) return `<div class="cell editing"><span class="k">${label}</span><span class="v ${extraCls}">${val}</span><div class="pop">${editor(key, o)}</div></div>`;
+    return `<button class="cell" data-act="fe" data-v="${key}"><span class="k">${label}</span><span class="v ${extraCls}">${val}</span></button>`;
+  };
+  const pcell = (key, val) => {
+    if (!editable) return `<td>${val}</td>`;
+    if (V.fe === key) return `<td class="editing">${val}<div class="pop">${editor(key, o)}</div></td>`;
+    return `<td class="ecell" data-act="fe" data-v="${key}"><span class="ev">${val}</span></td>`;
+  };
+  return `
+  <button class="crumb" data-act="go" data-v="orders">‹ 采购入库单</button>
+  <div class="top"><div><h1 class="num">${esc(o.code)}</h1><p>批次 ${esc(o.batch)} · ${o.source === 'Web' ? '管理端自建' : `APP 提交 · ${esc(o.operator)}`} · ${dot(o.date)} ${o.at}</p></div>
+    <div class="acts"><span class="pill ${tone}" style="font-size:15px;padding:4px 12px">${st}</span></div></div>
+  <div class="dgrid">
+    <div>
+      <div class="card info">
+        ${cell('farmer', '农户（供应商）', esc(bindName(f.id)))}
+        ${cell(null, '手机号', fmtPhone(f.phones[0]), 'num small')}
+        ${cell('warehouse', '收购仓库', esc(wh.name))}
+        ${cell('date', '收购日期', dot(o.date), 'num')}
+        ${cell(null, '好生意供应商编码', esc(f.code), 'num')}
+        ${cell(null, '均重取整', ROUND_NAME[c.round])}
+        ${cell(null, '磅秤员', esc(o.operator))}
+        ${cell(null, '好生意单据', o.hsId ? esc(o.hsId) : '—', 'small num')}
+      </div>
+      <h2 class="sec-title">商品行</h2>
+      <div class="twrap"><table class="t"><thead><tr><th>商品名称</th><th>规格</th><th>单位</th><th class="r">数量</th><th>均重单位</th><th class="r">均重</th><th class="r">收购价格</th><th class="r">金额</th></tr></thead><tbody>
+        <tr>${pcell('product', esc(o.product))}${pcell('spec', `<span class="nb">${esc(sp.name)}</span>`)}<td>箱</td><td class="r">${c.n}</td><td>kg</td><td class="r">${c.W}</td>
+        <td class="r">${c.M != null ? num(c.M) : missRule ? '<button class="btn fix sm" data-act="openRule">绑定规则</button>' : '<span class="tag warn">缺基准价</span>'}</td>
+        <td class="r"><b>${c.M != null ? money(c.amount) : '—'}</b></td></tr>
+      </tbody></table></div>
+      <div class="underrow"><p class="formula">${c.M != null ? formula(c) : ''}</p><div class="ops"><button class="btn sm" data-act="openRule">定价规则</button><button class="btn sm" data-act="openBoxes">逐箱流水 · ${c.n} 箱${manual ? ` <span class="tag warn">手录 ${manual}</span>` : ''}</button></div></div>
+    </div>
+    <aside class="card side-panel">
+      <span class="k">金额</span>
+      ${c.M != null ? `<div class="amt">${money(c.amount)}<small> 元</small></div><span class="calc">${num(c.M)} 元/箱 × ${c.n} 箱</span>${changed(o, c) ? `<span class="was">APP 提交时 ${num(o.submitted.M)} 元/箱 · ${money(o.submitted.amount)} 元</span>` : ''}`
+        : `<div class="amt" style="color:var(--ink-3)">—</div><div class="fixline">${missM0 ? `<span class="tag warn">无 ${dot(o.date)} 基准价</span>` : '<span class="tag warn">无收购规则</span>'}</div>`}
+      <hr>
+      <div class="row"><span class="muted">累计净重</span><span class="v">${kg(c.tC)} kg</span></div>
+      <div class="row"><span class="muted">均重</span><span class="v">${c.W} kg <span class="muted" style="font-weight:400">（原始 ${c.raw.toFixed(2)}）</span></span></div>
+      <div class="row"><span class="muted">定价规则</span><span class="v" style="max-width:190px">${c.ruleName ? esc(c.ruleName) : '—'}</span></div>
+      ${manual ? `<div class="row"><span class="muted">手录</span><span class="v"><span class="tag warn">${manual} 箱</span></span></div>` : ''}
+      ${o.status === 'failed' ? `<div class="result err"><b>回传失败</b>${esc(o.err)}</div>` : ''}
+      ${o.status === 'sent' ? `<div class="result ok"><b>已回传好生意</b><span class="num">单据 ${esc(o.hsId)}</span><br>${esc(o.approvedBy || '')} 审核 · 已锁定</div>` : ''}
+      <div class="act">${act}</div>
+    </aside>
+  </div>`;
+}
+function editor(key, o) {
+  if (key === 'farmer') {
+    const hits = farmerHits(V.feQ);
+    return `<input class="in" id="feQ" placeholder="农户姓名或手机尾号" value="${esc(V.feQ)}" autocomplete="off">
+      ${hits.length ? `<div class="list">${hits.map((h) => `<button data-act="setField" data-v="farmer|${h.id}"><span>${esc(bindName(h.id))}</span><span class="muted num">${fmtPhone(h.phones[0])}</span></button>`).join('')}</div>` : ''}`;
+  }
+  if (key === 'warehouse') return `<div class="seg sm">${DATA.warehouses.map((w) => `<button data-act="setField" data-v="warehouse|${w.id}" aria-pressed="${o.warehouse === w.id}">${w.name}</button>`).join('')}</div>`;
+  if (key === 'date') return dateField('feDate', o.date);
+  if (key === 'product') return `<div class="seg sm">${DATA.products.map((p) => `<button data-act="setField" data-v="product|${p.id}" aria-pressed="${o.product === p.id}">${p.id}</button>`).join('')}</div>`;
+  if (key === 'spec') return `<div class="seg sm">${DATA.specs.filter((s) => s.on !== false).map((s) => `<button data-act="setField" data-v="spec|${s.id}" aria-pressed="${o.spec === s.id}">${s.name}</button>`).join('')}</div>`;
+  return '';
+}
+function nextPendingBtn(o) {   // 审核完一张，直接给下一张
+  const next = pendingOrders().filter((x) => x !== o).sort((a, b) => (a.date + a.at).localeCompare(b.date + b.at))[0];
+  return next ? `<button class="btn dark lg" id="nextBtn" data-act="open" data-v="${next.id}">下一张待审核 · ${esc(farmerOf(next.farmer).name.slice(0, 10))}</button>`
+    : '<button class="btn lg" id="nextBtn" data-act="go" data-v="orders">✓ 待审核已清空，回列表</button>';
+}
+
+/* ================= 单箱表格：单据流水与新建单共用 ================= */
+function boxCtx() {
+  if (V.page === 'neworder') return { boxes: V.newo.boxes, mark: false, editable: true };
+  const o = curOrder();
+  return { boxes: o.boxes, mark: true, editable: o.status === 'pending' };
+}
+function boxTable() {
+  const { boxes, editable } = boxCtx(), ed = V.boxEdit;
+  const rows = V.onlyManual && V.page !== 'neworder' ? boxes.filter((b) => b.manual) : boxes;
+  const nMan = boxes.filter((b) => b.manual).length;
+  const filt = V.page !== 'neworder' && nMan ? `<button class="mfilter" data-act="onlyManual" aria-pressed="${V.onlyManual}">${V.onlyManual ? '看全部' : `只看手录 ${nMan} 箱`}</button>` : '';
+  return `<table class="t boxes"><thead><tr><th class="seqc">箱序号</th><th>净重</th><th></th><th class="r">${filt}</th></tr></thead><tbody>
+    ${rows.map((b) => `<tr>
+      <td class="num seqc">第 ${b.seq} 箱</td>
+      <td>${ed === b.seq ? `<input class="in numin edin" id="bxIn" inputmode="decimal" value="${kg(b.netC)}" aria-label="第 ${b.seq} 箱净重">`
+        : editable ? `<button class="netbtn" data-act="bxEdit" data-v="${b.seq}" aria-label="改第 ${b.seq} 箱净重">${kg(b.netC)} kg</button>` : `<b class="num">${kg(b.netC)} kg</b>`}
+        ${b.manual && b.rawC != null && ed !== b.seq ? `<span class="orig">秤读数 ${kg(b.rawC)} kg</span>` : ''}</td>
+      <td>${b.manual ? '<span class="tag warn">手录</span>' : ''}</td>
+      <td class="r nb">${editable && ed !== b.seq ? `<button class="btn sm ghost del" data-act="bxDel" data-v="${b.seq}" aria-label="删除第 ${b.seq} 箱">删除</button>` : ''}</td>
+    </tr>`).join('')}
+    ${editable && !V.onlyManual ? `<tr class="addrow"><td class="num muted seqc">第 ${boxes.length + 1} 箱</td><td colspan="3">
+      <span class="setrow" style="gap:8px"><input class="in numin" id="addIn" inputmode="decimal" placeholder="净重，回车添加" autocomplete="off" aria-label="第 ${boxes.length + 1} 箱净重">
+      <button class="btn sm ghost" data-act="pasteOpen" aria-expanded="${V.paste}">粘贴一列</button><span class="inline-err" id="addErr">${esc(V.addErr)}</span></span>
+      ${V.paste ? '<textarea class="pastebox" id="pasteBox" aria-label="粘贴一列净重" placeholder="46.5&#10;45.8&#10;46"></textarea>' : ''}</td></tr>` : ''}
+  </tbody></table>`;
+}
+function drawerBoxes() {
+  const o = curOrder(), editable = o.status === 'pending', c = calc(o), base = V.drawer.base;
+  const groups = sameWeight(o.boxes);
+  const delta = (a, b, f = (x) => x) => (a !== b ? `<s>${f(a)}</s>` : '');
+  return {
+    title: `逐箱流水 · ${o.boxes.length} 箱`, sub: `${esc(o.batch)} · 每箱皮重 ${kg(o.boxes[0]?.tareC || 0)} kg${o.boxes[0]?.tareName ? `（${esc(o.boxes[0].tareName)}）` : ''}`,
+    body: `<div class="groups">${groups.slice(0, 10).map(([w, n]) => `<span>${kg(w)}kg-${n}箱</span>`).join('')}${groups.length > 10 ? `<span>另 ${groups.length - 10} 种</span>` : ''}</div>
+      ${boxTable()}`,
+    foot: editable ? `<div><span class="k">箱数</span><span class="v">${delta(base.n, c.n)}${c.n}</span></div>
+        <div><span class="k">均重</span><span class="v">${delta(base.W, c.W)}${c.W} kg</span></div>
+        <div><span class="k">单价</span><span class="v">${base.M != null && c.M != null ? delta(base.M, c.M, num) : ''}${c.M != null ? num(c.M) : '—'}</span></div>
+        <div><span class="k">金额</span><span class="v">${base.amount != null && c.amount != null ? delta(base.amount, c.amount, money) : ''}${c.amount != null ? money(c.amount) : '—'}</span></div>` : '',
+    footCls: 'stats',
+  };
+}
+
+/* ================= 抽屉：单据里的定价规则 ================= */
+function priceWithN(o, n) { const c = calc(o); return c.m0 == null ? null : Math.round((c.m0 + Math.round(n * (c.W - c.w0) * 100) / 100) * 100) / 100; }
+function drawerOrderRule() {
+  const o = curOrder(), c = calc(o), sp = specOf(o.spec), f = farmerOf(o.farmer), editable = o.status === 'pending';
+  if (!editable) return { title: '定价规则', sub: '已审核，按审核时锁定', body: `<p><b>${esc(c.ruleName)}</b></p><p class="formula">${formula(c)}</p>`, foot: '' };
+  const rule = c.rule;
+  const others = DATA.rules.filter((r) => r.on !== false && r.kind === 'buy' && r.product === o.product && r.spec === o.spec && r !== rule);
+  const pt = (n) => { const m = priceWithN(o, n); return m == null ? '' : `本单 ${num(m)} 元/箱`; };
+  const list = others.length ? `<div class="pick">${others.map((r) => `<button data-act="ruleBindOrder" data-v="${r.id}"><span><b>${esc(r.name)}</b><span class="muted" style="display:block;font-size:13px">每 kg 尾差 ${num(r.n)} 元 · ${r.binds.length} 户</span></span><span class="num nb"><b>${pt(r.n)}</b></span></button>`).join('')}</div>` : '<p class="muted">没有可用规则</p>';
+  if (!rule) return { title: '选择收购规则', sub: `${esc(bindName(f.id))} · ${esc(o.product)} ${esc(sp.name)}`, body: list, foot: '' };
+  const raw = V.drawer.n, nOk = raw == null || (String(raw) !== '' && !isNaN(Number(raw)) && Number(raw) >= 0);
+  const n = raw == null ? rule.n : Number(raw), dirty = raw != null && nOk && n !== rule.n;
+  const before = priceWithN(o, rule.n), after = nOk ? priceWithN(o, n) : null;
+  const affected = pendingOrders().filter((x) => x !== o && ruleFor(x) === rule).length;
+  return {
+    title: rule.name, sub: `${esc(o.product)} ${esc(sp.name)} · 标准 ${sp.w0} kg/箱 · ${dot(o.date)} 基准 ${c.m0 == null ? '未录' : num(c.m0) + ' 元/箱'} · ${rule.binds.length} 户共用`,
+    body: `<div class="formgrid">
+        <div class="field"><span>每 kg 尾差（元）</span>
+          <div class="stepper"><button data-act="nStep" data-v="-0.1" aria-label="调低">−</button><input class="in num ${nOk ? '' : 'bad'}" id="nIn" inputmode="decimal" value="${raw ?? rule.n}"><button data-act="nStep" data-v="0.1" aria-label="调高">+</button></div></div>
+        <div class="preview"><span class="muted">本单收购价</span><span>${after != null ? `${dirty ? `<s>${num(before)}</s> → ` : ''}<b>${num(after)}</b> 元/箱` : '—'}</span></div>
+        <div><span class="lbl2">换成别的规则</span>${list}</div>
+        <div><button class="btn red" data-act="ruleUnbindOrder">从这条规则解绑 ${esc(bindName(f.id))}</button></div>
+      </div>`,
+    foot: dirty ? `<button class="btn" data-act="nRevert">还原</button><button class="btn primary" data-act="nSave">保存到规则${rule.binds.length > 1 ? ` · ${rule.binds.length} 户共用` : ''}${affected ? ` · 另 ${affected} 张待审核随之重算` : ''}</button>` : '',
+  };
+}
+
+/* ================= 定价规则 ================= */
+function pageRules() {
+  const toks = V.ruleQ.trim().split(/\s+/).filter(Boolean);
+  let list = DATA.rules.filter((r) => (V.ruleKind === 'all' || r.kind === V.ruleKind) && (V.ruleProduct === 'all' || r.product === V.ruleProduct) && (V.ruleSpec === 'all' || r.spec === V.ruleSpec));
+  if (toks.length) list = list.filter((r) => toks.every((t) => [r.name, r.product, specOf(r.spec).name, ...r.binds.map(bindName)].some((x) => x.includes(t))));
+  const seg = (key, opts) => `<div class="seg sm">${opts.map(([k, t]) => `<button data-act="ruleF" data-v="${key}|${k}" aria-pressed="${V[key] === k}">${t}</button>`).join('')}</div>`;
+  return `
+  <div class="top"><div><h1>定价规则</h1></div><div class="acts"><button class="btn dark" data-act="ruleNew">新建规则</button></div></div>
+  <div class="bar">
+    ${seg('ruleKind', [['all', '全部'], ['buy', '收购'], ['sell', '发货']])}
+    ${seg('ruleProduct', [['all', '全部商品'], ...DATA.products.map((p) => [p.id, p.id])])}
+    ${seg('ruleSpec', [['all', '全部规格'], ...DATA.specs.map((s) => [s.id, s.name])])}
+    <input class="search" id="rq" placeholder="规则、农户或客户" value="${esc(V.ruleQ)}" aria-label="搜索规则" style="width:240px">
+  </div>
+  ${list.length ? `<div class="twrap"><table class="t"><thead><tr><th>规则名称</th><th>属性</th><th>商品规格</th><th class="r">每 kg 尾差</th><th>绑定</th><th>状态</th></tr></thead><tbody>
+  ${list.map((r) => `<tr class="go" data-act="ruleEdit" data-v="${r.id}" tabindex="0">
+    <td class="name" title="${esc(r.name)}"><span class="nm">${esc(r.name)}</span></td>
+    <td><span class="pill plain">${r.kind === 'buy' ? '收购' : '发货'}</span></td>
+    <td class="nb">${esc(r.product)} ${esc(specOf(r.spec).name)}</td>
+    <td class="r">${num(r.n)} 元</td>
+    <td class="fill">${r.binds.length ? `<span class="clip" title="${esc(r.binds.map(bindName).join('、'))}">${r.binds.length > 2 ? `${r.binds.length} 户：` : ''}${r.binds.map((b) => esc(bindName(b))).join('、')}</span>` : '<span class="tag">未绑定</span>'}</td>
+    <td class="nb">${r.on === false ? '<span class="tag">已停用</span>' : '<span class="muted">启用</span>'}</td>
+  </tr>`).join('')}</tbody></table></div>` : '<div class="card empty">没有匹配的规则</div>'}`;
+}
+function ruleConflicts(r) {   // 同一农户在同一商品规格上只能绑一条收购规则
+  if (r.kind !== 'buy' || r.on === false) return [];
+  return r.binds.map((fid) => { const other = DATA.rules.find((x) => x.id !== r.id && x.on !== false && x.kind === 'buy' && x.product === r.product && x.spec === r.spec && x.binds.includes(fid)); return other ? { fid, other } : null; }).filter(Boolean);
+}
+function drawerRuleEdit() {
+  const r = V.drawer.r, isNew = !DATA.rules.some((x) => x.id === r.id);
+  const pool = r.kind === 'buy' ? DATA.farmers : DATA.customers;
+  const cand = V.drawer.q ? pool.filter((p) => !r.binds.includes(p.id) && (p.name.includes(V.drawer.q) || (p.phones || []).some((x) => x.endsWith(V.drawer.q)))) : [];
+  const conflicts = ruleConflicts(r);
+  return {
+    title: isNew ? '新建规则' : '编辑规则', sub: '',
+    body: `<div class="formgrid">
+      <label class="field"><span>规则名称</span><input class="in" id="rName" value="${esc(r.name)}" autocomplete="off"></label>
+      <div class="setrow"><button class="switch" role="switch" aria-checked="${r.on !== false}" data-act="rOn" aria-label="启用这条规则"></button><span>${r.on !== false ? '启用' : '已停用'}</span></div>
+      <div class="field"><span>属性</span><div class="seg">${[['buy', '收购规则 · 绑定农户'], ['sell', '发货规则 · 绑定客户']].map(([k, t]) => `<button data-act="rKind" data-v="${k}" aria-pressed="${r.kind === k}">${t}</button>`).join('')}</div></div>
+      <div class="field"><span>商品</span><div class="seg">${DATA.products.map((p) => `<button data-act="rProduct" data-v="${p.id}" aria-pressed="${r.product === p.id}">${p.id}</button>`).join('')}</div></div>
+      <div class="field"><span>规格</span><div class="seg">${DATA.specs.map((s) => `<button data-act="rSpec" data-v="${s.id}" aria-pressed="${r.spec === s.id}">${s.name}</button>`).join('')}</div></div>
+      <label class="field"><span>每 kg 尾差（元）</span><input class="in numin" id="rN" inputmode="decimal" value="${r.n ?? ''}" style="width:160px"></label>
+      <div class="field"><span>绑定${r.kind === 'buy' ? '农户' : '客户'}</span>
+        <div class="chips">${r.binds.map((b) => `<span class="chip ${conflicts.some((c) => c.fid === b) ? 'bad' : ''}">${esc(bindName(b))}<button data-act="rUnbind" data-v="${b}" aria-label="移除 ${esc(bindName(b))}">×</button></span>`).join('')}</div>
+        <input class="in" id="rQ" placeholder="${r.kind === 'buy' ? '农户姓名或手机尾号' : '客户名称'}" value="${esc(V.drawer.q || '')}" autocomplete="off" style="margin-top:8px">
+        ${cand.length ? `<div class="pick">${cand.slice(0, 8).map((p) => `<button data-act="rBind" data-v="${p.id}"><span>${esc(bindName(p.id))}</span><span class="muted num">${p.phones ? fmtPhone(p.phones[0]) : esc(p.code)}</span></button>`).join('')}</div>` : ''}
+        ${conflicts.map((c) => `<div class="conflict"><span>${esc(bindName(c.fid))} 已绑定「${esc(c.other.name)}」</span><button class="btn sm" data-act="rResolve" data-v="${c.fid}|${c.other.id}">从那条解绑</button></div>`).join('')}
+      </div>
+    </div>`,
+    foot: `<span id="rSaveWrap">${ruleSaveBtn()}</span>`,
+  };
+}
+function ruleSaveBtn() {
+  const r = V.drawer.r;
+  if (!r.name.trim()) return '<button class="btn todo" data-act="focus" data-v="rName">填写规则名称</button>';
+  if (r.n === '' || r.n == null || isNaN(Number(r.n)) || Number(r.n) < 0) return '<button class="btn todo" data-act="focus" data-v="rN">填写每 kg 尾差</button>';
+  const k = ruleConflicts(r).length;
+  if (k) return `<button class="btn fix" data-act="toConflict">${k} 个冲突</button>`;
+  const old = DATA.rules.find((x) => x.id === r.id);
+  const affected = old ? pendingOrders().filter((o) => ruleFor(o) === old).length : 0;
+  return `<button class="btn primary" data-act="rSave">保存${r.binds.length > 1 ? ` · ${r.binds.length} 户共用` : ''}${affected ? ` · ${affected} 张待审核随之重算` : ''}</button>`;
+}
+
+/* ================= 每日基准价：回车或离开即保存该行 ================= */
+function pagePrices() {
+  const d = V.priceDate, prev = dayShift(d, -1), today = d === TODAY;
+  const back = V.returnTo === 'new' ? '新建入库单' : V.returnTo ? `单据 ${DATA.orders.find((o) => o.id === V.returnTo).code}` : '';
+  const specs = DATA.specs.filter((s) => s.on !== false);
+  const miss = specs.filter((s) => priceOn(d, s.id) == null), canCopy = miss.some((s) => priceOn(prev, s.id) != null);
+  const waiting = (sid) => pendingOrders().filter((o) => o.spec === sid && o.date === d).length;
+  return `
+  ${back ? `<button class="btn backbtn" id="backBtn" data-act="backFromPrices">‹ 回到${esc(back)}</button>` : ''}
+  <div class="top narrow"><div><h1>每日基准价</h1></div>
+    <div class="acts"><button class="btn ghost" data-act="pDate" data-v="-1">‹ 前一天</button><span class="num" style="font-weight:600">${dot(d)}${today ? ' · 今天' : ''}</span><button class="btn ghost" data-act="pDate" data-v="1" ${today ? 'disabled' : ''}>后一天 ›</button></div></div>
+  ${miss.length ? `<div class="strip"><div class="sitem">${miss.length} 个规格未录${canCopy ? '<button class="btn sm fix" data-act="pCopy">全部沿用前一天</button>' : ''}</div></div>` : ''}
+  <table class="t narrow"><thead><tr><th>规格</th><th class="r">标准净含量</th><th class="r">前一天</th><th style="width:180px">基准价（元/箱）</th><th>状态</th></tr></thead><tbody>
+  ${specs.map((s) => {
+    const saved = priceOn(d, s.id), py = priceOn(prev, s.id);
+    return `<tr class="${saved == null ? 'warnrow' : ''}">
+      <td class="nb"><b>${esc(s.name)}</b></td><td class="r">${s.w0} kg</td><td class="r">${py != null ? num(py) : '—'}</td>
+      <td><input class="in numin" data-price="${s.id}" inputmode="decimal" value="${saved ?? ''}" aria-label="${esc(s.name)} 基准价"></td>
+      <td class="nb">${saved != null ? `<span class="muted" style="font-weight:600">✓ ${V.priceSaved[s.id] ? '已保存' : '已录'}</span>` : `<span class="tag warn">未录</span>${waiting(s.id) ? ` <span class="muted" style="font-size:13px">${waiting(s.id)} 张待审核在等</span>` : ''}`}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+function savePrice(sid, raw) {
+  const v = String(raw).trim(), d = V.priceDate, x = Number(v);
+  if (v === '') return true;
+  if (!/^\d{1,4}(\.\d{1,2})?$/.test(v) || x <= 0) return false;
+  if (priceOn(d, sid) === x) return true;
+  DATA.prices[d] = DATA.prices[d] || {}; DATA.prices[d][sid] = x; V.priceSaved[sid] = true;
+  return true;
+}
+function focusFirstMissingPrice(sid) {
+  const el = sid ? document.querySelector(`[data-price="${sid}"]`) : [...document.querySelectorAll('[data-price]')].find((x) => !x.value);
+  if (el) el.focus();
+}
+
+/* ================= 规格与皮重：点数值就地改 ================= */
+function icell(kind, id, field, display, raw, wide) {
+  const key = `${kind}:${id}:${field}`;
+  if (V.cell === key) return `<td class="${wide ? '' : 'r'}"><input id="cellIn" class="cellin ${wide ? 'wide' : ''}" value="${esc(raw)}" data-cell="${key}" aria-label="修改"></td>`;
+  return `<td class="icell ${wide ? '' : 'r'}" data-act="cell" data-v="${key}"><span class="iv">${display}</span></td>`;
+}
+function pageBasics() {
+  const uses = (sid) => DATA.rules.filter((r) => r.spec === sid).length;
+  return `<div class="top narrow"><div><h1>规格与皮重</h1></div></div>
+  <div class="top narrow" style="margin-bottom:10px"><h2 style="font-size:19px">包装规格</h2><div class="acts"><button class="btn" data-act="basicNew" data-v="spec">新增规格</button></div></div>
+  <table class="t narrow"><thead><tr><th>规格名称</th><th class="r">每箱枚数</th><th class="r">标准净含量 W0</th><th>规则</th><th>启用</th></tr></thead><tbody>
+  ${DATA.specs.map((s) => `<tr>${icell('spec', s.id, 'name', `<b>${esc(s.name)}</b>`, s.name, true)}${icell('spec', s.id, 'count', s.count, s.count)}${icell('spec', s.id, 'w0', `${s.w0} kg`, s.w0)}
+    <td class="muted">${uses(s.id)} 条</td><td><button class="switch" role="switch" aria-checked="${s.on !== false}" data-act="specOn" data-v="${s.id}" aria-label="启用 ${esc(s.name)}"></button></td></tr>`).join('')}
+  </tbody></table>
+  <div class="top narrow" style="margin:28px 0 10px"><h2 style="font-size:19px">包装箱皮重</h2><div class="acts"><button class="btn" data-act="basicNew" data-v="tare">新增包装箱</button></div></div>
+  <table class="t narrow"><thead><tr><th>包装箱</th><th class="r">皮重</th><th>启用</th><th>APP 热键</th></tr></thead><tbody>
+  ${DATA.tares.map((t) => `<tr>${icell('tare', t.id, 'name', `<b>${esc(t.name)}</b>`, t.name, true)}${icell('tare', t.id, 'kg', `${kg(t.c)} kg`, kg(t.c))}
+    <td><button class="switch" role="switch" aria-checked="${t.on}" data-act="tareOn" data-v="${t.id}" aria-label="启用 ${esc(t.name)}"></button></td>
+    <td>${t.on ? `<button class="switch" role="switch" aria-checked="${t.hot}" data-act="tareHot" data-v="${t.id}" aria-label="${esc(t.name)} 出现在 APP 皮重选项"></button>` : '<span class="muted">—</span>'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function saveCell(key, raw) {
+  const [kind, id, field] = key.split(':'), v = String(raw).trim();
+  if (kind === 'spec') {
+    const s = DATA.specs.find((x) => x.id === id);
+    if (field === 'name') { if (!v) return false; s.name = v; }
+    if (field === 'count') { if (!/^\d+$/.test(v) || !(Number(v) > 0)) return false; s.count = Number(v); }
+    if (field === 'w0') { if (!(Number(v) > 0)) return false; s.w0 = Number(v); }
+  } else {
+    const t = DATA.tares.find((x) => x.id === id);
+    if (field === 'name') { if (!v) return false; t.name = v; }
+    if (field === 'kg') { if (!(Number(v) > 0)) return false; t.c = Math.round(Number(v) * 100); }
+  }
+  return true;
+}
+function drawerBasicNew() {
+  const b = V.drawer.b, isSpec = V.drawer.kindNew === 'spec';
+  let btn;
+  if (!b.name.trim()) btn = '<button class="btn todo" data-act="focus" data-v="bName">填写名称</button>';
+  else if (isSpec && !(Number(b.count) > 0)) btn = '<button class="btn todo" data-act="focus" data-v="bCount">填写每箱枚数</button>';
+  else if (!(Number(b.val) > 0)) btn = `<button class="btn todo" data-act="focus" data-v="bVal">填写${isSpec ? '标准净含量' : '皮重'}</button>`;
+  else btn = '<button class="btn primary" data-act="basicSave">新增</button>';
+  return {
+    title: isSpec ? '新增规格' : '新增包装箱', sub: '',
+    body: `<div class="formgrid">
+      <label class="field"><span>${isSpec ? '规格名称' : '包装箱名称'}</span><input class="in" id="bName" value="${esc(b.name)}" placeholder="${isSpec ? '如 300枚/箱' : '如 4号包装箱'}" autocomplete="off"></label>
+      ${isSpec ? `<label class="field"><span>每箱枚数</span><input class="in numin" id="bCount" inputmode="numeric" value="${esc(b.count)}" style="width:160px"></label>` : ''}
+      <label class="field"><span>${isSpec ? '标准净含量（kg/箱）' : '皮重（kg）'}</span><input class="in numin" id="bVal" inputmode="decimal" value="${esc(b.val)}" style="width:160px"></label>
+    </div>`,
+    foot: `<span id="bSaveWrap">${btn}</span>`,
+  };
+}
+
+/* ================= 好生意档案 ================= */
+function pageArchive() {
+  const tabs = [['farmers', '供应商（农户）', DATA.farmers], ['products', '商品', DATA.products], ['customers', '客户', DATA.customers], ['warehouses', '仓库', DATA.warehouses]];
+  const [, , rows] = tabs.find((t) => t[0] === V.archTab);
+  const q = V.archQ.trim();
+  const list = q ? rows.filter((r) => [r.name || r.id, r.code, ...(r.phones || [])].some((t) => String(t).includes(q))) : rows;
+  return `
+  <div class="top"><div><h1>好生意档案</h1></div>
+    <div class="acts"><span class="muted" style="font-size:13px">上次同步 ${esc(DATA.lastSync)}</span>${V.syncing ? '<button class="btn" disabled><span class="spin"></span> 正在同步</button>' : '<button class="btn dark" data-act="sync">从好生意同步</button>'}</div></div>
+  ${V.syncErr ? `<div class="result err" style="margin:0 0 14px"><b>同步失败，保留了上次的数据</b>${esc(V.syncErr)}</div>` : ''}
+  <div class="tabs">${tabs.map(([k, t, r]) => `<button data-act="archTab" data-v="${k}" aria-pressed="${V.archTab === k}">${t}<span class="cnt">${r.length}</span></button>`).join('')}</div>
+  <div class="bar"><input class="search" id="aq" placeholder="名称、编码或手机号" value="${esc(V.archQ)}" aria-label="搜索档案"></div>
+  <table class="t"><thead><tr><th>名称</th><th>好生意编码</th>${V.archTab === 'farmers' ? '<th>联系方式</th><th>绑定的收购规则</th>' : ''}</tr></thead><tbody>
+  ${list.map((r) => `<tr><td class="name" title="${esc(r.name || r.id)}"><span class="nm">${esc(r.name || r.id)}</span></td><td class="num">${esc(r.code)}</td>${V.archTab === 'farmers'
+    ? `<td class="num">${r.phones.map(fmtPhone).join('<br>')}</td><td>${DATA.rules.filter((x) => x.binds.includes(r.id)).map((x) => esc(x.name)).join('<br>') || '<span class="tag">未绑定</span>'}</td>` : ''}</tr>`).join('') || '<tr><td colspan="4" class="empty">没有匹配的档案</td></tr>'}
+  </tbody></table>`;
+}
+
+/* ================= 磅秤员账号 ================= */
+function pageAccounts() {
+  return `
+  <div class="top narrow"><div><h1>磅秤员账号</h1></div><div class="acts"><button class="btn dark" data-act="accNew">新增磅秤员</button></div></div>
+  <table class="t narrow"><thead><tr><th>姓名</th><th>手机号（登录名）</th><th>最近登录</th><th>状态</th><th class="r"></th></tr></thead><tbody>
+  ${DATA.accounts.filter((a) => a.role === 'scale').map((a) => `<tr>
+    <td><b>${esc(a.name)}</b></td><td class="num">${fmtPhone(a.phone)}</td><td class="num muted">${esc(a.last || '—')}</td>
+    <td><span class="pill ${a.on ? 'ok' : ''}">${a.on ? '启用' : '已停用'}</span></td>
+    <td class="r nb"><button class="btn sm ghost" data-act="accReset" data-v="${a.id}">重置密码</button> <button class="btn sm ghost" data-act="accToggle" data-v="${a.id}">${a.on ? '停用' : '启用'}</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+function accSaveBtn() {
+  const a = V.drawer.a, okPhone = /^1\d{10}$/.test(a.phone), dup = DATA.accounts.some((x) => x.phone === a.phone);
+  if (!a.name.trim()) return '<button class="btn todo" data-act="focus" data-v="aName">填写姓名</button>';
+  if (!okPhone) return '<button class="btn todo" data-act="focus" data-v="aPhone">填写 11 位手机号</button>';
+  if (dup) return '<button class="btn fix" disabled>这个手机号已有账号</button>';
+  return '<button class="btn primary" data-act="accSave">新增并生成密码</button>';
+}
+function drawerAccount() {
+  const a = V.drawer.a;
+  return {
+    title: '新增磅秤员', sub: '',
+    body: `<div class="formgrid">
+      <label class="field"><span>姓名</span><input class="in" id="aName" value="${esc(a.name)}" autocomplete="off"></label>
+      <label class="field"><span>手机号（登录名）</span><input class="in num" id="aPhone" inputmode="numeric" value="${esc(a.phone)}" autocomplete="off"></label>
+    </div>`,
+    foot: `<span id="aSaveWrap">${accSaveBtn()}</span>`,
+  };
+}
+const genPw = () => String(100000 + Math.floor(Math.random() * 900000));
+
+/* ================= 系统设置 ================= */
+function pageSettings() {
+  const s = V.setDraft || DATA.settings, dirty = V.setDraft && JSON.stringify(V.setDraft) !== JSON.stringify(DATA.settings);
+  const affected = pendingOrders().length;
+  const numIn = (id, v, w = 72) => `<input class="in numin" id="${id}" inputmode="decimal" value="${v}" style="width:${w}px;height:38px">`;
+  return `
+  <div class="top"><div><h1>系统设置</h1><p>全公司统一；只影响之后的单据和待审核单据</p></div></div>
+  <div class="setgrid">
+    <section class="card setcard"><h3>均重取整</h3>
+      <div class="opts" role="radiogroup" aria-label="均重取整">${['half', 'floor', 'ceil'].map((r) => `<button class="opt" role="radio" aria-checked="${s.round === r}" data-act="setOpt" data-v="round|${r}"><b>${ROUND_NAME[r]}</b><span>46.05 → ${roundW(4605, 1, r)} kg · 46.5 → ${roundW(4650, 1, r)} kg</span></button>`).join('')}</div></section>
+    <section class="card setcard"><h3>标签打印方式</h3>
+      <div class="opts" role="radiogroup" aria-label="标签打印方式" style="grid-template-columns:repeat(2,minmax(0,1fr))">${[['batch', '完成后一次打印', '确认计量完毕后按箱序号依次打'], ['each', '逐箱打印', '记一箱打一张']].map(([k, t, d]) => `<button class="opt" role="radio" aria-checked="${s.printMode === k}" data-act="setOpt" data-v="printMode|${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div></section>
+    <section class="card setcard"><h3>回传好生意</h3>
+      <div class="setrow"><div class="seg">${[['NO_INVOICE', '不开票'], ['GENERAL', '普通发票'], ['SPECIAL', '专用发票']].map(([k, t]) => `<button data-act="setOpt" data-v="noteType|${k}" aria-pressed="${s.noteType === k}">${t}</button>`).join('')}</div>
+        <span class="muted" style="margin-left:12px">税率</span>${numIn('setTax', s.tax)}<span class="muted">%</span></div></section>
+    <section class="card setcard"><h3>标签纸</h3>
+      <div class="setrow"><span class="muted">宽</span>${numIn('setW', s.labelW)}<span class="muted">高</span>${numIn('setH', s.labelH)}<span class="muted">间隙</span>${numIn('setG', s.gap, 64)}<span class="muted">mm</span></div></section>
+    <section class="card setcard"><h3>合并称重识别范围</h3>
+      <div class="setrow"><span class="muted">每箱净重偏离标准净含量 ±</span>${numIn('setT', s.threshold)}<span class="muted">% 以内算一箱</span></div></section>
+  </div>
+  <div class="savebar" style="max-width:880px">${dirty ? `<button class="btn" data-act="setRevert">还原</button><button class="btn primary" data-act="setSave">保存设置${s.round !== DATA.settings.round && affected ? ` · ${affected} 张待审核按新规则重算` : ''}</button>` : ''}</div>`;
+}
+
+/* ================= 新建入库单 ================= */
+function pageNew() {
+  const n = V.newo, f = n.farmer && farmerOf(n.farmer);
+  const rules = n.farmer ? DATA.rules.filter((r) => r.on !== false && r.kind === 'buy' && r.binds.includes(n.farmer)) : [];
+  const steps = [['farmer', '农户'], ['product', '商品'], ['spec', '规格'], ['warehouse', '仓库与日期'], ['boxes', '逐箱净重']];
+  const val = { farmer: n.farmer, product: n.product, spec: n.spec, warehouse: n.warehouse && n.date, boxes: n.boxes.length };
+  const active = steps.find(([k]) => !val[k])?.[0];
+  const st = (k) => (val[k] ? 'done' : k === active ? 'active' : 'todo');
+  const tmp = { ...n, status: 'pending', frozen: null };
+  const c = n.farmer && n.product && n.spec ? calc(tmp) : null;
+  const hits = farmerHits(n.q.trim());
+  const noRule = n.farmer && n.product && n.spec && !ruleFor(tmp);
+  const cand = noRule ? DATA.rules.filter((r) => r.on !== false && r.kind === 'buy' && r.product === n.product && r.spec === n.spec) : [];
+  const tC = n.boxes.reduce((x, b) => x + b.netC, 0);
+  const save = active ? `<button class="btn todo lg" data-act="focusStep" data-v="${active}">还差：${steps.find((x) => x[0] === active)[1]}</button>` : '<button class="btn primary lg" data-act="newSave">保存为待审核</button>';
+  let amount;
+  if (c && c.M != null && n.boxes.length) amount = `<div class="amt">${money(c.amount)}<small> 元</small></div><span class="calc">${num(c.M)} 元/箱 × ${c.n} 箱</span><p class="formula">${formula(c)}</p>`;
+  else if (c && c.m0 == null) amount = `<div class="amt" style="color:var(--ink-3)">—</div><div class="fixline"><span class="tag warn">无 ${dot(n.date)} 基准价</span><button class="btn sm fix" data-act="fixM0" data-v="${n.spec}|${n.date}">录入</button></div>`;
+  else if (c && !c.rule) amount = '<div class="amt" style="color:var(--ink-3)">—</div><div class="fixline"><span class="tag warn">无收购规则</span></div>';
+  else amount = '<div class="amt" style="color:var(--ink-3)">—</div>';
+  return `
+  <button class="crumb" data-act="go" data-v="orders">‹ 采购入库单</button>
+  <div class="top"><div><h1>新建入库单</h1></div></div>
+  <div class="dgrid">
+    <div class="form-steps">
+      <section class="card fstep ${st('farmer')}" id="st-farmer"><div class="lbl"><i>${val.farmer ? '✓' : 1}</i>农户</div><div>
+        ${f ? `<div class="setrow"><b style="font-size:17px">${esc(bindName(f.id))}</b><span class="muted num">${fmtPhone(f.phones[0])}</span><button class="btn sm ghost" data-act="nFarmerClear">换一位</button></div>`
+          : `<div class="combo"><input class="in" id="nq" placeholder="农户姓名或手机尾号" value="${esc(n.q)}" autocomplete="off">${hits.length ? `<div class="pick">${hits.map((h) => `<button data-act="nFarmer" data-v="${h.id}"><span>${esc(bindName(h.id))}</span><span class="muted num">${h.phones.map(fmtPhone).join('　')}</span></button>`).join('')}</div>` : n.q.trim() ? '<div class="pick"><button disabled>没有匹配的农户</button></div>' : ''}</div>`}
+      </div></section>
+      <section class="card fstep ${st('product')}" id="st-product"><div class="lbl"><i>${val.product ? '✓' : 2}</i>商品</div><div><div class="seg">${DATA.products.map((p) => `<button data-act="nProduct" data-v="${p.id}" aria-pressed="${n.product === p.id}" ${n.farmer ? '' : 'disabled'}>${p.id}${rules.some((r) => r.product === p.id) ? '<small>有规则</small>' : ''}</button>`).join('')}</div></div></section>
+      <section class="card fstep ${st('spec')}" id="st-spec"><div class="lbl"><i>${val.spec ? '✓' : 3}</i>规格</div><div>
+        <div class="seg">${DATA.specs.filter((x) => x.on !== false).map((x) => `<button data-act="nSpec" data-v="${x.id}" aria-pressed="${n.spec === x.id}" ${n.product ? '' : 'disabled'}>${x.name}${priceOn(n.date, x.id) == null ? '<small class="w">无基准价</small>' : rules.some((r) => r.product === n.product && r.spec === x.id) ? '<small>有规则</small>' : ''}</button>`).join('')}</div>
+        ${noRule ? `<div class="rulepick"><div class="t2"><span class="tag warn">无收购规则</span>${esc(bindName(f.id))} · ${esc(n.product)} ${esc(specOf(n.spec).name)}</div>
+          ${cand.length ? `<div class="pick" style="margin:0">${cand.map((r) => `<button data-act="nBindRule" data-v="${r.id}"><span>${esc(r.name)}</span><span class="muted">绑定 ›</span></button>`).join('')}</div>` : '<button class="btn sm" data-act="nNewRule">新建收购规则</button>'}</div>` : ''}
+      </div></section>
+      <section class="card fstep ${st('warehouse')}" id="st-warehouse"><div class="lbl"><i>${val.warehouse ? '✓' : 4}</i>仓库与日期</div><div class="setrow">
+        <div class="seg">${DATA.warehouses.map((w) => `<button data-act="nWh" data-v="${w.id}" aria-pressed="${n.warehouse === w.id}" ${n.spec ? '' : 'disabled'}>${w.name}</button>`).join('')}</div>
+        ${n.spec ? dateField('nDate', n.date) : ''}
+      </div></section>
+      <section class="card fstep ${st('boxes')}" id="st-boxes"><div class="lbl"><i>${val.boxes ? '✓' : 5}</i>逐箱净重</div><div>
+        ${n.warehouse ? `${n.boxes.length ? `<div style="margin-bottom:10px"><b class="num">${n.boxes.length} 箱 · ${kg(tC)} kg · 均重 ${roundW(tC, n.boxes.length, DATA.settings.round)} kg</b></div>` : ''}${boxTable()}` : ''}
+      </div></section>
+    </div>
+    <aside class="card side-panel"><span class="k">金额</span>${amount}<div class="act">${save}</div></aside>
+  </div>`;
+}
+
+/* ================= 登录 ================= */
+function loginBtn() {
+  const L = V.login;
+  if (L.busy) return '<button class="btn primary lg" style="width:100%" disabled><span class="spin"></span> 登录中</button>';
+  if (L.phone.length < 11) return '<button class="btn todo lg" style="width:100%" data-act="focus" data-v="lgPhone">填写手机号</button>';
+  if (!L.pw) return '<button class="btn todo lg" style="width:100%" data-act="focus" data-v="lgPw">填写密码</button>';
+  return '<button class="btn primary lg" style="width:100%" data-act="login">登录</button>';
+}
+function pageLogin() {
+  const L = V.login || (V.login = { phone: '', pw: '', err: '' });
+  return `<div class="login"><div class="card">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span><b>收蛋</b><small>管理端</small></span></div>
+    <div class="formgrid">
+      <label class="field"><span>手机号</span><input class="in num ${L.err === 'bad' ? 'bad' : ''}" id="lgPhone" inputmode="numeric" value="${esc(L.phone)}" autocomplete="username"></label>
+      <label class="field"><span>密码</span><input class="in ${L.err === 'bad' ? 'bad' : ''}" id="lgPw" type="password" value="${esc(L.pw)}" autocomplete="current-password"></label>
+      <p class="inline-err" id="lgErr" style="margin:-6px 0 0;min-height:20px">${{ bad: '手机号或密码不对', scale: '磅秤员账号只能用 APP 登录' }[L.err] || ''}</p>
+      <span id="lgBtn">${loginBtn()}</span>
+    </div></div></div>`;
+}
+
+/* ================= 对话框 ================= */
+function dialogHtml() {
+  const d = V.dialog;
+  if (d.kind === 'approve') {
+    const o = curOrder(), c = calc(o);
+    return `<h2>审核并回传好生意？</h2><div class="amt">${money(c.amount)}<small> 元</small></div>
+      <p class="calc" style="margin:0">${esc(farmerOf(o.farmer).name)} · ${esc(o.product)} ${esc(specOf(o.spec).name)} · ${c.n} 箱 × ${num(c.M)} 元</p>
+      <p class="muted" style="margin:14px 0 0;font-size:13px">回传到「${esc(DATA.book)}」，之后单据锁定</p>
+      <div class="acts"><button class="btn" data-act="closeDialog">取消</button><button class="btn primary" id="dlgGo" data-act="approveGo">审核并回传</button></div>`;
+  }
+  if (d.kind === 'resetPw') {
+    const a = DATA.accounts.find((x) => x.id === d.id);
+    return `<h2>重置 ${esc(a.name)} 的密码？</h2><p class="muted" style="margin:10px 0 0">${esc(a.name)} 正在用的 APP 会退出登录，旧密码不能再用</p>
+      <div class="acts"><button class="btn" data-act="closeDialog">取消</button><button class="btn dark" id="dlgGo" data-act="accResetGo">重置密码</button></div>`;
+  }
+  if (d.kind === 'pw') {
+    return `<h2>${esc(d.title)}</h2><p class="muted" style="margin:6px 0 0">${esc(d.name)} · <span class="num">${fmtPhone(d.phone)}</span></p>
+      <div class="pwshow"><b>${d.pw}</b><button class="btn sm" data-act="copyPw">${d.copied ? '✓ 已复制' : '复制'}</button></div>
+      <p class="muted" style="margin:10px 0 0;font-size:13px">只显示这一次</p>
+      <div class="acts"><button class="btn primary" id="dlgGo" data-act="closeDialog">完成</button></div>`;
+  }
+  return '';
+}
+
+/* ================= 渲染 ================= */
+const PAGES = { orders: pageOrders, order: pageOrder, rules: pageRules, prices: pagePrices, basics: pageBasics, archive: pageArchive, accounts: pageAccounts, settings: pageSettings, neworder: pageNew };
+const DRAWERS = { boxes: drawerBoxes, orderRule: drawerOrderRule, ruleEdit: drawerRuleEdit, account: drawerAccount, basicNew: drawerBasicNew };
+function render() {
+  const keepScroll = $('drawer').querySelector('.bd')?.scrollTop || 0;
+  $('root').innerHTML = V.user ? shell(PAGES[V.page]()) : pageLogin();
+  if (V.drawer) {
+    const d = DRAWERS[V.drawer.kind]();
+    $('drawer').innerHTML = `<div class="hd"><div><h2>${d.title}</h2>${d.sub ? `<p>${d.sub}</p>` : ''}</div><button class="btn ghost" data-act="closeDrawer">关闭</button></div><div class="bd">${d.body}</div>${d.foot ? `<div class="ft ${d.footCls || ''}">${d.foot}</div>` : ''}`;
+    $('drawer').querySelector('.bd').scrollTop = keepScroll;
+    $('drawer').classList.add('on'); $('scrim').classList.add('on');
+  } else { $('drawer').classList.remove('on'); $('scrim').classList.remove('on'); }
+  if (V.dialog) { $('dialog').className = 'dialog on'; $('dialog').innerHTML = dialogHtml(); $('dscrim').classList.add('on'); }
+  else { $('dialog').className = 'dialog'; $('dscrim').classList.remove('on'); }
+  document.querySelectorAll('[data-lab="demo"],[data-lab="worst"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lab === MODE)));
+}
+let toastT;
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+
+/* ================= 操作 ================= */
+function go(page, extra = {}) { Object.assign(V, { page, drawer: null, dialog: null, fe: null, feQ: '', boxEdit: null, addErr: '', paste: false, onlyManual: false, cell: null }, extra); render(); window.scrollTo(0, 0); }
+const ACT = {
+  go(v) { if (v !== 'prices') V.returnTo = null; else V.priceSaved = {}; go(v); if (v === 'prices') focusFirstMissingPrice(); },
+  tab(v) { V.tab = v; render(); },
+  open(v) { go('order', { id: v }); },
+  logout() { V.user = null; V.login = { phone: V.login?.phone || '', pw: '', err: '' }; go('orders'); },
+  focus(v) { const el = $(v); if (el) { el.focus(); if (el.select) el.select(); } },
+  closeDrawer() { V.drawer = null; V.boxEdit = null; V.paste = false; V.onlyManual = false; render(); },
+  closeDialog() { V.dialog = null; render(); },
+  // 单据：字段就地改
+  fe(v) { V.fe = v; V.feQ = ''; render(); const el = $(v === 'farmer' ? 'feQ' : v === 'date' ? 'feDate' : '__'); if (el) { el.focus(); el.select(); } },
+  setField(v) { const [k, val] = v.split('|'); curOrder()[k] = val; V.fe = null; render(); },
+  pickDate(v) { const [id, iso] = v.split('|'); if (id === 'feDate') { curOrder().date = iso; V.fe = null; } else V.newo.date = iso; render(); },
+  openBoxes() { V.boxEdit = null; V.addErr = ''; V.onlyManual = false; V.drawer = { kind: 'boxes', base: calc(curOrder()) }; render(); },
+  onlyManual() { V.onlyManual = !V.onlyManual; render(); },
+  openRule() { V.drawer = { kind: 'orderRule', n: null }; render(); },
+  bxEdit(v) { V.boxEdit = Number(v); render(); $('bxIn').focus(); $('bxIn').select(); },
+  bxDel(v) {
+    const ctx = boxCtx();
+    if (ctx.mark && ctx.boxes.length === 1) { toast('至少要留一箱'); return; }
+    const i = ctx.boxes.findIndex((b) => b.seq === Number(v)); ctx.boxes.splice(i, 1); ctx.boxes.forEach((b, j) => { b.seq = j + 1; });
+    toast(`已删除第 ${v} 箱`); render();
+  },
+  pasteOpen() { V.paste = !V.paste; render(); if (V.paste) { const t = $('pasteBox'); t.focus(); t.scrollIntoView({ block: 'nearest' }); } },
+  nStep(v) { const r = calc(curOrder()).rule; const cur = Number(V.drawer.n ?? r.n); V.drawer.n = String(Math.max(0, Math.round(((isNaN(cur) ? r.n : cur) + Number(v)) * 100) / 100)); render(); },
+  nRevert() { V.drawer.n = null; render(); },
+  nSave() { const r = calc(curOrder()).rule; r.n = Number(V.drawer.n); V.drawer.n = null; toast('规则已保存'); render(); },
+  ruleBindOrder(v) { const o = curOrder(), old = ruleFor(o); if (old) old.binds = old.binds.filter((x) => x !== o.farmer); DATA.rules.find((r) => r.id === v).binds.push(o.farmer); V.drawer = { kind: 'orderRule', n: null }; toast('已换绑规则'); render(); },
+  ruleUnbindOrder() { const o = curOrder(), r = ruleFor(o); r.binds = r.binds.filter((x) => x !== o.farmer); V.drawer = { kind: 'orderRule', n: null }; render(); },
+  fixM0(v) {   // 直达基准价页，带上单据的收购日期，光标落在缺的那一格
+    const [sid, d] = v.split('|');
+    const ret = V.page === 'order' ? V.id : V.page === 'neworder' ? 'new' : null;
+    go('prices', { priceDate: d, returnTo: ret, priceSaved: {} }); focusFirstMissingPrice(sid);
+  },
+  backFromPrices() { const r = V.returnTo; V.returnTo = null; if (r === 'new') go('neworder'); else go('order', { id: r }); },
+  approve() { V.dialog = { kind: 'approve' }; render(); $('dlgGo').focus(); },
+  approveGo() {
+    const o = curOrder();
+    if (o.status === 'pending') { o.round = DATA.settings.round; o.frozen = calc({ ...o, frozen: null }); o.approvedBy = DATA.accounts.find((a) => a.phone === V.user).name; }
+    V.dialog = null; o.status = 'sending'; render();
+    setTimeout(() => {
+      if (LABF.pushFail) { o.status = 'failed'; o.err = '好生意返回：openToken 已过期（openapi.e1003）'; render(); return; }
+      o.status = 'sent'; o.err = ''; o.hsId = `CGRK-HSY-${compact(TODAY)}-${String(40 + DATA.orders.indexOf(o)).padStart(2, '0')}`;
+      render(); $('nextBtn')?.focus();
+    }, 1100);
+  },
+  unapprove() {   // 回传失败时好生意侧没有单据，退回后按待审核单处理：可修改、按当前规则重算
+    const o = curOrder(); Object.assign(o, { status: 'pending', frozen: null, round: null, err: '', approvedBy: null });
+    toast('已退回待审核，可以修改'); render();
+  },
+  newOrder() { go('neworder', { newo: { q: '', farmer: null, product: null, spec: null, warehouse: null, date: TODAY, boxes: [] } }); $('nq')?.focus(); },
+  // 规则
+  ruleF(v) { const [k, val] = v.split('|'); V[k] = val; render(); },
+  ruleNew() { V.drawer = { kind: 'ruleEdit', r: { id: 'r' + Date.now(), name: '', kind: 'buy', product: '粉蛋', spec: '360', n: 1, binds: [], on: true }, q: '' }; render(); $('rName').focus(); },
+  ruleEdit(v) { V.drawer = { kind: 'ruleEdit', r: JSON.parse(JSON.stringify(DATA.rules.find((r) => r.id === v))), q: '' }; render(); },
+  rOn() { V.drawer.r.on = V.drawer.r.on === false; render(); },
+  rKind(v) { if (V.drawer.r.kind !== v) { V.drawer.r.kind = v; V.drawer.r.binds = []; } render(); },
+  rProduct(v) { V.drawer.r.product = v; render(); },
+  rSpec(v) { V.drawer.r.spec = v; render(); },
+  rBind(v) { V.drawer.r.binds.push(v); V.drawer.q = ''; render(); $('rQ').focus(); },
+  rUnbind(v) { V.drawer.r.binds = V.drawer.r.binds.filter((x) => x !== v); render(); },
+  rResolve(v) { const [fid, rid] = v.split('|'); const other = DATA.rules.find((r) => r.id === rid); other.binds = other.binds.filter((x) => x !== fid); toast(`已把 ${bindName(fid)} 从「${other.name}」解绑`); render(); },
+  toConflict() { document.querySelector('.conflict')?.scrollIntoView({ block: 'center' }); },
+  rSave() {
+    const r = V.drawer.r; r.n = Number(r.n); r.name = r.name.trim();
+    const i = DATA.rules.findIndex((x) => x.id === r.id); if (i >= 0) DATA.rules[i] = r; else DATA.rules.push(r);
+    V.drawer = null; toast('规则已保存'); render();
+  },
+  // 基准价
+  pDate(v) { V.priceDate = dayShift(V.priceDate, Number(v)); V.priceSaved = {}; render(); focusFirstMissingPrice(); },
+  pCopy() {
+    const d = V.priceDate, prev = dayShift(d, -1); let k = 0;
+    DATA.specs.filter((s) => s.on !== false).forEach((s) => { if (priceOn(d, s.id) == null && priceOn(prev, s.id) != null) { DATA.prices[d] = DATA.prices[d] || {}; DATA.prices[d][s.id] = priceOn(prev, s.id); V.priceSaved[s.id] = true; k += 1; } });
+    toast(`已沿用前一天的 ${k} 个规格`); render();
+  },
+  // 规格、皮重
+  cell(v) { V.cell = v; render(); const el = $('cellIn'); el.focus(); el.select(); },
+  specOn(v) { const s = DATA.specs.find((x) => x.id === v); s.on = s.on === false; toast(s.on ? `已启用 ${s.name}` : `已停用 ${s.name}`); render(); },
+  tareOn(v) { const t = DATA.tares.find((x) => x.id === v); t.on = !t.on; render(); },
+  tareHot(v) { const t = DATA.tares.find((x) => x.id === v); t.hot = !t.hot; render(); },
+  basicNew(v) { V.drawer = { kind: 'basicNew', kindNew: v, b: { name: '', count: '', val: '' } }; render(); $('bName').focus(); },
+  basicSave() {
+    const b = V.drawer.b;
+    if (V.drawer.kindNew === 'spec') DATA.specs.push({ id: 's' + Date.now(), name: b.name.trim(), count: Number(b.count), w0: Number(b.val), on: true });
+    else DATA.tares.push({ id: 't' + Date.now(), name: b.name.trim(), c: Math.round(Number(b.val) * 100), hot: true, on: true });
+    V.drawer = null; toast('已新增'); render();
+  },
+  // 档案
+  archTab(v) { V.archTab = v; render(); },
+  sync() {
+    V.syncing = true; V.syncErr = ''; render();
+    setTimeout(() => {
+      V.syncing = false;
+      if (LABF.syncFail) V.syncErr = '好生意返回：appSecret 校验失败（openapi.e1001）';
+      else { const d = new Date(); DATA.lastSync = `${dot(TODAY)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; toast(`同步完成：供应商 ${DATA.farmers.length} · 商品 ${DATA.products.length} · 客户 ${DATA.customers.length} · 仓库 ${DATA.warehouses.length}`); }
+      render();
+    }, 1400);
+  },
+  // 账号
+  accNew() { V.drawer = { kind: 'account', a: { name: '', phone: '' } }; render(); $('aName').focus(); },
+  accSave() {
+    const a = V.drawer.a, pw = genPw();
+    DATA.accounts.push({ id: 'a' + Date.now(), name: a.name.trim(), phone: a.phone, role: 'scale', on: true, last: '' });
+    V.drawer = null; V.dialog = { kind: 'pw', title: `已新增 ${a.name.trim()}`, name: a.name.trim(), phone: a.phone, pw }; render(); $('dlgGo').focus();
+  },
+  accReset(v) { V.dialog = { kind: 'resetPw', id: v }; render(); },
+  accResetGo() { const a = DATA.accounts.find((x) => x.id === V.dialog.id); V.dialog = { kind: 'pw', title: `${a.name} 的新密码`, name: a.name, phone: a.phone, pw: genPw() }; render(); $('dlgGo').focus(); },
+  copyPw() { try { navigator.clipboard?.writeText(V.dialog.pw)?.catch(() => {}); } catch (e) {} V.dialog.copied = true; render(); },
+  accToggle(v) { const a = DATA.accounts.find((x) => x.id === v); a.on = !a.on; toast(a.on ? `已启用 ${a.name}` : `已停用 ${a.name}，APP 已退出登录`); render(); },
+  // 设置
+  setOpt(v) { const [k, val] = v.split('|'); V.setDraft = { ...(V.setDraft || DATA.settings), [k]: val }; render(); },
+  setRevert() { V.setDraft = null; render(); },
+  setSave() { DATA.settings = { ...V.setDraft }; V.setDraft = null; toast('设置已保存'); render(); },
+  // 新建入库单
+  nFarmer(v) { const n = V.newo; n.farmer = v; n.q = ''; const rules = DATA.rules.filter((r) => r.on !== false && r.kind === 'buy' && r.binds.includes(v)); if (rules.length === 1) { n.product = rules[0].product; n.spec = rules[0].spec; } render(); },
+  nFarmerClear() { Object.assign(V.newo, { farmer: null, product: null, spec: null }); render(); $('nq').focus(); },
+  nProduct(v) { V.newo.product = v; const r = DATA.rules.filter((x) => x.on !== false && x.kind === 'buy' && x.binds.includes(V.newo.farmer) && x.product === v); if (r.length === 1) V.newo.spec = r[0].spec; render(); },
+  nSpec(v) { V.newo.spec = v; render(); },
+  nWh(v) { V.newo.warehouse = v; render(); $('addIn')?.focus(); },
+  nBindRule(v) { DATA.rules.find((r) => r.id === v).binds.push(V.newo.farmer); toast('已绑定收购规则'); render(); },
+  nNewRule() { const n = V.newo; V.drawer = { kind: 'ruleEdit', r: { id: 'r' + Date.now(), name: '', kind: 'buy', product: n.product, spec: n.spec, n: 1, binds: [n.farmer], on: true }, q: '' }; render(); $('rName').focus(); },
+  focusStep(v) {
+    const el = $('st-' + v); el.scrollIntoView({ block: 'center' });
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) el.animate([{ boxShadow: '0 0 0 0 rgba(11,107,58,.45)' }, { boxShadow: '0 0 0 10px rgba(11,107,58,0)' }], { duration: 500, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+    if (v === 'farmer') $('nq')?.focus(); if (v === 'boxes') $('addIn')?.focus();
+  },
+  newSave() {
+    const n = V.newo, id = 'n' + Date.now(), d = new Date();
+    DATA.orders.push({ id, code: nextCode(n.date), date: n.date, at: `${pad(d.getHours())}:${pad(d.getMinutes())}`, batch: nextBatch(n.date), farmer: n.farmer, product: n.product, spec: n.spec, warehouse: n.warehouse,
+      operator: DATA.accounts.find((a) => a.phone === V.user).name, source: 'Web', status: 'pending', round: null, hsId: '', err: '', frozen: null, submitted: null, boxes: n.boxes });
+    toast('已保存为待审核'); go('order', { id });
+  },
+  login() {
+    const L = V.login; L.busy = true; $('lgBtn').innerHTML = loginBtn();
+    setTimeout(() => {
+      L.busy = false;
+      const a = DATA.accounts.find((x) => x.phone === L.phone);
+      const pw = { '13900002222': 'admin123', '13900001111': 'egg123' }[a?.phone];
+      if (!a || L.pw !== pw) { L.err = 'bad'; L.pw = ''; render(); $('lgPw').focus(); return; }
+      if (a.role !== 'admin') { L.err = 'scale'; render(); return; }
+      L.err = ''; L.pw = ''; V.user = a.phone; go('orders', { tab: 'pending' });
+    }, 700);
+  },
+};
+
+/* ================= 单箱：添加、改净重 ================= */
+function addBoxes(text) {   // 一次可以粘贴多箱：按换行、逗号、空格拆开
+  const parts = String(text).split(/[\s,，、;；]+/).filter(Boolean);
+  if (!parts.length) return;
+  const bad = parts.find((p) => !validKg(p));
+  if (bad) { V.addErr = `“${bad}”不是有效的净重`; render(); const i = $('addIn'); if (i) { i.value = parts.length === 1 ? text : ''; i.classList.add('bad'); i.focus(); } return; }
+  const ctx = boxCtx();
+  parts.forEach((p) => ctx.boxes.push({ seq: ctx.boxes.length + 1, netC: Math.round(parseFloat(p) * 100), tareC: ctx.boxes[0]?.tareC || 0, tareName: ctx.boxes[0]?.tareName || '', manual: ctx.mark, rawC: null }));
+  V.addErr = ''; V.paste = false; render(); const inp = $('addIn'); if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest' }); }
+}
+function saveBox(raw) {
+  const v = String(raw).trim();
+  if (!validKg(v)) { $('bxIn').classList.add('bad'); $('bxIn').focus(); return false; }
+  const ctx = boxCtx(), b = ctx.boxes.find((x) => x.seq === V.boxEdit), val = Math.round(parseFloat(v) * 100);
+  if (val !== b.netC) { if (ctx.mark && !b.manual) b.rawC = b.netC; b.netC = val; if (ctx.mark) b.manual = true; }   // 管理端改的净重也记为手录，保留秤读数
+  V.boxEdit = null; render(); return true;
+}
+
+/* ================= 事件 ================= */
+document.addEventListener('click', (e) => {
+  const lab = e.target.closest('[data-lab]');
+  if (lab) { LAB[lab.dataset.lab](); return; }
+  const el = e.target.closest('[data-act]');
+  if (el && !el.disabled && ACT[el.dataset.act]) { ACT[el.dataset.act](el.dataset.v, e); return; }
+  if (V.fe && !e.target.closest('.editing')) { V.fe = null; render(); }   // 点在编辑区外面：收起就地编辑
+});
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (e.key === 'Escape') {
+    if (V.dialog) ACT.closeDialog(); else if (V.boxEdit) { V.boxEdit = null; render(); } else if (V.cell) { V.cell = null; render(); }
+    else if (V.fe) { V.fe = null; render(); } else if (V.drawer) ACT.closeDrawer();
+    return;
+  }
+  if (e.key !== 'Enter') return;
+  if (t.matches && t.matches('tr.go')) { t.click(); return; }
+  if (t.id === 'bxIn') { e.preventDefault(); if (saveBox(t.value)) $('addIn')?.focus(); }
+  if (t.id === 'addIn') { e.preventDefault(); addBoxes(t.value); }
+  if (t.id === 'cellIn') { e.preventDefault(); if (saveCell(t.dataset.cell, t.value)) { V.cell = null; toast('已保存'); render(); } else t.style.borderColor = 'var(--err-ink)'; }
+  if (t.id === 'feDate' || t.id === 'nDate') { e.preventDefault(); const iso = parseDot(t.value); if (!iso) { t.classList.add('bad'); return; } if (t.id === 'feDate') { curOrder().date = iso; V.fe = null; } else V.newo.date = iso; render(); }
+  if (t.id === 'lgPhone') { e.preventDefault(); $('lgPw').focus(); }
+  if (t.id === 'lgPw') { e.preventDefault(); $('lgBtn').querySelector('button:not([disabled])')?.click(); }
+  if (t.id === 'nIn') e.preventDefault();
+  if (t.dataset && t.dataset.price) {
+    e.preventDefault();
+    if (!savePrice(t.dataset.price, t.value)) { t.classList.add('bad'); return; }
+    const i = [...document.querySelectorAll('[data-price]')].indexOf(t);
+    render(); const all = [...document.querySelectorAll('[data-price]')];
+    const nxt = all.slice(i + 1).find((x) => !x.value) || all.find((x) => !x.value);   // 下一个还没录的；全录完了落到返回按钮
+    if (nxt) nxt.focus(); else ($('backBtn') || all[i + 1] || t).focus();
+  }
+});
+document.addEventListener('paste', (e) => {
+  if (e.target.id !== 'addIn' && e.target.id !== 'pasteBox') return;
+  const txt = e.clipboardData.getData('text');
+  if (e.target.id === 'pasteBox' || /[\s,，]/.test(txt.trim())) { e.preventDefault(); addBoxes(txt); }
+});
+document.addEventListener('focusout', (e) => {   // 离开基准价输入框即保存这一行
+  const t = e.target;
+  if (t.dataset && t.dataset.price) {
+    if (!savePrice(t.dataset.price, t.value)) { t.classList.add('bad'); return; }
+    setTimeout(() => { const a = document.activeElement; const keep = a && a.dataset && a.dataset.price; render(); if (keep) document.querySelector(`[data-price="${keep}"]`)?.focus(); }, 0);
+  }
+});
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  const rerenderKeep = (id) => { const pos = t.selectionStart; render(); const n = $(id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (err) {} } };
+  if (t.id === 'oq') { V.q = t.value; $('olist').innerHTML = orderTable(); return; }
+  if (t.id === 'rq') { V.ruleQ = t.value; rerenderKeep('rq'); return; }
+  if (t.id === 'aq') { V.archQ = t.value; rerenderKeep('aq'); return; }
+  if (t.id === 'nq') { V.newo.q = t.value; rerenderKeep('nq'); return; }
+  if (t.id === 'feQ') { V.feQ = t.value.trim(); rerenderKeep('feQ'); return; }
+  if (t.id === 'rName') { V.drawer.r.name = t.value; $('rSaveWrap').innerHTML = ruleSaveBtn(); return; }
+  if (t.id === 'rN') { V.drawer.r.n = t.value.trim(); $('rSaveWrap').innerHTML = ruleSaveBtn(); return; }
+  if (t.id === 'rQ') { V.drawer.q = t.value.trim(); rerenderKeep('rQ'); return; }
+  if (t.id === 'nIn') { V.drawer.n = t.value.trim(); rerenderKeep('nIn'); return; }
+  if (t.id === 'aName' || t.id === 'aPhone') { const k = t.id === 'aName' ? 'name' : 'phone'; V.drawer.a[k] = k === 'phone' ? t.value.replace(/\D/g, '').slice(0, 11) : t.value; if (k === 'phone') t.value = V.drawer.a.phone; $('aSaveWrap').innerHTML = accSaveBtn(); return; }
+  if (['bName', 'bCount', 'bVal'].includes(t.id)) { V.drawer.b[{ bName: 'name', bCount: 'count', bVal: 'val' }[t.id]] = t.value; const d = drawerBasicNew(); $('bSaveWrap').outerHTML = d.foot; return; }
+  if (t.dataset.price) { t.classList.remove('bad'); return; }
+  if (t.id === 'addIn') { if (V.addErr) { V.addErr = ''; $('addErr').textContent = ''; } t.classList.remove('bad'); return; }
+  if (t.id === 'feDate' || t.id === 'nDate') { t.classList.remove('bad'); return; }
+  if (['setTax', 'setW', 'setH', 'setG', 'setT'].includes(t.id)) { const key = { setTax: 'tax', setW: 'labelW', setH: 'labelH', setG: 'gap', setT: 'threshold' }[t.id]; V.setDraft = { ...(V.setDraft || DATA.settings), [key]: Number(t.value) }; rerenderKeep(t.id); return; }
+  if (t.id === 'lgPhone' || t.id === 'lgPw') {
+    const L = V.login; if (t.id === 'lgPhone') { L.phone = t.value.replace(/\D/g, '').slice(0, 11); t.value = L.phone; } else L.pw = t.value;
+    if (L.err) { L.err = ''; $('lgErr').textContent = ''; document.querySelectorAll('#lgPhone,#lgPw').forEach((x) => x.classList.remove('bad')); }
+    if (t.id === 'lgPhone' && L.phone.length === 11) $('lgPw').focus();
+    $('lgBtn').innerHTML = loginBtn();
+  }
+});
+
+/* ================= 模拟控制 ================= */
+const LAB = {
+  toggle() { $('lab').classList.toggle('open'); },
+  demo() { reset('demo'); render(); },
+  worst() { reset('worst'); render(); },
+  reset() { reset(MODE); render(); },
+  newOrder() {
+    const k = 6 + Math.floor(rnd() * 8), d = new Date();
+    const o = { id: 'x' + Date.now(), code: nextCode(TODAY), date: TODAY, at: `${pad(d.getHours())}:${pad(d.getMinutes())}`, batch: nextBatch(TODAY), farmer: 'f1', product: '粉蛋', spec: '360', warehouse: 'w1',
+      operator: '张师傅', source: 'APP', status: 'pending', round: null, hsId: '', err: '', frozen: null, submitted: null, boxes: boxesFrom(randNets(k)) };
+    const c = calc(o); o.submitted = c.M != null ? { M: c.M, amount: c.amount } : null;
+    DATA.orders.push(o); toast('APP 提交了一张新单'); render();
+  },
+};
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'labPushFail') LABF.pushFail = e.target.checked;
+  if (e.target.id === 'labSyncFail') LABF.syncFail = e.target.checked;
+});
+
+reset('demo');
+render();
+</script>
+</body>
+</html>

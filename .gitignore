@@ -1,0 +1,27 @@
+.DS_Store
+
+# 本机专用
+.env
+.pii-local
+.claude/skills/
+.claude/settings.local.json
+skill/
+
+# 不入库的资料（放网盘，见开发规格第 6 章）
+lab/*.mp4
+sdk/*.zip
+sdk/*.textClipping
+sdk/票据打印机ESC编程手册*.pdf
+doc/产品需求/*需求规格说明书 v[2-6].*
+doc/开发规格/*开发规格说明书 v1.md
+
+# 构建产物
+node_modules/
+dist/
+target/
+build/
+.gradle/
+.idea/
+*.iml
+*.apk
+local.properties
