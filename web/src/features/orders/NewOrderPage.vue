@@ -460,7 +460,7 @@ onBeforeUnmount(() => {
 
       <div class="act">
         <button class="btn lg" :class="primary.kind" :disabled="primary.disabled" @click="primary.go">{{ primary.text }}</button>
-        <p v-if="saveErr" class="inline-err" role="alert" style="margin: 0">{{ saveErr }}</p>
+        <p v-if="saveErr" class="inline-err" role="alert" tabindex="0" style="margin: 0">{{ saveErr }}</p>
         <p v-if="boxes.length && warehouseId != null && !active" class="muted" style="margin: 0; font-size: 13px">
           {{ warehouseName }} · {{ dot(date) }} 收购
         </p>
@@ -484,6 +484,7 @@ onBeforeUnmount(() => {
 .pick { margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; max-height: 260px; overflow-y: auto; background: var(--surface); }
 .pick button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 40px; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; }
 .pick button:last-child { border-bottom: 0; }
+.pick button .num { flex: none; white-space: nowrap; }
 .pick button:hover:not(:disabled) { background: var(--sunken); }
 .nw-rulepick { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); }
 .nw-rulepick .t2 { font-weight: 600; color: var(--warn-ink); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -497,9 +498,16 @@ onBeforeUnmount(() => {
 .nw-fixline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .nw-side .act { display: grid; gap: 8px; margin-top: 18px; }
 .nw-side .act .btn { width: 100%; white-space: normal; text-align: center; }
+/* 提交失败的原因可能很长：框内滚动，不把按钮顶出窗口 */
+.nw-side .act .inline-err { max-height: 9em; overflow-y: auto; }
 @media (max-width: 1100px) {
   .nw-grid { grid-template-columns: minmax(0, 1fr); }
   .nw-side { position: static; order: -1; }
+  /* 单列时金额卡在最上面，逐箱录入在下面：保存按钮固定在窗口底边，录上百箱也够得着 */
+  .nw-side .act { position: fixed; left: var(--side); right: 0; bottom: 0; z-index: 5; margin: 0; padding: 12px 20px; justify-items: end; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 16px -8px rgba(0,0,0,.14); }
+  .nw-side .act .btn { width: min(100%, 420px); }
+  .nw-side .act p { max-width: 100%; text-align: right; }
+  .nw-side .act .inline-err { max-height: 4.6em; }
 }
 @media (max-width: 720px) {
   .nw-step { grid-template-columns: minmax(0, 1fr); gap: 8px; }

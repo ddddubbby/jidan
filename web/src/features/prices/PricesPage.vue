@@ -167,8 +167,9 @@ function backTo() {
         <tr><th>规格</th><th class="r">标准净含量</th><th class="r">前一天</th><th style="width: 180px">基准价（元/箱）</th><th>状态</th></tr>
       </thead>
       <tbody>
-        <tr v-for="r in rows" :key="r.specId" :class="{ warnrow: r.price == null }">
-          <td class="nb"><b>{{ r.name }}</b></td>
+        <template v-for="r in rows" :key="r.specId">
+        <tr :class="{ warnrow: r.price == null, errfirst: !!r.err }">
+          <td class="spname"><b>{{ r.name }}</b></td>
           <td class="r">{{ r.stdNetKg }} kg</td>
           <td class="r">{{ r.prev ?? '—' }}</td>
           <td>
@@ -185,7 +186,7 @@ function backTo() {
             />
           </td>
           <td class="nb">
-            <span v-if="r.err" class="inline-err">{{ r.err }}</span>
+            <span v-if="r.err" class="inline-err">没存上</span>
             <span v-else-if="r.price != null" class="muted okmark">✓ {{ r.saved ? '已保存' : '已录' }}</span>
             <template v-else>
               <span class="tag warn">未录</span>
@@ -193,6 +194,9 @@ function backTo() {
             </template>
           </td>
         </tr>
+        <!-- 报错可能很长：单独占一行显示全文，不挤在窄格子里 -->
+        <tr v-if="r.err" class="errrow"><td colspan="5"><span class="inline-err" role="alert">{{ r.err }}</span></td></tr>
+        </template>
         <tr v-if="!rows.length"><td colspan="5" class="empty">没有启用的规格，先到“规格与皮重”里新增</td></tr>
       </tbody>
     </table>
@@ -202,6 +206,9 @@ function backTo() {
 <style>
 .pdate { font-weight: 600; min-width: 112px; text-align: center; }
 .okmark { font-weight: 600; }
+.t tr.errfirst td { border-bottom: 0; }
+.t tr.errrow td { padding-top: 0; background: var(--err-bg); }
+.spname { min-width: 9em; overflow-wrap: anywhere; }
 .waitnote { margin-left: 8px; font-size: 13px; }
 .backbtn { margin: -6px 0 10px; }
 .result { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 15px; }

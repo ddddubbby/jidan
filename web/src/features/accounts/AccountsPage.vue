@@ -105,13 +105,13 @@ const when = (t?: string) => (t ? t.replace('T', ' ').slice(0, 16) : '—')
 
   <table class="t narrow">
     <thead>
-      <tr><th>姓名</th><th>手机号（登录名）</th><th>最近登录</th><th>状态</th><th class="r"></th></tr>
+      <tr><th>姓名</th><th>手机号（登录名）</th><th class="narrowhide">最近登录</th><th>状态</th><th class="r"></th></tr>
     </thead>
     <tbody>
       <tr v-for="a in accounts" :key="a.id">
-        <td><b>{{ a.name }}</b></td>
-        <td class="num">{{ fmtPhone(a.phone ?? '') }}</td>
-        <td class="num muted">{{ when(a.lastLoginAt) }}</td>
+        <td class="acname"><b>{{ a.name }}</b></td>
+        <td class="num nb">{{ fmtPhone(a.phone ?? '') }}</td>
+        <td class="num muted nb narrowhide">{{ when(a.lastLoginAt) }}</td>
         <td><span class="pill" :class="{ ok: a.enabled }">{{ a.enabled ? '启用' : '已停用' }}</span></td>
         <td class="r nb">
           <button class="btn sm ghost" @click="askReset(a)">重置密码</button>
@@ -144,6 +144,8 @@ const when = (t?: string) => (t ? t.replace('T', ' ').slice(0, 16) : '—')
 </template>
 
 <style>
+/* 姓名可能很长：在格子里换行，但不窄到一行一个字；窄屏时最近登录先让位 */
+.acname { min-width: 9em; overflow-wrap: anywhere; }
 .pwshow { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; flex-wrap: wrap; }
 .pwshow b { font-size: 34px; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
 </style>
