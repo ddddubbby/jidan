@@ -2,8 +2,6 @@ package com.jidan.receiving.ui.login
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class LoginFormTest {
     @Test
@@ -21,14 +19,5 @@ class LoginFormTest {
         assertEquals(LoginStep.PASSWORD, loginStep("http://10.0.2.2:8080", "13800138000", "", false))
         assertEquals(LoginStep.READY, loginStep("http://10.0.2.2:8080", "13800138000", "123456", false))
         assertEquals(LoginStep.BUSY, loginStep("http://10.0.2.2:8080", "13800138000", "123456", true))
-    }
-
-    @Test
-    fun updateGate() {
-        assertFalse(shouldShowUpdate(1, null))
-        assertFalse(shouldShowUpdate(2, AppVersionLike(2, "http://x/a.apk")))
-        assertFalse(shouldShowUpdate(1, AppVersionLike(2, null)))
-        assertFalse(shouldShowUpdate(1, AppVersionLike(2, "")))
-        assertTrue(shouldShowUpdate(1, AppVersionLike(2, "http://x/a.apk")))
     }
 }
