@@ -60,6 +60,18 @@ private class FailingTareScale(val inner: FakeScale) : Scale by inner {
     }
 }
 
+/** 数 `clearTare()` 调了几次；[failWith] 非空时抛出（不改秤）。 */
+private class CountingClearScale(val inner: FakeScale) : Scale by inner {
+    var clears = 0
+    var failWith: Throwable? = null
+
+    override suspend fun clearTare() {
+        clears++
+        failWith?.let { throw it }
+        inner.clearTare()
+    }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeighControllerTest {
     private val tare2 = Tare(Kg.of(2.0), "2号箱")
@@ -392,5 +404,128 @@ class WeighControllerTest {
         runCurrent()
         assertTrue(ctl.options.readingIsNet)
         assertNotNull(ctl.machine)
+    }
+
+    // ---- 5. 新一单开始时清掉秤里上一单的皮重 ----
+
+    private fun WeighController.emptyBox() = com.jidan.receiving.core.EmptyBoxState(
+        connected = true,
+        platform = machine!!.platformNow,
+        stable = machine!!.isStable,
+    )
+
+    @Test
+    fun newOrderWithoutTareClearsTheTareLeftOnTheScale() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        fake.setDigitalTare(Kg.of(2.0)) // 上一单下发的 2kg 数字皮
+        assertEquals(-200, fake.readings.value!!.raw.cents)
+
+        val ctl = controller(scale, FakeHost())
+        assertTrue(ctl.start(null, header()))
+        runCurrent()
+
+        assertEquals(1, scale.clears)
+        assertEquals("", ctl.tareError)
+        assertEquals(0, fake.readings.value!!.raw.cents)
+        assertEquals(Kg(0), ctl.machine!!.displayNet)
+
+        // 选了皮重之后不再清（setDigitalTare 会覆盖）
+        ctl.chooseTare(tare2, 1)
+        assertEquals(1, scale.clears)
+    }
+
+    @Test
+    fun clearIsRepeatedEachTimeTheScaleConnectsAgain() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        val ctl = controller(scale, FakeHost())
+        assertTrue(ctl.start(null, header()))
+        runCurrent()
+        assertEquals(1, scale.clears)
+
+        fake.reachable = false
+        runCurrent()
+        fake.reachable = true
+        connect(fake)
+        assertEquals(2, scale.clears)
+    }
+
+    @Test
+    fun clearFailureBlocksWeighingEmptyBoxAndRetryClears() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        fake.setDigitalTare(Kg.of(2.0))
+        scale.failWith = IllegalStateException("秤没有响应清皮指令")
+
+        val ctl = controller(scale, FakeHost())
+        assertTrue(ctl.start(null, header()))
+        runCurrent()
+
+        // 界面状态里有原因；没有已选皮重，所以按钮直达重试清皮
+        assertEquals("秤没有响应清皮指令", ctl.tareError)
+        val ui = WeighUiState().withScaleSide(ctl, scaleConnected = true)
+        assertTrue(ui.ready)
+        assertEquals("秤没有响应清皮指令", ui.tareError)
+        assertNull(ui.tare)
+
+        // 放一只 2.5kg 的空箱：读数不喂状态机，“称空箱”不可按
+        fake.placeEmptyBox(250)
+        settle()
+        assertNull(ctl.machine!!.platformNow)
+        assertFalse(ctl.emptyBox().available)
+        assertEquals(WeighPhase.LOCKED, ctl.machine!!.phase)
+
+        // 原因排除后重试：清掉旧皮重，读数放行，空箱按台面 2.5kg 去皮
+        scale.failWith = null
+        ctl.retryTare()
+        runCurrent()
+        assertEquals("", ctl.tareError)
+        assertEquals(2, scale.clears)
+        assertEquals(Kg.of(2.5), ctl.machine!!.platformNow)
+        assertTrue(ctl.emptyBox().available)
+    }
+
+    @Test
+    fun clearTimeoutShowsNoResponse() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        scale.failWith = runCatching { kotlinx.coroutines.withTimeout(1) { kotlinx.coroutines.delay(10) } }
+            .exceptionOrNull()
+        assertTrue(scale.failWith is kotlinx.coroutines.TimeoutCancellationException)
+        val ctl = controller(scale, FakeHost())
+        assertTrue(ctl.start(null, header()))
+        runCurrent()
+        assertEquals("秤没有响应", ctl.tareError)
+    }
+
+    @Test
+    fun tareByAppNeverClears() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        val opts = AppOptions.from(mapOf("scale.tare-by" to "app"))
+        val ctl = controller(scale, FakeHost(options = opts))
+        assertTrue(ctl.start(null, header()))
+        runCurrent()
+        fake.placeOneBox(4650)
+        settle()
+        assertEquals(0, scale.clears)
+        assertEquals("", ctl.tareError)
+    }
+
+    @Test
+    fun restoredDraftWithTareDoesNotClear() = runTest {
+        val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
+        val scale = CountingClearScale(fake)
+        connect(fake)
+        val ctl = controller(scale, FakeHost())
+        assertTrue(ctl.start(draft(), OrderHeader()))
+        runCurrent()
+        assertEquals(0, scale.clears)
     }
 }

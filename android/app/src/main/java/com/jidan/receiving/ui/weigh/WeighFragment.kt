@@ -222,10 +222,17 @@ class WeighFragment : Fragment() {
 
         val tareFailed = state.ready && state.tareError.isNotBlank()
         b.tareErrorText.isVisible = tareFailed
-        b.retryTare.isVisible = tareFailed && state.tare != null
+        b.retryTare.isVisible = tareFailed
         if (tareFailed) {
-            b.tareErrorText.text = getString(R.string.weigh_tare_failed, state.tareError)
-            b.retryTare.text = getString(R.string.weigh_retry_tare, state.tare?.unit?.format().orEmpty())
+            val tare = state.tare
+            if (tare != null) {
+                b.tareErrorText.text = getString(R.string.weigh_tare_failed, state.tareError)
+                b.retryTare.text = getString(R.string.weigh_retry_tare, tare.unit.format())
+            } else {
+                // 还没选皮重：失败的是清掉秤里上一单留下的皮重
+                b.tareErrorText.text = getString(R.string.weigh_clear_tare_failed, state.tareError)
+                b.retryTare.text = getString(R.string.weigh_retry_clear_tare)
+            }
         }
 
         b.reweighRow.isVisible = state.reweighSeq != null
