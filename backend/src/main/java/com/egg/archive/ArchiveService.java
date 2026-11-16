@@ -175,6 +175,31 @@ public class ArchiveService {
         return new PageResult<>(toRows.apply(mapper.selectList(w)), total, page, size);
     }
 
+    // ---------------------------------------------------------------- 建单用
+
+    /** 商品全量，APP 的 bootstrap 下发用。 */
+    public List<Product> allProducts() {
+        return products.selectList(new QueryWrapper<Product>().orderByAsc("id"));
+    }
+
+    /** 仓库全量，APP 的 bootstrap 下发用。 */
+    public List<Warehouse> allWarehouses() {
+        return warehouses.selectList(new QueryWrapper<Warehouse>().orderByAsc("id"));
+    }
+
+    /** 提交单据时确认农户、商品、仓库都在档案里。好生意里删掉的档案本系统保留，所以只会是传错了 id。 */
+    public void requireExist(long vendorId, long productId, long warehouseId) {
+        if (vendors.selectById(vendorId) == null) {
+            throw ApiException.invalid("农户不存在");
+        }
+        if (products.selectById(productId) == null) {
+            throw ApiException.invalid("商品不存在");
+        }
+        if (warehouses.selectById(warehouseId) == null) {
+            throw ApiException.invalid("仓库不存在");
+        }
+    }
+
     // ---------------------------------------------------------------- 建单选农户
 
     /** 按手机号后四位查农户；同名的靠 matchedPhones 区分。没有匹配返回空列表，由 APP 提示。 */

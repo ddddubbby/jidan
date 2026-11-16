@@ -509,6 +509,89 @@
         }
       }
     },
+    "/api/orders" : {
+      "post" : {
+        "tags" : [ "order-controller" ],
+        "operationId" : "submit",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SubmitForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Submitted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/quote" : {
+      "post" : {
+        "tags" : [ "order-controller" ],
+        "operationId" : "quote",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QuoteForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batches" : {
+      "post" : {
+        "tags" : [ "order-controller" ],
+        "operationId" : "batch",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BatchForm"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Batch"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login" : {
       "post" : {
         "tags" : [ "auth-controller" ],
@@ -825,6 +908,24 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/app/bootstrap" : {
+      "get" : {
+        "tags" : [ "bootstrap-controller" ],
+        "operationId" : "bootstrap",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Bootstrap"
                 }
               }
             }
@@ -1271,6 +1372,232 @@
         },
         "required" : [ "coef", "kind", "name", "productId", "specId" ]
       },
+      "BoxForm" : {
+        "type" : "object",
+        "properties" : {
+          "seq" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "netKg" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "grossKg" : {
+            "type" : "number"
+          },
+          "tareKg" : {
+            "type" : "number"
+          },
+          "tareName" : {
+            "type" : "string"
+          },
+          "groupNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "groupK" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "rawKg" : {
+            "type" : "number"
+          },
+          "printed" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "netKg", "seq" ]
+      },
+      "SubmitForm" : {
+        "type" : "object",
+        "properties" : {
+          "batchNo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "SG\\d{8}-[1-9]\\d*"
+          },
+          "vendorId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "warehouseId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "boxes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BoxForm"
+            },
+            "minItems" : 1
+          }
+        },
+        "required" : [ "batchNo", "boxes", "productId", "specId", "vendorId", "warehouseId" ]
+      },
+      "Submitted" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "PUSHED", "VOID" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "APP", "WEB" ]
+          },
+          "boxCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalNetKg" : {
+            "type" : "number"
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "submittedPrice" : {
+            "type" : "number"
+          },
+          "submittedAmount" : {
+            "type" : "number"
+          }
+        }
+      },
+      "QuoteForm" : {
+        "type" : "object",
+        "properties" : {
+          "vendorId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "boxNetKg" : {
+            "type" : "array",
+            "items" : {
+              "type" : "number",
+              "minimum" : 0
+            }
+          },
+          "trialRuleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "trialCoef" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "productId", "specId", "vendorId" ]
+      },
+      "Result" : {
+        "type" : "object",
+        "properties" : {
+          "boxCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalKg" : {
+            "type" : "number"
+          },
+          "rawAvgKg" : {
+            "type" : "number"
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "standardNetKg" : {
+            "type" : "number"
+          },
+          "basePrice" : {
+            "type" : "number"
+          },
+          "ruleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "ruleName" : {
+            "type" : "string"
+          },
+          "coefficient" : {
+            "type" : "number"
+          },
+          "tailKg" : {
+            "type" : "number"
+          },
+          "priceDiff" : {
+            "type" : "number"
+          },
+          "unitPrice" : {
+            "type" : "number"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "roundMode" : {
+            "type" : "string",
+            "enum" : [ "HALF", "FLOOR", "CEIL" ]
+          },
+          "issues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "BatchForm" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
+      "Batch" : {
+        "type" : "object",
+        "properties" : {
+          "batchNo" : {
+            "type" : "string"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
       "LoginRequest" : {
         "type" : "object",
         "properties" : {
@@ -1486,6 +1813,100 @@
           "pageSize" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "Bootstrap" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "products" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Named"
+            }
+          },
+          "specs" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpecItem"
+            }
+          },
+          "warehouses" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Named"
+            }
+          },
+          "tares" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tare"
+            }
+          },
+          "settings" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "options" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "Named" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SpecItem" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "eggCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "stdNetKg" : {
+            "type" : "number"
+          },
+          "basePrice" : {
+            "type" : "number"
+          }
+        }
+      },
+      "Tare" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "tareKg" : {
+            "type" : "number"
           }
         }
       }
