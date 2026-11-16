@@ -15,6 +15,20 @@ class CatalogRepository(
         client.runApi { this.farmerRules(farmerId) }
             .filter { it.enabled && it.kind.equals("BUY", ignoreCase = true) }
 
+    /** 某商品规格下启用的收购规则列表（含绑定户数）。 */
+    suspend fun buyRules(productId: Long, specId: Long): List<RuleViewDto> =
+        client.runApi { this.rules(kind = "BUY", productId = productId, specId = specId) }
+            .filter { it.enabled }
+
+    suspend fun updateRuleCoef(ruleId: Long, coef: Double): RuleViewDto =
+        client.runApi { this.updateRule(ruleId, RuleCoefPatch(coef)) }
+
+    /** [ruleId] 为空即解绑该商品规格上的采购规则。 */
+    suspend fun bindFarmerRule(farmerId: Long, productId: Long, specId: Long, ruleId: Long?): List<RuleViewDto> =
+        client.runApi {
+            this.bindFarmerRule(farmerId, RuleBindingRequest(productId, specId, ruleId))
+        }
+
     suspend fun products(): List<ArchiveRowDto> =
         client.runApi { this.archive("products", pageSize = 100) }.items
 

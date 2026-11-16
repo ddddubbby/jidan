@@ -20,11 +20,15 @@ import com.jidan.receiving.core.WeighingMachine
 import com.jidan.receiving.core.sum
 import com.jidan.receiving.data.QuoteRequest
 import com.jidan.receiving.data.QuoteResult
+import com.jidan.receiving.data.RuleViewDto
 import com.jidan.receiving.data.TareDto
 import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.printing.PrintJobState
 import com.jidan.receiving.printing.PrintQueue
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,6 +44,40 @@ import kotlinx.coroutines.launch
 sealed class ReceivingNav {
     data object ToSummary : ReceivingNav()
     data object BackToWeigh : ReceivingNav()
+}
+
+data class RuleCandidate(
+    val rule: RuleViewDto,
+    val unitPrice: Double? = null,
+)
+
+/** 定价规则弹层（APP-09 / P7-3）。 */
+data class RuleSheetState(
+    val loading: Boolean = false,
+    val busy: Boolean = false,
+    val error: String = "",
+    val productName: String = "",
+    val specName: String = "",
+    val standardNetKg: Double? = null,
+    val basePrice: Double? = null,
+    val boundRuleId: Long? = null,
+    val boundRuleName: String? = null,
+    val boundCoef: Double? = null,
+    val bindCount: Int = 0,
+    val draftCoef: Double? = null,
+    val trialUnitPrice: Double? = null,
+    val boundUnitPrice: Double? = null,
+    val changing: Boolean = false,
+    val candidates: List<RuleCandidate> = emptyList(),
+) {
+    val unbound: Boolean get() = boundRuleId == null
+    val displayCoef: Double? get() = draftCoef ?: boundCoef
+    val dirty: Boolean
+        get() {
+            val d = draftCoef ?: return false
+            val b = boundCoef ?: return false
+            return abs(d - b) > 1e-9
+        }
 }
 
 data class SummaryUiState(
@@ -114,6 +152,9 @@ class ReceivingViewModel(
 
     private val _summary = MutableStateFlow(SummaryUiState())
     val summary: StateFlow<SummaryUiState> = _summary.asStateFlow()
+
+    private val _ruleSheet = MutableStateFlow(RuleSheetState())
+    val ruleSheet: StateFlow<RuleSheetState> = _ruleSheet.asStateFlow()
 
     private val _nav = MutableSharedFlow<ReceivingNav>(extraBufferCapacity = 1)
     val nav: SharedFlow<ReceivingNav> = _nav.asSharedFlow()
@@ -313,9 +354,153 @@ class ReceivingViewModel(
         }
     }
 
-    /** 规则弹层改绑或改系数后重算（P7-3 会带 trial；此处先按当前绑定重拉）。 */
+    /** 规则弹层改绑或改系数后重算。 */
     fun reloadQuote() {
         viewModelScope.launch { refreshQuote(resetM0Retried = false) }
+    }
+
+    /** 打开规则弹层时加载候选与本单试算价。 */
+    fun loadRuleSheet() {
+        viewModelScope.launch { refreshRuleSheet(keepChanging = false) }
+    }
+
+    fun toggleChangeRule() {
+        _ruleSheet.update { it.copy(changing = !it.changing, error = "") }
+    }
+
+    fun adjustDraftCoef(delta: Double) {
+        val cur = _ruleSheet.value.displayCoef ?: return
+        val next = max(0.0, ((cur + delta) * 10).roundToInt() / 10.0)
+        _ruleSheet.update { it.copy(draftCoef = next, error = "") }
+        viewModelScope.launch { previewTrialCoef(next) }
+    }
+
+    fun revertDraftCoef() {
+        _ruleSheet.update {
+            it.copy(draftCoef = null, trialUnitPrice = it.boundUnitPrice, error = "")
+        }
+    }
+
+    fun saveDraftCoef() {
+        val state = _ruleSheet.value
+        val ruleId = state.boundRuleId ?: return
+        val coef = state.draftCoef ?: return
+        viewModelScope.launch {
+            _ruleSheet.update { it.copy(busy = true, error = "") }
+            try {
+                container.catalog.updateRuleCoef(ruleId, coef)
+                refreshQuote(resetM0Retried = false)
+                refreshRuleSheet(keepChanging = false)
+            } catch (e: Throwable) {
+                _ruleSheet.update { it.copy(busy = false, error = e.userMessage()) }
+            }
+        }
+    }
+
+    fun unbindRule() {
+        val s = session ?: return
+        viewModelScope.launch {
+            _ruleSheet.update { it.copy(busy = true, error = "") }
+            try {
+                container.catalog.bindFarmerRule(s.farmer.id, s.product.id, s.spec.id, null)
+                refreshQuote(resetM0Retried = false)
+                refreshRuleSheet(keepChanging = false)
+            } catch (e: Throwable) {
+                _ruleSheet.update { it.copy(busy = false, error = e.userMessage()) }
+            }
+        }
+    }
+
+    fun bindRule(ruleId: Long) {
+        val s = session ?: return
+        viewModelScope.launch {
+            _ruleSheet.update { it.copy(busy = true, error = "") }
+            try {
+                container.catalog.bindFarmerRule(s.farmer.id, s.product.id, s.spec.id, ruleId)
+                refreshQuote(resetM0Retried = false)
+                refreshRuleSheet(keepChanging = false)
+            } catch (e: Throwable) {
+                _ruleSheet.update { it.copy(busy = false, error = e.userMessage()) }
+            }
+        }
+    }
+
+    private suspend fun previewTrialCoef(coef: Double) {
+        val s = session ?: return
+        try {
+            val q = container.orders.quote(
+                QuoteRequest(
+                    vendorId = s.farmer.id,
+                    productId = s.product.id,
+                    specId = s.spec.id,
+                    boxNetKg = s.boxes.map { it.net.toDouble() },
+                    trialCoef = coef,
+                ),
+            )
+            _ruleSheet.update { it.copy(trialUnitPrice = q.unitPrice) }
+        } catch (_: Throwable) {
+            // 预览失败不挡改系数；保存时再报错
+        }
+    }
+
+    private suspend fun refreshRuleSheet(keepChanging: Boolean) {
+        val s = session ?: return
+        val changing = if (keepChanging) _ruleSheet.value.changing else false
+        _ruleSheet.update {
+            it.copy(
+                loading = true,
+                busy = false,
+                error = "",
+                changing = changing,
+                draftCoef = null,
+                productName = s.product.name,
+                specName = s.spec.name,
+            )
+        }
+        try {
+            if (_summary.value.quote == null) {
+                refreshQuote(resetM0Retried = false)
+            }
+            val quote = _summary.value.quote
+            val rules = container.catalog.buyRules(s.product.id, s.spec.id)
+            val boundId = quote?.ruleId
+            val bound = rules.firstOrNull { it.id == boundId }
+                ?: rules.firstOrNull { it.id == quote?.ruleId }
+            val others = rules.filter { it.id != boundId }
+            val priced = others.map { r ->
+                val unit = runCatching {
+                    container.orders.quote(
+                        QuoteRequest(
+                            vendorId = s.farmer.id,
+                            productId = s.product.id,
+                            specId = s.spec.id,
+                            boxNetKg = s.boxes.map { it.net.toDouble() },
+                            trialRuleId = r.id,
+                        ),
+                    ).unitPrice
+                }.getOrNull()
+                RuleCandidate(r, unit)
+            }
+            _ruleSheet.update {
+                it.copy(
+                    loading = false,
+                    busy = false,
+                    standardNetKg = quote?.standardNetKg,
+                    basePrice = quote?.basePrice,
+                    boundRuleId = bound?.id ?: boundId,
+                    boundRuleName = bound?.name ?: quote?.ruleName,
+                    boundCoef = bound?.coef ?: quote?.coefficient,
+                    bindCount = bound?.bindCount ?: 0,
+                    draftCoef = null,
+                    trialUnitPrice = quote?.unitPrice,
+                    boundUnitPrice = quote?.unitPrice,
+                    candidates = priced,
+                    changing = changing && boundId != null,
+                )
+            }
+        } catch (e: Throwable) {
+            _ruleSheet.update { it.copy(loading = false, busy = false, error = e.userMessage()) }
+        }
     }
 
     private suspend fun refreshQuote(resetM0Retried: Boolean) {
@@ -488,6 +673,7 @@ class ReceivingViewModel(
         container.orderDraft.clear()
         _ui.value = WeighUiState()
         _summary.value = SummaryUiState()
+        _ruleSheet.value = RuleSheetState()
     }
 
     private fun applyOutcome(outcome: WeighOutcome?) {
