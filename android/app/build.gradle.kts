@@ -28,6 +28,14 @@ android {
         create("real") {
             dimension = "device"
             resValue("string", "app_name", "收蛋")
+            // 蓝石秤 SDK 的 companyKey：不入库。构建时从 Gradle 属性 lanstar.companyKey
+            // （-P 或 ~/.gradle/gradle.properties）或环境变量 LANSTAR_COMPANY_KEY 取；
+            // 都没有则为空串，SDK 在没有 key 时的表现未验证（见 sdk/README.md）
+            val key = providers.gradleProperty("lanstar.companyKey")
+                .orElse(providers.environmentVariable("LANSTAR_COMPANY_KEY"))
+                .getOrElse("")
+                .replace("\\", "\\\\").replace("\"", "\\\"")
+            buildConfigField("String", "LANSTAR_COMPANY_KEY", "\"$key\"")
         }
     }
 

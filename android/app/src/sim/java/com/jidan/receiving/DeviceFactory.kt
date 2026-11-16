@@ -1,5 +1,6 @@
 package com.jidan.receiving
 
+import android.content.Context
 import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.Scale
@@ -20,13 +21,13 @@ object DeviceFactory {
     lateinit var fakePrinter: FakePrinter
         private set
 
-    fun createScale(scope: CoroutineScope, prefs: Prefs, scaleModel: String?): Scale {
+    fun createScale(context: Context, scope: CoroutineScope, prefs: Prefs, scaleModel: String?): Scale {
         val fake = FakeScale(scope, prefs.pairedScaleId ?: FakeScale.MINE_ID)
         fakeScale = fake
         return fake
     }
 
-    fun createPrinter(scope: CoroutineScope, prefs: Prefs, printerModel: String?): LabelPrinter {
+    fun createPrinter(context: Context, scope: CoroutineScope, prefs: Prefs, printerModel: String?): LabelPrinter {
         val fake = FakePrinter(scope, prefs.pairedPrinterId ?: FakePrinter.MINE_ID)
         fakePrinter = fake
         return fake
