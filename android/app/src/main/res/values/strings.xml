@@ -30,6 +30,11 @@
     <string name="weigh_net_k">净重（%1$d 箱）</string>
     <string name="weigh_tare">皮重</string>
     <string name="weigh_change_tare">换</string>
+    <string name="weigh_start_loading">正在取最新设置…</string>
+    <string name="weigh_start_failed">现在不能称重：%1$s</string>
+    <string name="weigh_start_retry">重试，取最新设置</string>
+    <string name="weigh_tare_failed">皮重没有设到秤上：%1$s</string>
+    <string name="weigh_retry_tare">重新设皮重 %1$s kg</string>
     <string name="weigh_pick_tare">请选择皮重</string>
     <string name="weigh_record">记录</string>
     <string name="weigh_finish">确认计量完毕</string>

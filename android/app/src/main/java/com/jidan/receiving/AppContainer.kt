@@ -4,6 +4,7 @@ import android.content.Context
 import com.jidan.receiving.data.ApiClient
 import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.AuthRepository
+import com.jidan.receiving.data.BootstrapResponse
 import com.jidan.receiving.data.CatalogRepository
 import com.jidan.receiving.data.OrderDraftStore
 import com.jidan.receiving.data.OrderRepository
@@ -124,9 +125,16 @@ class AppContainer(context: Context) {
         _options.value = options
     }
 
+    /** 取 `GET /app/bootstrap`，把业务设置与选项换成刚取到的，原样返回供调用方读规格。失败时抛出，选项不变。 */
+    suspend fun fetchBootstrap(): BootstrapResponse {
+        val b = auth.bootstrap()
+        applyOptions(AppOptions.from(b.allValues()))
+        return b
+    }
+
     /** 取 `GET /app/bootstrap` 的业务设置与选项。 */
     suspend fun refreshOptions() {
-        applyOptions(AppOptions.from(auth.bootstrap().allValues()))
+        fetchBootstrap()
     }
 
     /** 进程启动时已有会话：恢复自动连，并重新取一次下发的设置。 */
