@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -38,6 +39,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 计价只有 PricingService 一处（开发规格 2.3）。{@code DemoDataTest} 会按规则重算一遍核对这些字面值。
  */
 @Component
+// 先于 InitialAdmin：演示数据带了管理员时，初始管理员那一步就不会误报“没有管理员”
+@Order(1)
 @ConditionalOnProperty(name = "egg.seed-demo", havingValue = "true")
 public class DemoDataSeeder implements ApplicationRunner {
 
