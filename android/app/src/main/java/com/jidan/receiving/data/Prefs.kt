@@ -30,6 +30,22 @@ class Prefs(context: Context) {
             ed.apply()
         }
 
+    var pairedScaleId: String?
+        get() = sp.getString(KEY_SCALE, null)
+        set(value) {
+            val ed = sp.edit()
+            if (value.isNullOrBlank()) ed.remove(KEY_SCALE) else ed.putString(KEY_SCALE, value)
+            ed.apply()
+        }
+
+    var pairedPrinterId: String?
+        get() = sp.getString(KEY_PRINTER, null)
+        set(value) {
+            val ed = sp.edit()
+            if (value.isNullOrBlank()) ed.remove(KEY_PRINTER) else ed.putString(KEY_PRINTER, value)
+            ed.apply()
+        }
+
     /** Retrofit 要求以 `/` 结尾；去掉用户多打的空白与末尾斜杠再补上。 */
     fun normalizedBaseUrl(): String {
         var u = serverUrl.trim()
@@ -45,5 +61,7 @@ class Prefs(context: Context) {
         private const val KEY_PHONE = "last_phone"
         private const val KEY_WAREHOUSE = "last_warehouse_id"
         private const val KEY_TARE = "last_tare_id"
+        private const val KEY_SCALE = "paired_scale_id"
+        private const val KEY_PRINTER = "paired_printer_id"
     }
 }

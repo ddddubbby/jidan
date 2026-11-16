@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 模拟台：开发规格 11.4 子集 + 三个异常开关；未经实物验证 -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/sunken">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            style="@style/Text.Strong"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_console_title" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/placeOne"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_place_one"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/placeThree"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_place_three"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/placeEmpty"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_place_empty"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/remove"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_remove"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggleReach"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_disconnect"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/battLow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_batt_low" />
+
+        <TextView
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/sim_printer_section" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/noPaper"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_no_paper"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/openCover"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_open_cover"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/printerOk"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sim_printer_ok"
+                android:textAllCaps="false"
+                android:textSize="@dimen/text_13" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/sim_anomaly_section" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/anomalyNotNet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_anomaly_not_net" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/anomalyStable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_anomaly_stable" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/anomalyTare"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sim_anomaly_tare" />
+    </LinearLayout>
+</ScrollView>

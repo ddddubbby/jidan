@@ -7,6 +7,15 @@ import com.jidan.receiving.data.AuthRepository
 import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.data.SessionUser
 import com.jidan.receiving.data.TokenStore
+import com.jidan.receiving.device.LabelPrinter
+import com.jidan.receiving.device.LinkKeeper
+import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.fake.FakePrinter
+import com.jidan.receiving.device.fake.FakeScale
+import com.jidan.receiving.platform.BluetoothGate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,13 +24,18 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Activity 级手工组装（开发规格 9.4）。P6-1 先接网络与登录；设备、Session 等后续任务往这里挂。
+ * Activity 级手工组装（开发规格 9.4）。
  */
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val prefs = Prefs(appContext)
     val tokenStore = TokenStore(appContext)
+    val bluetoothGate = BluetoothGate(appContext).also {
+        // 模拟版无真蓝牙时仍可走查连接 UI
+        if (DeviceFactory.isSim) it.forceReady = true
+    }
 
     private val _session = MutableStateFlow(tokenStore.readSession())
     val session: StateFlow<SessionUser?> = _session.asStateFlow()
@@ -29,7 +43,6 @@ class AppContainer(context: Context) {
     private val _options = MutableStateFlow(AppOptions.defaults())
     val options: StateFlow<AppOptions> = _options.asStateFlow()
 
-    /** 任意接口返回 UNAUTHENTICATED(401) 时发出，MainActivity 转到登录页。 */
     private val _unauthenticated = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val unauthenticated: SharedFlow<Unit> = _unauthenticated.asSharedFlow()
 
@@ -44,20 +57,53 @@ class AppContainer(context: Context) {
 
     val auth = AuthRepository(apiClient)
 
+    val scale: Scale = DeviceFactory.createScale(
+        scope,
+        prefs,
+        _options.value.get("device.scale-model"),
+    )
+    val printer: LabelPrinter = DeviceFactory.createPrinter(
+        scope,
+        prefs,
+        _options.value.get("device.printer-model"),
+    )
+
+    val linkKeeper = LinkKeeper(
+        scale = scale,
+        printer = printer,
+        scope = scope,
+        isScaleReachable = {
+            val fake = scale as? FakeScale
+            fake?.reachable ?: true
+        },
+        isPrinterReachable = {
+            val fake = printer as? FakePrinter
+            fake?.reachable ?: true
+        },
+        persistScaleId = { prefs.pairedScaleId = it },
+        persistPrinterId = { prefs.pairedPrinterId = it },
+    )
+
     fun setSession(user: SessionUser) {
         tokenStore.save(user)
         _session.value = user
+        linkKeeper.start()
     }
 
     fun clearSession() {
+        linkKeeper.stop()
         tokenStore.clear()
         _session.value = null
-        // 登录失效后选项回到默认；等 P2-2 bootstrap 合入后再在登录成功时刷新
         _options.value = AppOptions.defaults()
     }
 
     fun applyOptions(options: AppOptions) {
         _options.value = options
+    }
+
+    /** 进程启动时已有会话：恢复自动连。 */
+    fun onAppStart() {
+        if (_session.value != null) linkKeeper.start()
     }
 }
 
