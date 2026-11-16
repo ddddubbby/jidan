@@ -126,6 +126,43 @@
         }
       }
     },
+    "/api/rules/{id}" : {
+      "put" : {
+        "tags" : [ "rule-controller" ],
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RulePatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RuleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/options" : {
       "get" : {
         "tags" : [ "options-controller" ],
@@ -163,6 +200,46 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/OptionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/farmers/{id}/rule-binding" : {
+      "put" : {
+        "tags" : [ "farmer-rule-controller" ],
+        "operationId" : "bind",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BindingForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/RuleView"
+                  }
                 }
               }
             }
@@ -354,6 +431,84 @@
         }
       }
     },
+    "/api/rules" : {
+      "get" : {
+        "tags" : [ "rule-controller" ],
+        "operationId" : "list_2",
+        "parameters" : [ {
+          "name" : "kind",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "productId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "specId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "q",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/RuleView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "rule-controller" ],
+        "operationId" : "create_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RuleCreate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RuleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login" : {
       "post" : {
         "tags" : [ "auth-controller" ],
@@ -385,7 +540,7 @@
     "/api/accounts" : {
       "get" : {
         "tags" : [ "account-controller" ],
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -404,7 +559,7 @@
       },
       "post" : {
         "tags" : [ "account-controller" ],
-        "operationId" : "create_2",
+        "operationId" : "create_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -467,6 +622,36 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/farmers/{id}/rules" : {
+      "get" : {
+        "tags" : [ "farmer-rule-controller" ],
+        "operationId" : "rules",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/RuleView"
+                  }
                 }
               }
             }
@@ -672,6 +857,121 @@
           }
         }
       },
+      "RulePatch" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "kind" : {
+            "type" : "string",
+            "pattern" : "BUY|SELL"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "coef" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "bindIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          }
+        }
+      },
+      "RuleView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specName" : {
+            "type" : "string"
+          },
+          "coef" : {
+            "type" : "number"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "binds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Target"
+            }
+          },
+          "bindCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "Target" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "tail4" : {
+            "type" : "string"
+          }
+        }
+      },
+      "BindingForm" : {
+        "type" : "object",
+        "properties" : {
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "ruleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "productId", "specId" ]
+      },
       "BasePriceForm" : {
         "type" : "object",
         "properties" : {
@@ -778,6 +1078,43 @@
           }
         },
         "required" : [ "eggCount", "name", "stdNetKg" ]
+      },
+      "RuleCreate" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "kind" : {
+            "type" : "string",
+            "pattern" : "BUY|SELL"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "coef" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "bindIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          }
+        },
+        "required" : [ "coef", "kind", "name", "productId", "specId" ]
       },
       "LoginRequest" : {
         "type" : "object",
