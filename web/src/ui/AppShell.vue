@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMeta } from '../stores/meta'
 import { useSession } from '../stores/session'
@@ -18,6 +18,14 @@ const session = useSession()
 
 // 详情页、新建页都算在“采购入库单”下
 const current = computed(() => String(route.meta.nav ?? ''))
+
+// 换页时重取导航提示，上一页改过的数据（如录完基准价）立刻反映到这里；失败了就保留旧值，不打扰
+watch(() => route.fullPath, () => meta.refresh().catch(() => {}), { immediate: true })
+
+function logout() {
+  session.clear()
+  router.replace('/login')
+}
 </script>
 
 <template>
@@ -37,9 +45,9 @@ const current = computed(() => String(route.meta.nav ?? ''))
           </button>
         </template>
       </div>
-      <div v-if="session.name" class="me">
-        <b>{{ session.name }}</b><span class="book" :title="session.book">{{ session.book }}</span>
-        <button @click="session.logout()">退出登录</button>
+      <div class="me">
+        <b>{{ session.name }}</b><span class="book" :title="meta.book">{{ meta.book }}</span>
+        <button @click="logout">退出登录</button>
       </div>
     </nav>
     <main class="main" id="main"><slot /></main>
