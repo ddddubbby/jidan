@@ -5,6 +5,7 @@
 .pii-local
 .claude/skills/
 .claude/settings.local.json
+.claude/worktrees/
 skill/
 
 # 不入库的资料（放网盘，见开发规格第 6 章）
