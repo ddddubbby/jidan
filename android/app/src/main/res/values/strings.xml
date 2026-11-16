@@ -51,6 +51,7 @@
     <string name="summary_refresh_base">刷新基准价</string>
     <string name="summary_refreshing">正在刷新</string>
     <string name="summary_loading">计价中</string>
+    <string name="summary_requote">重新计价</string>
     <string name="summary_submit">提交单据</string>
     <string name="summary_retry">重新提交</string>
     <string name="summary_submitting">提交中</string>

@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.jidan.receiving.ui.login.LoginFragment
 import kotlinx.coroutines.launch
@@ -27,19 +28,26 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                appContainer().unauthenticated.collect {
-                    val dest = nav.currentDestination?.id
-                    if (dest == R.id.summaryFragment || dest == R.id.doneFragment) {
-                        appContainer().resumeSummaryAfterLogin = true
-                    }
-                    if (dest != R.id.loginFragment) {
-                        nav.navigate(
-                            R.id.action_create_to_login,
-                            Bundle().apply { putBoolean(LoginFragment.ARG_EXPIRED, true) },
-                        )
-                    }
-                }
+                // 在后台时发生的 401 没有人收，回到前台补一次
+                if (appContainer().session.value == null) toLogin(nav)
+                appContainer().unauthenticated.collect { toLogin(nav) }
             }
         }
+    }
+
+    /**
+     * 登录失效：任何页面都回登录页（全局动作，清回退栈）。在汇总页失效的，重登后回汇总页；
+     * 其余页面重登后回称重页（草稿还在）。完成页的单已提交，没有可回的，不记。
+     */
+    private fun toLogin(nav: NavController) {
+        val dest = nav.currentDestination?.id ?: return
+        if (dest == R.id.loginFragment) return
+        if (dest == R.id.summaryFragment) {
+            appContainer().resumeSummaryAfterLogin = true
+        }
+        nav.navigate(
+            R.id.action_global_to_login,
+            Bundle().apply { putBoolean(LoginFragment.ARG_EXPIRED, true) },
+        )
     }
 }

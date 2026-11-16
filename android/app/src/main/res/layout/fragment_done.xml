@@ -124,13 +124,23 @@
                 android:gravity="center" />
 
             <TextView
-                android:id="@+id/unprinted"
+                android:id="@+id/printProgress"
                 style="@style/Text.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:gravity="center"
-                android:textColor="@color/warn_ink"
+                android:visibility="gone" />
+
+            <!-- 提交后还能补打：打印机有问题时写明缺什么，点了去设备弹层 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reprint"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="52dp"
+                android:textAllCaps="false"
                 android:visibility="gone" />
         </LinearLayout>
     </ScrollView>

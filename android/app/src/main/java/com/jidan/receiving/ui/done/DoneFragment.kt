@@ -17,10 +17,14 @@ import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.databinding.FragmentDoneBinding
 import com.jidan.receiving.platform.Feedback
+import com.jidan.receiving.printing.reprintAction
+import com.jidan.receiving.ui.sheets.DevicesSheet
+import com.jidan.receiving.ui.sheets.LedgerSheet
 import com.jidan.receiving.ui.summary.formatMoney
 import com.jidan.receiving.ui.weigh.DoneUiState
 import com.jidan.receiving.ui.weigh.ReceivingNav
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
+import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
 class DoneFragment : Fragment() {
@@ -44,8 +48,9 @@ class DoneFragment : Fragment() {
             },
         )
         b.again.setOnClickListener { vm.again() }
+        // 提交后流水只读，只能在弹层里逐张补打（APP-07）
         b.ledgerLine.setOnClickListener {
-            // 提交后流水已清；只展示文案，不打开空弹层
+            LedgerSheet().show(parentFragmentManager, LedgerSheet.TAG)
         }
         if (!Feedback.reducedMotion(requireContext())) {
             b.check.scaleX = 0.85f
@@ -94,14 +99,24 @@ class DoneFragment : Fragment() {
             getString(R.string.done_sub_avg_only, avg)
         }
         b.batch.text = getString(R.string.done_batch, state.batchNo)
-        b.unprinted.isVisible = state.printEnabled && state.unprinted > 0
-        if (b.unprinted.isVisible) {
-            b.unprinted.text = getString(
-                R.string.print_failed_n,
-                state.unprinted,
-                state.printError.ifBlank { "未打印" },
-            )
+        val job = state.printJob
+        b.printProgress.isVisible = job != null
+        if (job != null) {
+            b.printProgress.text = getString(R.string.print_progress, job.done, job.total)
         }
+        // 没打完的标签接着打，打完（或失败停下）才能再收一单，免得中途把剩下的打断
+        b.again.isEnabled = job == null
+        b.again.text = if (job != null) {
+            getString(R.string.print_progress, job.done, job.total)
+        } else {
+            getString(R.string.done_again)
+        }
+        b.reprint.bindReprint(
+            action = if (job == null) reprintAction(state.printEnabled, state.unprinted, state.printBlock) else null,
+            unprinted = state.unprinted,
+            onPrint = { vm.reprintUnprinted() },
+            onFixPrinter = { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) },
+        )
     }
 
     override fun onDestroyView() {
