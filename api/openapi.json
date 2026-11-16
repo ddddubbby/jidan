@@ -2499,6 +2499,10 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "unsent" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
           "missingBasePrices" : {
             "type" : "array",
             "items" : {

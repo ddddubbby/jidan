@@ -212,6 +212,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["voidOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}/unapprove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unapprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["push"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}/mark-pushed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markPushed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/quote": {
         parameters: {
             query?: never;
@@ -222,6 +302,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["quote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dev/chanjet/fail-next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["failNext"];
         delete?: never;
         options?: never;
         head?: never;
@@ -799,6 +895,27 @@ export interface components {
             submittedPrice?: number;
             submittedAmount?: number;
         };
+        Flow: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            batchNo?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
+            /** Format: date-time */
+            approvedAt?: string;
+            hsId?: string;
+            pushError?: string;
+            /** Format: int32 */
+            boxCount?: number;
+            totalNetKg?: number;
+            avgKg?: number;
+            price?: number;
+            amount?: number;
+        };
+        MarkPushedForm: {
+            hsId?: string;
+        };
         QuoteForm: {
             /** Format: int64 */
             vendorId: number;
@@ -812,6 +929,12 @@ export interface components {
             /** Format: int64 */
             trialRuleId?: number;
             trialCoef?: number;
+        };
+        FailForm: {
+            mode?: string;
+        };
+        FailState: {
+            pending?: string;
         };
         BatchForm: {
             /** Format: date */
@@ -934,6 +1057,8 @@ export interface components {
             pending?: number;
             /** Format: int64 */
             failed?: number;
+            /** Format: int64 */
+            unsent?: number;
             missingBasePrices?: components["schemas"]["MissingPrice"][];
         };
         MissingPrice: {
@@ -1549,6 +1674,120 @@ export interface operations {
             };
         };
     };
+    voidOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Flow"];
+                };
+            };
+        };
+    };
+    unapprove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Flow"];
+                };
+            };
+        };
+    };
+    push: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Flow"];
+                };
+            };
+        };
+    };
+    markPushed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MarkPushedForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Flow"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Flow"];
+                };
+            };
+        };
+    };
     quote: {
         parameters: {
             query?: never;
@@ -1569,6 +1808,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Result"];
+                };
+            };
+        };
+    };
+    failNext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FailState"];
                 };
             };
         };

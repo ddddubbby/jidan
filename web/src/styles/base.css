@@ -78,6 +78,12 @@ table.t { width: 100%; border-collapse: separate; border-spacing: 0; background:
 .t .clip { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t tr.warnrow td { background: #fffaf0; }
 .empty { padding: 40px; text-align: center; color: var(--ink-2); }
+.twrap { overflow-x: auto; border-radius: 16px; }
+
+/* ---------- 提示条：今天要先处理的事（缺基准价等） ---------- */
+.strip { display: flex; flex-wrap: wrap; gap: 10px; margin: -4px 0 16px; }
+.sitem { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 14px; border-radius: 12px; font-weight: 600; background: var(--warn-bg); color: var(--warn-ink); }
+.sitem .btn { min-height: 34px; }
 
 /* ---------- 输入、开关 ---------- */
 .field { display: grid; gap: 6px; }
