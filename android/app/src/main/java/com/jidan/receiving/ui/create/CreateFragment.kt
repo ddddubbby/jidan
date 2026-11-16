@@ -20,7 +20,7 @@ import com.google.android.material.button.MaterialButton
 import com.jidan.receiving.R
 import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
-import com.jidan.receiving.data.ArchiveRowDto
+import com.jidan.receiving.data.NamedDto
 import com.jidan.receiving.data.FarmerDto
 import com.jidan.receiving.databinding.FragmentCreateBinding
 import com.jidan.receiving.platform.BluetoothPrompts
@@ -354,7 +354,7 @@ class CreateFragment : Fragment() {
         return btn
     }
 
-    private fun warehouseRow(w: ArchiveRowDto, last: Boolean, selected: Boolean): View {
+    private fun warehouseRow(w: NamedDto, last: Boolean, selected: Boolean): View {
         val btn = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle)
         btn.layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

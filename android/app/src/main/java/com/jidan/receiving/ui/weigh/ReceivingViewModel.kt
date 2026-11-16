@@ -267,7 +267,7 @@ class ReceivingViewModel(
             _ui.update { it.copy(loading = true, error = "") }
             try {
                 val batch = container.catalog.nextBatchNo()
-                val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
+                val tares = container.catalog.tareHotkeys()
                 val std = Kg(h.stdNetCents ?: Kg.of(36.0).cents) // 粉蛋默认 36kg，缺字段时兜底
                 val opts = container.options.value.weighOptions()
                 val s = Session(
@@ -550,7 +550,6 @@ class ReceivingViewModel(
     fun refreshBasePrice() {
         viewModelScope.launch {
             _summary.update { it.copy(refreshing = true, error = "") }
-            runCatching { container.catalog.basePriceBySpec() }
             refreshQuote(resetM0Retried = false)
             val stillMissing = _summary.value.quote?.noBasePrice == true
             _summary.update { it.copy(refreshing = false, m0Retried = stillMissing) }

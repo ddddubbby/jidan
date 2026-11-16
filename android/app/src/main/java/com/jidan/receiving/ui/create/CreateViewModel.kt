@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.core.Pick
-import com.jidan.receiving.data.ArchiveRowDto
 import com.jidan.receiving.data.FarmerDto
+import com.jidan.receiving.data.NamedDto
 import com.jidan.receiving.data.RuleViewDto
 import com.jidan.receiving.data.SpecDto
 import com.jidan.receiving.data.userMessage
@@ -22,9 +22,9 @@ data class CreateUiState(
     val farmers: List<FarmerDto> = emptyList(),
     val recent: List<FarmerDto> = emptyList(),
     val noMatch: String = "",
-    val products: List<ArchiveRowDto> = emptyList(),
+    val products: List<NamedDto> = emptyList(),
     val specs: List<SpecDto> = emptyList(),
-    val warehouses: List<ArchiveRowDto> = emptyList(),
+    val warehouses: List<NamedDto> = emptyList(),
     val rules: List<RuleViewDto> = emptyList(),
     val prices: Map<Long, Double?> = emptyMap(),
     val farmerId: Long? = null,
@@ -67,10 +67,11 @@ class CreateViewModel(
         viewModelScope.launch {
             _ui.update { it.copy(loading = true, error = "") }
             try {
-                val products = container.catalog.products()
-                val specs = container.catalog.specs()
-                val warehouses = container.catalog.warehouses()
-                val prices = runCatching { container.catalog.basePriceBySpec() }.getOrDefault(emptyMap())
+                val cat = container.catalog.catalog()
+                val products = cat.products
+                val specs = cat.specs
+                val warehouses = cat.warehouses
+                val prices = cat.basePrices()
                 val lastWh = container.prefs.lastWarehouseId
                 val wh = warehouses.firstOrNull { it.id == lastWh }
                 _ui.update {
@@ -171,7 +172,7 @@ class CreateViewModel(
         }
     }
 
-    fun selectProduct(p: ArchiveRowDto) {
+    fun selectProduct(p: NamedDto) {
         val pairs = _ui.value.rules.map { it.productId to it.specId }
         val sid = autoFillSpecForProduct(pairs, p.id)
         val spec = _ui.value.specs.firstOrNull { it.id == sid }
@@ -192,7 +193,7 @@ class CreateViewModel(
         _ui.update { it.copy(specId = s.id, specName = s.name, open = null) }
     }
 
-    fun selectWarehouse(w: ArchiveRowDto) {
+    fun selectWarehouse(w: NamedDto) {
         _ui.update { it.copy(warehouseId = w.id, warehouseName = w.name, open = null) }
     }
 
