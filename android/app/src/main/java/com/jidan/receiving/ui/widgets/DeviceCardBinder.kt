@@ -25,7 +25,7 @@ object DeviceCardBinder {
         searchedEmpty: Boolean = false,
     ) {
         val action = linkAction(gate, status, pairedId, searchedEmpty)
-        binding.title.text = buildString {
+        binding.cardTitle.text = buildString {
             append(modelLabel)
             if (!pairedId.isNullOrBlank()) append(" · ").append(pairedId)
         }
@@ -47,7 +47,7 @@ object DeviceCardBinder {
         searchedEmpty: Boolean = false,
     ) {
         val action = linkAction(gate, status, pairedId, searchedEmpty)
-        binding.title.text = buildString {
+        binding.cardTitle.text = buildString {
             append(modelLabel)
             if (!pairedId.isNullOrBlank()) append(" · ").append(pairedId)
         }
@@ -64,13 +64,13 @@ object DeviceCardBinder {
         onAction: (LinkActionKind) -> Unit,
     ) {
         if (action == LinkActionKind.NONE) {
-            binding.action.isVisible = false
+            binding.cardAction.isVisible = false
             return
         }
-        binding.action.isVisible = true
-        binding.action.isEnabled = action != LinkActionKind.CONNECTING
-        binding.action.text = action.label(isScale)
-        binding.action.setOnClickListener { onAction(action) }
+        binding.cardAction.isVisible = true
+        binding.cardAction.isEnabled = action != LinkActionKind.CONNECTING
+        binding.cardAction.text = action.label(isScale)
+        binding.cardAction.setOnClickListener { onAction(action) }
     }
 
     private fun scaleStatusText(status: LinkStatus, batteryLow: Boolean): String = when (status) {
