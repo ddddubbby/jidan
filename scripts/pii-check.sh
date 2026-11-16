@@ -46,7 +46,11 @@ trap 'rm -rf "$tmpd"' EXIT
 files=$(printf '%s\n' "$files" | grep -v -x -e 'scripts/pii-check.sh' -e '' || true)
 [ -z "$files" ] && exit "$ident_bad"
 
-generic='/Users/[^/[:space:]<]+/|/home/[^/[:space:]<]+/|claude\.ai/code/session_[0-9A-Za-z]|session_[0-9A-Za-z]{8,}|originSessionId|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'
+generic_core='/Users/[^/[:space:]<]+/|/home/[^/[:space:]<]+/|claude\.ai/code/session_[0-9A-Za-z]|session_[0-9A-Za-z]{8,}|originSessionId|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+generic="$generic_core|[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}"
+# 佳博 SDK2 三个原生模块原样收录的第三方源码（FreeImage、libpng、zlib 等）：版权头里是原作者公开的联系邮箱。
+# 这三个目录只免邮箱一条规则（业务方 2026-11-16 同意），其余规则照常检查。
+vendor_paths='^android/(fimage|jzint|serial-port)/'
 pdf_ok='Gprinter'   # 厂商手册里的公司名
 allow='noreply@anthropic\.com|@example\.(com|org)|\.invalid\b|-0000-1000-8000-00805f9b34fb'
 
@@ -82,7 +86,8 @@ hits=$(printf '%s\n' "$files" | while IFS= read -r f; do
     src=$f
   fi
   scan_binary "$f" "$src"
-  grep -I -n -E "$generic" -- "$src" 2>/dev/null | grep -v -E "$allow" | sed "s|^|$f:|"
+  if printf '%s\n' "$f" | grep -q -E "$vendor_paths"; then rule=$generic_core; else rule=$generic; fi
+  grep -I -n -E "$rule" -- "$src" 2>/dev/null | grep -v -E "$allow" | sed "s|^|$f:|"
   if [ -s .pii-local ]; then
     grep -v -e '^[[:space:]]*$' -e '^#' .pii-local > "$tmpd/pii-local"
     grep -I -n -i -F -f "$tmpd/pii-local" -- "$src" 2>/dev/null | sed "s|^|$f:|"

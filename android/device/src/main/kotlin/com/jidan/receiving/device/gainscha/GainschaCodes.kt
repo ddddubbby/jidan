@@ -5,7 +5,7 @@ import com.jidan.receiving.device.PrinterIssue
 
 /**
  * 佳博打印机的结果码、状态码 → APP 契约里的 [PrintOutcome]、[PrinterIssue]。
- * 依据：TSPL 手册“询问打印机状态指令 `<ESC>!?`”；佳博 SDK2 API 文档 9.5“状态码说明”。
+ * 依据：TSPL 手册“询问打印机状态指令 `<ESC>!?`”；佳博 SDK2 API 文档 9.5“状态码说明”，加上 aar 里 `PrintStatus.STATUS_CUTTER_JAM`（0x26，文档没列，官方示例有处理）。
  * 全部是查表，未经实物验证；真机上哪些位会置起属 H-2。
  */
 object GainschaCodes {
@@ -23,6 +23,7 @@ object GainschaCodes {
     const val REASON_OPEN_COVER = "开盖"
     const val REASON_OVERHEAT = "过热"
     const val REASON_LOST = "打印机丢单，请补打"
+    const val REASON_CUTTER_JAM = "卡切刀"
 
     /**
      * `<ESC>!?` 的回复字节，按位：0 开盖、1 卡纸、2 缺纸、3 无碳带、4 暂停、5 正在打印、6 外盖打开、7 过热。
@@ -53,6 +54,7 @@ object GainschaCodes {
     const val TRACK_PAPER_OUT = 0x23
     const val TRACK_COVER_OPEN = 0x24
     const val TRACK_OVERHEAT = 0x25
+    const val TRACK_CUTTER_JAM = 0x26
 
     /**
      * 一票一控状态码 → 结果。0x21“打印中”说明打印机已收下并在出纸，算成功（再查一次的办法这里不做）。
@@ -65,6 +67,7 @@ object GainschaCodes {
         TRACK_PAPER_OUT -> PrintOutcome.Failure(REASON_NO_PAPER)
         TRACK_COVER_OPEN -> PrintOutcome.Failure(REASON_OPEN_COVER)
         TRACK_OVERHEAT -> PrintOutcome.Failure(REASON_OVERHEAT)
+        TRACK_CUTTER_JAM -> PrintOutcome.Failure(REASON_CUTTER_JAM) // PrinterIssue 没有对应项，不改状态标签
         else -> PrintOutcome.Failure("打印机返回未知状态 0x%02X".format(trackCode and 0xFF))
     }
 
