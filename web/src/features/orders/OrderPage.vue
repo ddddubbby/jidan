@@ -203,7 +203,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
         <div v-if="manualCount" class="row"><span class="muted">手录</span><span class="v"><span class="tag warn">{{ manualCount }} 箱</span></span></div>
 
         <div v-if="status === 'APPROVED' && d.pushError" class="result err">
-          <b>回传失败</b><span class="errfull">{{ d.pushError }}</span>
+          <b>回传失败</b><span class="errfull" tabindex="0">{{ d.pushError }}</span>
         </div>
         <div v-else-if="status === 'APPROVED'" class="result wait">
           <b>已审核，等待回传</b>{{ d.approver?.name }} 审核 · 已锁定
@@ -240,7 +240,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
           </template>
 
           <template v-else>
-            <button v-if="next?.id" ref="nextBtn" class="btn dark lg" @click="goNext">下一张待审核 · {{ (next.vendorName ?? '').slice(0, 10) }}</button>
+            <button v-if="next?.id" ref="nextBtn" class="btn dark lg nxt" :title="next.vendorName" @click="goNext">下一张待审核 · <span class="nxtname">{{ next.vendorName }}</span></button>
             <button v-else ref="nextBtn" class="btn lg" @click="router.push('/orders')">✓ 待审核已清空，回列表</button>
           </template>
         </div>
@@ -279,19 +279,26 @@ const goNext = () => router.push('/orders/' + next.value!.id)
 .fixline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .side-panel hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 .side-panel .row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 15px; }
+.side-panel .row .muted { flex: none; white-space: nowrap; }
 .side-panel .row .v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.side-panel .act { display: grid; gap: 8px; margin-top: 18px; }
+.side-panel .act { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 18px; }
 .side-panel .act .btn { width: 100%; }
 .side-panel .result { overflow-wrap: anywhere; }
 .side-panel .result.wait { background: var(--sunken); color: var(--ink-2); }
 /* 好生意返回的失败原因可能很长：完整显示，太长就在框里滚动 */
-.errfull { display: block; max-height: 180px; overflow-y: auto; }
+.errfull { display: block; max-height: min(180px, 30vh); overflow-y: auto; }
+/* 下一张的农户名可能很长：按钮里省略，鼠标停上去看全名 */
+.nxt { max-width: 100%; white-space: pre; }
+.nxtname { display: block; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .markrow { display: flex; justify-content: flex-end; margin-top: 8px; }
 @media (max-width: 1100px) {
   .side-panel { position: static; order: -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; }
   .side-panel > hr { display: none; }
   .side-panel > .k, .side-panel > .amt, .side-panel > .calc, .side-panel > .was, .side-panel > .fixline { grid-column: 1; }
   .side-panel > .row, .side-panel > .result { grid-column: 2; }
-  .side-panel > .act { grid-column: 1 / -1; }
+  /* 单列时卡片在最上面，主按钮贴在视口底边，长报错把它顶下去时也够得着 */
+  .side-panel > .act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: sticky; bottom: 0; z-index: 2; margin: 14px -20px -20px; padding: 12px 20px; border-radius: 0 0 16px 16px; background: var(--surface); box-shadow: 0 -8px 12px -8px rgba(0,0,0,.12); }
+  .side-panel > .act .btn { width: auto; }
+  .side-panel > .act .btn.lg { flex: 1 1 220px; }
 }
 </style>

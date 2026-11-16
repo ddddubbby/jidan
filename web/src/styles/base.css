@@ -104,6 +104,8 @@ table.t { width: 100%; border-collapse: separate; border-spacing: 0; background:
 .switch[aria-checked="true"] { background: var(--ink); }
 .switch[aria-checked="true"]::after { transform: translateX(18px); }
 .inline-err { font-size: 13px; font-weight: 600; color: var(--err-ink); }
+/* 好生意或后端返回的报错可能很长，还可能带一长串不含空格的编号：框内换行，不撑破页面 */
+.result, .inline-err { overflow-wrap: anywhere; }
 .t.ft .hf { display: none; }
 .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -111,7 +113,7 @@ table.t { width: 100%; border-collapse: separate; border-spacing: 0; background:
 @media (max-width: 1100px) {
   .t .narrowhide { display: none; }
   .t .name { max-width: 170px; }
-  .search { width: 240px; }
+  .search { width: 280px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .btn, .switch, .switch::after { transition: none !important; }
