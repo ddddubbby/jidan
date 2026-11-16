@@ -46,6 +46,14 @@ class Prefs(context: Context) {
             ed.apply()
         }
 
+    /**
+     * 模拟台「大字号」：进程内把 fontScale 提到 1.3，对照系统字体 130%（v7 4.4-6）。
+     * 仅适配走查用；真机系统设置优先，此开关不替代系统字体。
+     */
+    var simBigFont: Boolean
+        get() = sp.getBoolean(KEY_SIM_BIG, false)
+        set(value) = sp.edit().putBoolean(KEY_SIM_BIG, value).apply()
+
     /** Retrofit 要求以 `/` 结尾；去掉用户多打的空白与末尾斜杠再补上。 */
     fun normalizedBaseUrl(): String {
         var u = serverUrl.trim()
@@ -63,5 +71,10 @@ class Prefs(context: Context) {
         private const val KEY_TARE = "last_tare_id"
         private const val KEY_SCALE = "paired_scale_id"
         private const val KEY_PRINTER = "paired_printer_id"
+        private const val KEY_SIM_BIG = "sim_big_font"
+
+        /** [ReceivingApp.attachBaseContext] 在 container 尚未就绪时读。 */
+        fun simBigFontEnabled(context: Context): Boolean =
+            context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean(KEY_SIM_BIG, false)
     }
 }

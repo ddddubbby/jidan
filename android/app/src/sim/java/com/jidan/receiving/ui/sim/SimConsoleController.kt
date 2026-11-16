@@ -2,13 +2,18 @@ package com.jidan.receiving.ui.sim
 
 import android.view.View
 import com.jidan.receiving.DeviceFactory
+import com.jidan.receiving.R
 import com.jidan.receiving.databinding.ViewSimConsoleBinding
 import com.jidan.receiving.device.fake.FakeScale
 import com.jidan.receiving.device.PrinterIssue
 
-/** 绑定模拟台控件到 FakeScale / FakePrinter。 */
+/** 绑定模拟台控件到 FakeScale / FakePrinter；适配走查开关（v7 4.4-6）。 */
 class SimConsoleController(
     private val binding: ViewSimConsoleBinding,
+    private val onFill100: (() -> Unit)?,
+    private val onWorstName: (() -> Unit)?,
+    private val onToggleBigFont: (() -> Unit)?,
+    private val bigFontOn: Boolean,
 ) {
     private var caseIdx = 0
 
@@ -43,15 +48,34 @@ class SimConsoleController(
         binding.anomalyNotNet.setOnCheckedChangeListener { _, v -> scale.anomalyReadingNotNet = v }
         binding.anomalyStable.setOnCheckedChangeListener { _, v -> scale.anomalyStableBroken = v }
         binding.anomalyTare.setOnCheckedChangeListener { _, v -> scale.anomalyTareIgnored = v }
+
+        binding.fill100.setOnClickListener { onFill100?.invoke() }
+        binding.worstName.setOnClickListener { onWorstName?.invoke() }
+        binding.toggleBigFont.text = binding.root.context.getString(
+            if (bigFontOn) R.string.sim_big_font_on else R.string.sim_big_font,
+        )
+        binding.toggleBigFont.setOnClickListener { onToggleBigFont?.invoke() }
     }
 
     companion object {
-        fun inflateInto(parent: android.view.ViewGroup): SimConsoleController {
+        fun inflateInto(
+            parent: android.view.ViewGroup,
+            onFill100: (() -> Unit)? = null,
+            onWorstName: (() -> Unit)? = null,
+            onToggleBigFont: (() -> Unit)? = null,
+            bigFontOn: Boolean = false,
+        ): SimConsoleController {
             val inflater = android.view.LayoutInflater.from(parent.context)
             val view = inflater.inflate(com.jidan.receiving.R.layout.view_sim_console, parent, false)
             parent.addView(view)
             val binding = ViewSimConsoleBinding.bind(view)
-            return SimConsoleController(binding).also { it.bind() }
+            return SimConsoleController(
+                binding,
+                onFill100,
+                onWorstName,
+                onToggleBigFont,
+                bigFontOn,
+            ).also { it.bind() }
         }
     }
 }

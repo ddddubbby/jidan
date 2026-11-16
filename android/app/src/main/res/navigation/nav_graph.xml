@@ -42,5 +42,35 @@
             app:destination="@id/createFragment"
             app:popUpTo="@id/createFragment"
             app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_weigh_to_summary"
+            app:destination="@id/summaryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/summaryFragment"
+        android:name="com.jidan.receiving.ui.summary.SummaryFragment"
+        android:label="@string/summary_amount">
+        <action
+            android:id="@+id/action_summary_to_weigh"
+            app:destination="@id/weighFragment"
+            app:popUpTo="@id/weighFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_summary_to_done"
+            app:destination="@id/doneFragment"
+            app:popUpTo="@id/createFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/doneFragment"
+        android:name="com.jidan.receiving.ui.done.DoneFragment"
+        android:label="@string/done_submitted">
+        <action
+            android:id="@+id/action_done_to_create"
+            app:destination="@id/createFragment"
+            app:popUpTo="@id/createFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 </navigation>
