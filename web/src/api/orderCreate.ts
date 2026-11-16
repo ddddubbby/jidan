@@ -33,7 +33,11 @@ export const bindVendorRule = (vendorId: number, productId: number, specId: numb
 /** Web 新建单取批次号要带上收购日期（开发规格 8.2） */
 export const getBatch = (date: string) => http.post<{ batchNo: string; date: string }>('/batches', { date })
 
-export interface QuoteReq { vendorId: number; productId: number; specId: number; date: string; boxNetKg: number[] }
+export interface QuoteReq {
+  vendorId: number; productId: number; specId: number; date: string; boxNetKg: number[]
+  /** 试算：换成这条规则 / 把系数换成这个值（单据里的定价规则抽屉用） */
+  trialRuleId?: number; trialCoef?: number
+}
 export const quote = (r: QuoteReq) => http.post<QuoteResult>('/orders/quote', r)
 
 export interface SubmitReq {
