@@ -17,3 +17,8 @@ mybatis-plus:
     banner: false
     db-config:
       id-type: auto
+
+egg:
+  # 库里没有业务数据时写入一套演示数据（开发规格 7.3）。开发与模拟模式默认开；
+  # 正式部署设 EGG_SEED_DEMO=false。
+  seed-demo: ${EGG_SEED_DEMO:true}
