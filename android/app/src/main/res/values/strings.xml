@@ -52,6 +52,17 @@
     <string name="summary_refreshing">正在刷新</string>
     <string name="summary_loading">计价中</string>
     <string name="summary_submit">提交单据</string>
+    <string name="summary_retry">重新提交</string>
+    <string name="summary_submitting">提交中</string>
+    <string name="summary_pending_price">待定价</string>
+    <string name="done_submitted">已提交</string>
+    <string name="done_pending">待审核</string>
+    <string name="done_pending_price">待定价</string>
+    <string name="done_again">再收一单</string>
+    <string name="done_ledger_line">%1$s · %2$d 箱 · %3$s kg</string>
+    <string name="done_sub">均重 %1$skg · %2$s 元/箱</string>
+    <string name="done_sub_avg_only">均重 %1$skg</string>
+    <string name="done_batch">批次 %1$s</string>
     <string name="rule_sheet_title">定价规则</string>
     <string name="rule_sheet_pick">选择收购规则</string>
     <string name="rule_sheet_unbound">未绑定收购规则</string>

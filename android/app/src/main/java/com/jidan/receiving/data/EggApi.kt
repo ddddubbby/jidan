@@ -53,6 +53,9 @@ interface EggApi {
     @POST("api/orders/quote")
     suspend fun quote(@Body body: QuoteRequest): QuoteResult
 
+    @POST("api/orders")
+    suspend fun submit(@Body body: SubmitRequest): SubmittedDto
+
     @GET("api/rules")
     suspend fun rules(
         @Query("kind") kind: String? = null,

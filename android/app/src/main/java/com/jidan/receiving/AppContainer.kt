@@ -66,6 +66,12 @@ class AppContainer(context: Context) {
     val orderDraft = OrderDraftStore()
     val sessionStore = SessionStore(appContext)
 
+    /**
+     * 提交时登录失效：先登录，登录后回到汇总页（单据草稿不丢，APP-10）。
+     * 进程内标志；清会话不清草稿。
+     */
+    @Volatile var resumeSummaryAfterLogin: Boolean = false
+
     val scale: Scale = DeviceFactory.createScale(
         scope,
         prefs,

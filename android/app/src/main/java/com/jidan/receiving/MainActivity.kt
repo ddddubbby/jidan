@@ -28,7 +28,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 appContainer().unauthenticated.collect {
-                    if (nav.currentDestination?.id != R.id.loginFragment) {
+                    val dest = nav.currentDestination?.id
+                    if (dest == R.id.summaryFragment || dest == R.id.doneFragment) {
+                        appContainer().resumeSummaryAfterLogin = true
+                    }
+                    if (dest != R.id.loginFragment) {
                         nav.navigate(
                             R.id.action_create_to_login,
                             Bundle().apply { putBoolean(LoginFragment.ARG_EXPIRED, true) },

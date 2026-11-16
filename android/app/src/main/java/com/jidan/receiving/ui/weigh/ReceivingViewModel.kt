@@ -18,9 +18,13 @@ import com.jidan.receiving.core.WeighOutcome
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.core.WeighingMachine
 import com.jidan.receiving.core.sum
+import com.jidan.receiving.data.ApiError
 import com.jidan.receiving.data.QuoteRequest
 import com.jidan.receiving.data.QuoteResult
 import com.jidan.receiving.data.RuleViewDto
+import com.jidan.receiving.data.SubmitBoxRequest
+import com.jidan.receiving.data.SubmitRequest
+import com.jidan.receiving.data.SubmittedDto
 import com.jidan.receiving.data.TareDto
 import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
@@ -44,6 +48,8 @@ import kotlinx.coroutines.launch
 sealed class ReceivingNav {
     data object ToSummary : ReceivingNav()
     data object BackToWeigh : ReceivingNav()
+    data object ToDone : ReceivingNav()
+    data object ToCreate : ReceivingNav()
 }
 
 data class RuleCandidate(
@@ -94,6 +100,28 @@ data class SummaryUiState(
     val unprinted: Int = 0,
     val printEnabled: Boolean = true,
     val printError: String = "",
+    val submitting: Boolean = false,
+    val submitError: Boolean = false,
+    /** `submit.without-price = allow` 时缺价也可提交，金额显示「待定价」。 */
+    val allowWithoutPrice: Boolean = false,
+)
+
+data class DoneUiState(
+    val farmerName: String = "",
+    val productName: String = "",
+    val specName: String = "",
+    val batchNo: String = "",
+    val boxCount: Int = 0,
+    val totalNetKg: Double? = null,
+    val avgKg: Double? = null,
+    val unitPrice: Double? = null,
+    val amount: Double? = null,
+    val pendingPrice: Boolean = false,
+    val unprinted: Int = 0,
+    val printEnabled: Boolean = true,
+    val printError: String = "",
+    /** 防连点：提交与「再收一单」同位置（原型 500ms）。 */
+    val readyAgainAt: Long = 0L,
 )
 
 data class WeighUiState(
@@ -155,6 +183,9 @@ class ReceivingViewModel(
 
     private val _ruleSheet = MutableStateFlow(RuleSheetState())
     val ruleSheet: StateFlow<RuleSheetState> = _ruleSheet.asStateFlow()
+
+    private val _done = MutableStateFlow(DoneUiState())
+    val done: StateFlow<DoneUiState> = _done.asStateFlow()
 
     private val _nav = MutableSharedFlow<ReceivingNav>(extraBufferCapacity = 1)
     val nav: SharedFlow<ReceivingNav> = _nav.asSharedFlow()
@@ -343,6 +374,110 @@ class ReceivingViewModel(
         viewModelScope.launch { _nav.emit(ReceivingNav.BackToWeigh) }
     }
 
+    /** 提交单据（APP-10）。失败保留流水；登录失效由 MainActivity 回登录，草稿不丢。 */
+    fun submitOrder() {
+        val s = session ?: return
+        if (_summary.value.submitting) return
+        val allow = container.options.value.get("submit.without-price").equals("allow", ignoreCase = true)
+        val q = _summary.value.quote
+        if (!allow && q != null && (q.noBasePrice || q.noRule)) return
+        viewModelScope.launch {
+            _summary.update { it.copy(submitting = true, submitError = false, error = "") }
+            try {
+                val groups = s.boxes.groupingBy { it.group }.eachCount()
+                val submitted = container.orders.submit(
+                    SubmitRequest(
+                        batchNo = s.batchNo,
+                        vendorId = s.farmer.id,
+                        productId = s.product.id,
+                        specId = s.spec.id,
+                        warehouseId = s.warehouse.id,
+                        boxes = s.boxes.map { b ->
+                            SubmitBoxRequest(
+                                seq = b.seq,
+                                netKg = b.net.toDouble(),
+                                grossKg = b.gross?.toDouble(),
+                                tareKg = b.tare.toDouble(),
+                                tareName = b.tareName.ifBlank { null },
+                                groupNo = b.group,
+                                groupK = groups[b.group],
+                                manual = b.manual,
+                                rawKg = b.raw?.toDouble(),
+                                printed = b.printed,
+                            )
+                        },
+                    ),
+                )
+                finishSubmit(s, submitted, q)
+            } catch (e: Throwable) {
+                if (e is ApiError && (e.code == "UNAUTHENTICATED" || e.status == 401)) {
+                    container.resumeSummaryAfterLogin = true
+                }
+                _summary.update {
+                    it.copy(
+                        submitting = false,
+                        submitError = true,
+                        error = e.userMessage().ifBlank { "提交失败：连不上服务器" },
+                    )
+                }
+            }
+        }
+    }
+
+    /** 再收一单：清完成态，回建单页。 */
+    fun again() {
+        val readyAt = _done.value.readyAgainAt
+        if (System.currentTimeMillis() < readyAt) return
+        printQueue.stop()
+        session = null
+        machine = null
+        tickJob?.cancel()
+        scaleBound = false
+        confirmed = false
+        container.orderDraft.clear()
+        container.sessionStore.clear()
+        _ui.value = WeighUiState()
+        _summary.value = SummaryUiState()
+        _ruleSheet.value = RuleSheetState()
+        _done.value = DoneUiState()
+        viewModelScope.launch { _nav.emit(ReceivingNav.ToCreate) }
+    }
+
+    private fun finishSubmit(s: Session, submitted: SubmittedDto, quote: QuoteResult?) {
+        val pending = submitted.submittedAmount == null && submitted.submittedPrice == null
+        val unprinted = printQueue.unprintedCount()
+        val printEnabled = printQueue.enabled()
+        val printError = printQueue.lastError.value
+        _done.value = DoneUiState(
+            farmerName = s.farmer.name,
+            productName = s.product.name,
+            specName = s.spec.name,
+            batchNo = submitted.batchNo ?: s.batchNo,
+            boxCount = submitted.boxCount.takeIf { it > 0 } ?: s.boxes.size,
+            totalNetKg = submitted.totalNetKg ?: quote?.totalKg,
+            avgKg = submitted.avgKg ?: quote?.avgKg,
+            unitPrice = submitted.submittedPrice ?: quote?.unitPrice,
+            amount = submitted.submittedAmount ?: quote?.amount,
+            pendingPrice = pending,
+            unprinted = unprinted,
+            printEnabled = printEnabled,
+            printError = printError,
+            readyAgainAt = System.currentTimeMillis() + 500,
+        )
+        // 提交成功清草稿；完成页只用 DoneUiState
+        printQueue.stop()
+        container.sessionStore.clear()
+        container.orderDraft.clear()
+        session = null
+        machine = null
+        tickJob?.cancel()
+        scaleBound = false
+        confirmed = false
+        _ui.value = WeighUiState()
+        _summary.update { it.copy(submitting = false, submitError = false) }
+        viewModelScope.launch { _nav.emit(ReceivingNav.ToDone) }
+    }
+
     /** 重新拉当日基准价再计价（原型 `refreshM0`）。 */
     fun refreshBasePrice() {
         viewModelScope.launch {
@@ -505,10 +640,13 @@ class ReceivingViewModel(
 
     private suspend fun refreshQuote(resetM0Retried: Boolean) {
         val s = session ?: return
+        val allow = container.options.value.get("submit.without-price").equals("allow", ignoreCase = true)
         _summary.update {
             it.copy(
                 loading = true,
                 error = "",
+                submitError = false,
+                allowWithoutPrice = allow,
                 m0Retried = if (resetM0Retried) false else it.m0Retried,
                 farmerName = s.farmer.name,
                 batchNo = s.batchNo,
@@ -674,6 +812,7 @@ class ReceivingViewModel(
         _ui.value = WeighUiState()
         _summary.value = SummaryUiState()
         _ruleSheet.value = RuleSheetState()
+        _done.value = DoneUiState()
     }
 
     private fun applyOutcome(outcome: WeighOutcome?) {

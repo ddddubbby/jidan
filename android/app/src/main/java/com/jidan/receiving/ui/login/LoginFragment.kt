@@ -98,7 +98,17 @@ class LoginFragment : Fragment() {
             LoginStep.PHONE -> b.phone.requestFocus()
             LoginStep.PASSWORD -> b.password.requestFocus()
             LoginStep.READY -> vm.login {
-                findNavController().navigate(R.id.action_login_to_create)
+                val nav = findNavController()
+                val c = requireContext().appContainer()
+                nav.navigate(R.id.action_login_to_create)
+                val resumeSummary = c.resumeSummaryAfterLogin
+                c.resumeSummaryAfterLogin = false
+                if (c.sessionStore.exists()) {
+                    nav.navigate(R.id.action_create_to_weigh)
+                    if (resumeSummary) {
+                        nav.navigate(R.id.action_weigh_to_summary)
+                    }
+                }
             }
             LoginStep.BUSY -> Unit
         }
