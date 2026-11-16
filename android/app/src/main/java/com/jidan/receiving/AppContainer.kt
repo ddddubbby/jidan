@@ -6,6 +6,7 @@ import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.AuthRepository
 import com.jidan.receiving.data.CatalogRepository
 import com.jidan.receiving.data.OrderDraftStore
+import com.jidan.receiving.data.OrderRepository
 import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.data.SessionStore
 import com.jidan.receiving.data.SessionUser
@@ -61,6 +62,7 @@ class AppContainer(context: Context) {
 
     val auth = AuthRepository(apiClient)
     val catalog = CatalogRepository(apiClient)
+    val orders = OrderRepository(apiClient)
     val orderDraft = OrderDraftStore()
     val sessionStore = SessionStore(appContext)
 

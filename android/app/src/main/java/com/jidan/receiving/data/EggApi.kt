@@ -2,6 +2,7 @@ package com.jidan.receiving.data
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -48,4 +49,21 @@ interface EggApi {
 
     @POST("api/batches")
     suspend fun createBatch(@Body body: BatchRequest = BatchRequest()): BatchDto
+
+    @POST("api/orders/quote")
+    suspend fun quote(@Body body: QuoteRequest): QuoteResult
+
+    @GET("api/rules")
+    suspend fun rules(
+        @Query("kind") kind: String? = null,
+        @Query("productId") productId: Long? = null,
+        @Query("specId") specId: Long? = null,
+        @Query("q") q: String? = null,
+    ): List<RuleViewDto>
+
+    @PUT("api/rules/{id}")
+    suspend fun updateRule(@Path("id") id: Long, @Body body: RuleCoefPatch): RuleViewDto
+
+    @PUT("api/farmers/{id}/rule-binding")
+    suspend fun bindFarmerRule(@Path("id") id: Long, @Body body: RuleBindingRequest): List<RuleViewDto>
 }

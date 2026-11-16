@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -58,13 +57,32 @@ class WeighFragment : Fragment() {
         b.openLedger.setOnClickListener {
             LedgerSheet().show(parentFragmentManager, LedgerSheet.TAG)
         }
-        b.finish.setOnClickListener {
-            Toast.makeText(requireContext(), R.string.weigh_finish_hint, Toast.LENGTH_SHORT).show()
+        b.reprint.setOnClickListener {
+            if (vm.ui.value.printError.isNotBlank() &&
+                (vm.ui.value.printError.contains("未连接") ||
+                    vm.ui.value.printError.contains("缺纸") ||
+                    vm.ui.value.printError.contains("开盖") ||
+                    vm.ui.value.printError.contains("过热"))
+            ) {
+                DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG)
+            } else {
+                vm.reprintUnprinted()
+            }
         }
+        b.finish.setOnClickListener { vm.onConfirmWeighing() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.ui.collect { render(it) }
+                launch {
+                    vm.ui.collect { render(it) }
+                }
+                launch {
+                    vm.nav.collect { ev ->
+                        if (ev is ReceivingNav.ToSummary) {
+                            findNavController().navigate(R.id.action_weigh_to_summary)
+                        }
+                    }
+                }
             }
         }
 
@@ -213,6 +231,29 @@ class WeighFragment : Fragment() {
         }
 
         b.openLedger.isVisible = state.count > 0
+
+        val job = state.printJob
+        b.printProgress.isVisible = job != null
+        if (job != null) {
+            b.printProgress.text = getString(R.string.print_progress, job.done, job.total)
+        }
+        val showReprint = state.printEnabled && state.unprinted > 0 && job == null
+        b.reprint.isVisible = showReprint
+        if (showReprint) {
+            b.reprint.text = if (state.printError.isNotBlank()) {
+                getString(R.string.print_failed_n, state.unprinted, state.printError)
+            } else {
+                getString(R.string.print_reprint_n, state.unprinted)
+            }
+        }
+        val preview = state.labelPreview
+        b.labelPreviewTitle.isVisible = preview.isNotBlank()
+        b.labelPreview.isVisible = preview.isNotBlank()
+        b.labelPreview.text = preview
+        b.simHost.findViewById<android.widget.TextView>(R.id.labelPreview)?.let { tv ->
+            tv.text = preview.ifBlank { "—" }
+        }
+
         b.finish.isEnabled = state.count > 0 && state.reweighSeq == null
         b.finish.setBackgroundColor(
             ContextCompat.getColor(

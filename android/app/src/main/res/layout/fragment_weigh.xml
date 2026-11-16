@@ -245,6 +245,43 @@
                 android:textColor="@color/ok_ink"
                 android:visibility="gone" />
 
+            <TextView
+                android:id="@+id/printProgress"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reprint"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/button_small_height"
+                android:layout_marginTop="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textAllCaps="false"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/labelPreviewTitle"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/print_preview_title"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/labelPreview"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_step_card"
+                android:padding="12dp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/recentSection"
                 android:layout_width="match_parent"
