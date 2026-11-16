@@ -207,6 +207,19 @@ public class ArchiveService {
                 .collect(Collectors.toMap(x -> x.id, x -> x.name));
     }
 
+    /** 审核组装回传报文时取编码用。单据引用的档案本系统不删，取不到只会是数据被改坏了，直接抛。 */
+    public Vendor vendor(long id) {
+        return vendors.selectById(id);
+    }
+
+    public Product product(long id) {
+        return products.selectById(id);
+    }
+
+    public Warehouse warehouse(long id) {
+        return warehouses.selectById(id);
+    }
+
     /** 提交单据时确认农户、商品、仓库都在档案里。好生意里删掉的档案本系统保留，所以只会是传错了 id。 */
     public void requireExist(long vendorId, long productId, long warehouseId) {
         if (vendors.selectById(vendorId) == null) {
