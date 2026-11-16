@@ -125,12 +125,14 @@ class LiSiFullFlowTest {
     private fun quoteFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxNetKg"))) {
         LISI_NETS -> QUOTE_LISI
         EDITED_NETS -> QUOTE_EDITED
+        ONE_BOX_NETS -> QUOTE_ONE_BOX
         else -> "ERROR 回放里没有这组净重的计价：${call.json.get("boxNetKg")}"
     }
 
     private fun submittedFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxes").map { it.asJsonObject.get("netKg") })) {
         LISI_NETS -> SUBMITTED_LISI
         EDITED_NETS -> SUBMITTED_EDITED
+        ONE_BOX_NETS -> SUBMITTED_ONE_BOX
         else -> "ERROR 回放里没有这组净重的提交结果"
     }
 
@@ -429,11 +431,83 @@ class LiSiFullFlowTest {
         assertEquals(emptyList(), contract.violations.toList())
     }
 
+    /** 建单页里改选农户（照 `CreateViewModel`：只换 Pick）。 */
+    private fun Deps.pickFarmer(id: Long, name: String) {
+        orderDraft.update { it.copy(farmer = Pick(id, name)) }
+    }
+
+    /** 选 2 号包装箱、称一箱（净重 46.5），等自动记录完成。 */
+    private suspend fun TestScope.weighOneBox(deps: Deps, vm: ReceivingViewModel) {
+        vm.selectTare(vm.ui.value.tares.first { it.name == "2号包装箱" })
+        settle(500)
+        deps.scale.placeOneBox(FakeScale.CASE_NETS_C.first())
+        settle()
+        deps.scale.removeLoad()
+        settle()
+        settle(400L)
+        assertEquals(1, vm.ui.value.boxes.size)
+    }
+
+    @Test
+    fun leavingWeighWithNoBoxesFreesTheOrderSoNewFarmerIsUsed() = flow { deps, vm, navs ->
+        deps.createOrder()
+        connectDevices(deps)
+        vm.startFromDraft()
+        until("进入称重") { vm.ui.value.ready }
+        assertEquals("李四", vm.ui.value.farmerName)
+        assertTrue(deps.sessionStore.exists())
+
+        // 0 箱离开：不问，直接放行，单和本地草稿都清掉，建单页四项还在
+        assertEquals(LeaveWeigh.Left, vm.leaveWeigh())
+        assertFalse(deps.sessionStore.exists())
+        assertFalse(vm.ui.value.ready)
+        assertTrue(deps.orderDraft.header.value.ready)
+
+        // 回建单页把李四改成王秀英，再点“开始收蛋”：按新四项新开一单
+        deps.pickFarmer(12, "王秀英")
+        vm.startFromDraft()
+        until("重新进入称重") { vm.ui.value.ready }
+        assertEquals("王秀英", vm.ui.value.farmerName)
+        assertEquals("王秀英", deps.sessionStore.load()?.farmer?.name)
+        assertEquals(12L, deps.sessionStore.load()?.farmer?.id)
+
+        weighOneBox(deps, vm)
+        vm.onConfirmWeighing()
+        until("计价回来") { vm.summary.value.quote != null }
+        vm.submitOrder()
+        until("提交完成") { navs.contains(ReceivingNav.ToDone) }
+        val body = calls.last { it.method == "POST" && it.path == "/api/orders" }.json
+        assertEquals(12L, body.get("vendorId").asLong)
+        assertEquals(1, body.getAsJsonArray("boxes").size())
+        assertEquals(emptyList(), contract.violations.toList())
+    }
+
+    @Test
+    fun leavingWeighWithBoxesAsksFirstAndAbandonClearsEverything() = flow { deps, vm, _ ->
+        deps.createOrder()
+        connectDevices(deps)
+        vm.startFromDraft()
+        until("进入称重") { vm.ui.value.ready }
+        weighOneBox(deps, vm)
+
+        // 有箱：要确认，什么都不动（“继续称”就是不做任何事）
+        assertEquals(LeaveWeigh.NeedConfirm, vm.leaveWeigh())
+        assertTrue(deps.sessionStore.exists())
+        assertTrue(vm.ui.value.ready)
+        assertEquals(1, vm.ui.value.boxes.size)
+
+        // 确认放弃：草稿与内存都清
+        vm.abandon()
+        assertFalse(deps.sessionStore.exists())
+        assertFalse(vm.ui.value.ready)
+    }
+
     private companion object {
         const val TOKEN = "test-token"
 
         val LISI_NETS = listOf(4650, 4580, 4600, 4600, 4600, 4560, 4560, 4560, 4560, 4780)
         val EDITED_NETS = LISI_NETS.dropLast(1) + 5280
+        val ONE_BOX_NETS = listOf(4650)
 
         // 以下取自后端 BenchmarkFlowTest 的算例，字段按 api/openapi.json 的 Bootstrap、Result、Submitted 等
         val FARMERS = """[
@@ -463,6 +537,14 @@ class LiSiFullFlowTest {
         val QUOTE_EDITED = """{"boxCount":10,"totalKg":465.5,"rawAvgKg":46.55,"avgKg":47,"standardNetKg":45,
             "basePrice":180,"ruleId":61,"ruleName":"粉蛋李四收购定价方案","coefficient":1,"tailKg":2,"priceDiff":2,
             "unitPrice":182,"amount":1820,"roundMode":"HALF","issues":[]}"""
+
+        // 王秀英只称一箱 46.5：合计 46.5、均重 46.5 取整 47（half），多 2kg，182 元/箱
+        val QUOTE_ONE_BOX = """{"boxCount":1,"totalKg":46.5,"rawAvgKg":46.5,"avgKg":47,"standardNetKg":45,
+            "basePrice":180,"ruleId":62,"ruleName":"粉蛋王秀英收购定价方案","coefficient":1,"tailKg":2,"priceDiff":2,
+            "unitPrice":182,"amount":182,"roundMode":"HALF","issues":[]}"""
+
+        val SUBMITTED_ONE_BOX = """{"id":1003,"code":"RK20261116003","batchNo":"SG20261116-1","status":"PENDING","source":"APP",
+            "boxCount":1,"totalNetKg":46.5,"avgKg":47,"submittedPrice":182,"submittedAmount":182}"""
 
         val SUBMITTED_LISI = """{"id":1001,"code":"RK20261116001","batchNo":"SG20261116-1","status":"PENDING","source":"APP",
             "boxCount":10,"totalNetKg":460.5,"avgKg":46,"submittedPrice":181,"submittedAmount":1810}"""

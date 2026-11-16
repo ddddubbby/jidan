@@ -96,20 +96,19 @@ class WeighFragment : Fragment() {
     }
 
     private fun leave() {
-        if (!vm.hasBoxes()) {
+        if (vm.leaveWeigh() == LeaveWeigh.Left) {
             findNavController().navigateUp()
             return
         }
+        // 有箱只给两个答案（原型 sheetLeave）：放弃这一单 / 继续称
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.weigh_leave_title)
-            .setPositiveButton(R.string.weigh_leave_keep) { _, _ ->
-                findNavController().navigateUp()
-            }
+            .setMessage(getString(R.string.weigh_leave_message, vm.ui.value.boxes.size))
             .setNegativeButton(R.string.weigh_abandon) { _, _ ->
                 vm.abandon()
                 findNavController().navigateUp()
             }
-            .setNeutralButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.weigh_leave_continue, null)
             .show()
     }
 
