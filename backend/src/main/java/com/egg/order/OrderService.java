@@ -132,7 +132,7 @@ public class OrderService {
     }
 
     /** Web 自建单的净重是管理员录的，逐箱不另标“手录”，也没有秤的原始读数（v7 WEB-06）。 */
-    private static WeighRecord record(long orderId, BoxInput b, OrderSource source) {
+    static WeighRecord record(long orderId, BoxInput b, OrderSource source) {
         boolean web = source == OrderSource.WEB;
         WeighRecord r = new WeighRecord();
         r.orderId = orderId;

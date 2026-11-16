@@ -117,10 +117,12 @@ public class PricingService {
     // ---------------------------------------------------------------- 纯计算
 
     /**
+     * 审核后的单据拿冻结的各项来还原明细（尾差、价差、原始均重）时也走这里，计价仍只有这一处。
+     *
      * @param basePrice null 表示当日没录基准价
      * @param coef      null 表示没有规则
      */
-    static Result compute(List<BigDecimal> boxNetKg, BigDecimal standardNetKg, BigDecimal basePrice, Long ruleId,
+    public static Result compute(List<BigDecimal> boxNetKg, BigDecimal standardNetKg, BigDecimal basePrice, Long ruleId,
             String ruleName, BigDecimal coef, RoundMode mode) {
         List<String> issues = new ArrayList<>();
         if (coef == null) {
