@@ -20,6 +20,8 @@ android {
     productFlavors {
         create("sim") {
             dimension = "device"
+            // 包名带 .sim 后缀，可与实机版同装一台手机（开发规格 11.3）
+            applicationIdSuffix = ".sim"
             // 桌面上一眼分得出两个包
             resValue("string", "app_name", "收蛋（模拟版）")
         }
