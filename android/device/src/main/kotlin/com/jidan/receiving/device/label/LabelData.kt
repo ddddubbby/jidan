@@ -18,4 +18,15 @@ data class LabelData(
 ) {
     /** 箱码：`批次号#批次序号`（BE-06 / C-1）。 */
     val qrPayload: String get() = "$batchNo#$seq"
+
+    companion object {
+        private val BATCH_DATE = Regex("^SG(\\d{4})(\\d{2})(\\d{2})-")
+
+        /** 批次号 `SG20261116-1` 里的收购日期，写成 `2026.11.16`；批次号不合格式返回 null。 */
+        fun buyDateOf(batchNo: String): String? {
+            val m = BATCH_DATE.find(batchNo) ?: return null
+            val (y, mo, d) = m.destructured
+            return "$y.${mo.toInt()}.${d.toInt()}"
+        }
+    }
 }

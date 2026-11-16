@@ -4,6 +4,13 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
 
+    <!-- 任何页面登录失效都走这一条（MainActivity）；清空回退栈，只留登录页 -->
+    <action
+        android:id="@+id/action_global_to_login"
+        app:destination="@id/loginFragment"
+        app:popUpTo="@id/nav_graph"
+        app:popUpToInclusive="true" />
+
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.jidan.receiving.ui.login.LoginFragment"
@@ -23,11 +30,6 @@
         android:id="@+id/createFragment"
         android:name="com.jidan.receiving.ui.create.CreateFragment"
         android:label="@string/create_title">
-        <action
-            android:id="@+id/action_create_to_login"
-            app:destination="@id/loginFragment"
-            app:popUpTo="@id/nav_graph"
-            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_create_to_weigh"
             app:destination="@id/weighFragment" />

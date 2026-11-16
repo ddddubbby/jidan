@@ -52,8 +52,13 @@ object SplitBoxes {
     /** 加到末尾并重新编号。 */
     fun append(boxes: List<Box>, added: List<Box>): List<Box> = renumber(boxes + added)
 
-    /** 序号从 1 起连续。 */
-    fun renumber(boxes: List<Box>): List<Box> = boxes.mapIndexed { i, b -> b.copy(seq = i + 1) }
+    /**
+     * 序号从 1 起连续。序号变了的箱，已经贴出去的标签上印的箱序号与二维码（`批次号#序号`）就不对了，
+     * 所以打印标记一并清掉，等重打；序号没变的箱不动。
+     */
+    fun renumber(boxes: List<Box>): List<Box> = boxes.mapIndexed { i, b ->
+        if (b.seq == i + 1) b else b.copy(seq = i + 1, printed = false)
+    }
 
     /** 删除第 [seq] 箱所在的整组，后面的序号顺延。 */
     fun deleteGroup(boxes: List<Box>, seq: Int): List<Box> {

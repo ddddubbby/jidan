@@ -274,13 +274,15 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/unprinted"
-                style="@style/Text.Caption"
+            <!-- 有标签没打出来：补打按钮（打印机有问题时写明缺什么，点了去设备弹层） -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reprint"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:textColor="@color/warn_ink"
+                android:minHeight="52dp"
+                android:textAllCaps="false"
                 android:visibility="gone" />
 
             <TextView

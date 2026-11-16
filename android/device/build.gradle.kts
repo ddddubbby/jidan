@@ -28,6 +28,8 @@ dependencies {
     api(project(":core"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
+    // 二维码矩阵：箱贴上的码必须是真码（v7 5.4）；位图与预览共用
+    implementation(libs.zxing.core)
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlin.test.junit)

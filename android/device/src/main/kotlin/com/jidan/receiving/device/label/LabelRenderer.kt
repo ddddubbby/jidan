@@ -5,17 +5,29 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.jidan.receiving.device.PrintPayload
 import java.io.ByteArrayOutputStream
 
 /**
  * 按模板生成 TSPL 或位图（开发规格 9.3）。
  * 位图与模拟台预览共用 [drawBitmap]；真机佳博发送属 P8-2，此处只出指令/图。
- * 二维码在位图里画伪图案（与原型 fakeQR 同思路），TSPL 用 QRCODE 指令。
+ * 二维码：TSPL 用 QRCODE 指令（打印机自己编码），位图用 zxing 生成的真矩阵，纠错等级两边都是 L。
  */
 object LabelRenderer {
     /** 200 DPI：1mm = 8 dots（v7 7.3）。 */
     const val DOTS_PER_MM = 8
+
+    /**
+     * TSPL 简体中文 24×24 点阵字库（GB 码），见 TSPL 手册 TEXT 指令的字体表（`TSS24.BF2`）。
+     * 标签上的行都带中文，统一用它；字库内含半角数字与字母。
+     * 注意：中文字库按 GB 码取字，所以指令字符串发给打印机时必须编成 GB18030/GBK 字节，
+     * 不能直接按 UTF-8 发送。这一步属 P8-2（佳博适配器），这里只出字符串。
+     */
+    const val FONT_CN = "TSS24.BF2"
 
     fun render(
         data: LabelData,
@@ -64,12 +76,11 @@ object LabelRenderer {
             val text = textByKey[f.key] ?: continue
             val x = mmToDots(f.xMm)
             val y = mmToDots(f.yMm)
-            // FONT 2 ≈ 小字；完整内容挤在 40mm 高内
-            sb.appendLine("TEXT $x,$y,\"2\",0,1,1,\"${escapeTspl(text)}\"")
+            sb.appendLine("TEXT $x,$y,\"$FONT_CN\",0,1,1,\"${escapeTspl(text)}\"")
         }
         val qx = mmToDots(template.qrXMm)
         val qy = mmToDots(template.qrYMm)
-        val cell = (mmToDots(template.qrSizeMm) / 25).coerceIn(3, 8)
+        val cell = (mmToDots(template.qrSizeMm) / qrMatrix(data.qrPayload).width).coerceIn(1, 10)
         sb.appendLine("QRCODE $qx,$qy,L,$cell,A,0,\"${escapeTspl(data.qrPayload)}\"")
         sb.appendLine("PRINT 1")
         return sb.toString()
@@ -91,7 +102,7 @@ object LabelRenderer {
             paint.textSize = f.fontMm * DOTS_PER_MM
             canvas.drawText(text, f.xMm * DOTS_PER_MM, (f.yMm + f.fontMm) * DOTS_PER_MM, paint)
         }
-        drawFakeQr(
+        drawQr(
             canvas,
             data.qrPayload,
             (template.qrXMm * DOTS_PER_MM).toInt(),
@@ -120,28 +131,27 @@ object LabelRenderer {
 
     private fun escapeTspl(s: String): String = s.replace("\"", "'")
 
-    /** 伪二维码：由 payload 哈希铺点，角上画定位框（原型 fakeQR）。 */
-    private fun drawFakeQr(canvas: Canvas, payload: String, x0: Int, y0: Int, size: Int) {
-        val n = 17
-        val cell = (size / n).coerceAtLeast(1)
-        var h = -2128831035 // FNV-1a 32-bit offset basis
-        for (ch in payload) {
-            h = h xor ch.code
-            h *= 16777619
-        }
+    /** 箱码的二维码矩阵：纠错等级 L、无白边（纸本身是白的）。尺寸随内容定，`SG20261116-1#3` 是 21×21。 */
+    fun qrMatrix(payload: String) = QRCodeWriter().encode(
+        payload,
+        BarcodeFormat.QR_CODE,
+        0,
+        0,
+        mapOf(
+            EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+            EncodeHintType.MARGIN to 0,
+            EncodeHintType.CHARACTER_SET to "UTF-8",
+        ),
+    )
+
+    /** 把真二维码按整数格宽画进 [size] 见方的区域，左上角在 ([x0], [y0])。 */
+    private fun drawQr(canvas: Canvas, payload: String, x0: Int, y0: Int, size: Int) {
+        val m = qrMatrix(payload)
+        val cell = (size / m.width).coerceAtLeast(1)
         val paint = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL }
-        for (y in 0 until n) {
-            for (x in 0 until n) {
-                h = h xor (h shl 13)
-                h = h xor (h ushr 17)
-                h = h xor (h shl 5)
-                val corner = (x < 5 && y < 5) || (x > 11 && y < 5) || (x < 5 && y > 11)
-                val on = if (corner) {
-                    x % 12 == 0 || x % 12 == 4 || y % 12 == 0 || y % 12 == 4 || (x % 12 == 2 && y % 12 == 2)
-                } else {
-                    (h and 1) != 0
-                }
-                if (on) {
+        for (y in 0 until m.height) {
+            for (x in 0 until m.width) {
+                if (m[x, y]) {
                     canvas.drawRect(
                         (x0 + x * cell).toFloat(),
                         (y0 + y * cell).toFloat(),

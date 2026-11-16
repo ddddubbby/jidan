@@ -36,6 +36,10 @@ data class LabelPreview(
 /**
  * 打印队列（开发规格 9.3 / APP-07）。
  * `print.enabled=off` 时整队不工作；失败即停，未打出的保持未打印。
+ *
+ * 队列里没有序号清单：工作协程每次取流水里序号最小的未打印箱来打，打完再取，直到没有或失败。
+ * 所以任何入队动作都只是“叫醒工作协程”；已经在打时不取消、不重来，新增或作废的箱自然排到后面（先进先出）。
+ * 这样删箱、改箱数后序号顺延也不会让队列里记的序号对不上。
  */
 class PrintQueue(
     private val printer: LabelPrinter,
@@ -57,87 +61,79 @@ class PrintQueue(
 
     fun enabled(): Boolean = options().get("print.enabled").equals("on", ignoreCase = true)
 
-    fun timingPerBox(): Boolean =
-        !options().get("print.timing").equals("after-confirm", ignoreCase = true)
+    fun timingPerBox(): Boolean = timingIsPerBox(options())
 
     /** 逐箱：记完一批箱后入队。 */
     fun enqueueNew(seqs: List<Int>) {
-        if (!enabled() || !timingPerBox()) return
-        enqueue(seqs)
+        if (seqs.isEmpty() || !enabled() || !timingPerBox()) return
+        wake()
     }
 
-    /** 重称 / 手录后立即重打该箱（逐箱模式）。 */
+    /**
+     * 重称 / 手录后该箱原标签作废：清打印标记。逐箱模式立即重打；
+     * 完成后一次打印的模式留到再次确认计量完毕时重打（APP-07）。
+     */
     fun enqueueReprint(seq: Int) {
-        if (!enabled() || !timingPerBox()) return
+        if (!enabled()) return
         updateSession { it.markPrinted(seq, false) }
-        enqueue(listOf(seq))
+        if (timingPerBox()) wake()
     }
 
-    /** 确认计量后：完成后一次打印时打全部未打印；逐箱时只补打未打出的。 */
+    /**
+     * 删箱、改箱数后，序号变了的箱已被清掉打印标记（见 `SplitBoxes.renumber`）。
+     * 逐箱模式立即重打它们；完成后一次打印的模式留到再次确认。
+     */
+    fun enqueueRenumbered() {
+        if (!enabled() || !timingPerBox()) return
+        wake()
+    }
+
+    /** 确认计量后：逐箱时补打未打出的；完成后一次打印时打全部（确认前没有箱被打过，调整过的箱已清标记）。 */
     fun enqueueAfterConfirm() {
         if (!enabled()) return
-        val s = session() ?: return
-        val seqs = if (timingPerBox()) {
-            s.unprinted.map { it.seq }
-        } else {
-            s.boxes.map { it.seq }
-        }
-        if (seqs.isEmpty()) return
-        enqueue(seqs)
+        wake()
     }
 
     /** 一键补打全部未打印。 */
     fun reprintUnprinted() {
         if (!enabled()) return
-        val seqs = session()?.unprinted?.map { it.seq }.orEmpty()
-        if (seqs.isEmpty()) return
-        enqueue(seqs)
+        wake()
     }
 
     fun reprintOne(seq: Int) {
         if (!enabled()) return
         updateSession { it.markPrinted(seq, false) }
-        enqueue(listOf(seq))
+        wake()
     }
 
+    /** 放弃整单或再收一单时才停；提交不停（尚未打完的接着打）。 */
     fun stop() {
         worker?.cancel()
         worker = null
         _job.value = null
+        _lastError.value = ""
+        _preview.value = null
     }
 
     fun unprintedCount(): Int =
         if (!enabled()) 0 else session()?.unprinted?.size ?: 0
 
-    private fun enqueue(seqs: List<Int>) {
-        if (seqs.isEmpty()) return
-        // 已有任务时把新 seq 接到队尾：简化为取消后重跑「当前未打印 ∪ 请求」
-        val pending = LinkedHashSet<Int>()
-        session()?.unprinted?.mapTo(pending) { it.seq }
-        pending.addAll(seqs)
-        val ordered = session()?.boxes?.map { it.seq }?.filter { it in pending }.orEmpty()
-        if (ordered.isEmpty()) return
-        stop()
-        worker = scope.launch { runQueue(ordered) }
+    /** 此刻打印机挡在哪（未连接、缺纸、开盖、过热）；能打返回 null。看当前状态，不看上一次的失败。 */
+    fun blocker(): String? = printerReady()
+
+    private fun wake() {
+        if (worker?.isActive == true) return
+        if (session()?.unprinted.isNullOrEmpty()) return
+        worker = scope.launch { runQueue() }
     }
 
-    private suspend fun runQueue(seqs: List<Int>) {
+    private suspend fun runQueue() {
         _lastError.value = ""
-        val total = seqs.size
         var done = 0
-        _job.value = PrintJobState(done, total)
-        for (seq in seqs) {
+        while (true) {
             val s = session() ?: break
-            val box = try {
-                s.box(seq)
-            } catch (_: Throwable) {
-                continue
-            }
-            if (box.printed) {
-                done += 1
-                _job.value = PrintJobState(done, total)
-                continue
-            }
+            val box = s.unprinted.firstOrNull() ?: break
+            _job.value = PrintJobState(done, done + s.unprinted.size)
             val ready = printerReady()
             if (ready != null) {
                 _lastError.value = ready
@@ -150,9 +146,11 @@ class PrintQueue(
             _preview.value = LabelPreview(data, tpl.content, LabelRenderer.previewText(data, tpl.content))
             when (val outcome = printer.print(payload)) {
                 is PrintOutcome.Success -> {
-                    updateSession { it.markPrinted(seq, true) }
+                    // 打印途中该箱若被删、被改（序号或内容变了），出来的是旧标签，不能把新箱记成已打
+                    updateSession { cur ->
+                        if (cur.boxes.firstOrNull { it.seq == box.seq } == box) cur.markPrinted(box.seq, true) else cur
+                    }
                     done += 1
-                    _job.value = PrintJobState(done, total)
                     delay(60)
                 }
                 is PrintOutcome.Failure -> {
@@ -189,7 +187,9 @@ class PrintQueue(
         specName = s.spec.name,
         net = box.net,
         farmerName = s.farmer.name,
-        buyDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.M.d")),
+        // 收购日期取批次号里的日期，跨天补打也不变（批次号 `SG20261116-1`）
+        buyDate = LabelData.buyDateOf(s.batchNo)
+            ?: LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.M.d")),
         warehouseName = s.warehouse.name,
         batchNo = s.batchNo,
         seq = box.seq,
