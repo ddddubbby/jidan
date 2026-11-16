@@ -2,7 +2,10 @@ package com.egg.auth;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.egg.common.ApiException;
@@ -35,6 +38,15 @@ public class AccountService {
     public List<AccountView> listScale() {
         return accounts.selectList(Wrappers.<Account>query().eq("role", Role.SCALE.name()).orderByAsc("id"))
                 .stream().map(AccountService::view).toList();
+    }
+
+    /** 单据上显示磅秤员、审核人的姓名用；管理员与磅秤员同表，都能查到。 */
+    public Map<Long, String> names(Collection<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return accounts.selectList(Wrappers.<Account>query().in("id", ids)).stream()
+                .collect(Collectors.toMap(a -> a.id, a -> a.name));
     }
 
     public WithPassword create(String name, String phone, long by) {

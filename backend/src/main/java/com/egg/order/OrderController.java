@@ -57,6 +57,10 @@ public class OrderController {
             @Digits(integer = 6, fraction = 2, message = "净重最多两位小数") BigDecimal netKg,
             BigDecimal grossKg, BigDecimal tareKg, String tareName, Integer groupNo, Integer groupK,
             boolean manual, BigDecimal rawKg, boolean printed) {
+
+        BoxInput toInput() {
+            return new BoxInput(seq, netKg, grossKg, tareKg, tareName, groupNo, groupK, manual, rawKg, printed);
+        }
     }
 
     public record SubmitForm(
@@ -94,9 +98,7 @@ public class OrderController {
     @Access(Who.ADMIN_OR_SCALE)
     @PostMapping("/api/orders")
     public Submitted submit(@Valid @RequestBody SubmitForm f, CurrentUser me) {
-        List<BoxInput> boxes = f.boxes().stream().map(b -> new BoxInput(b.seq(), b.netKg(), b.grossKg(), b.tareKg(),
-                b.tareName(), b.groupNo(), b.groupK(), b.manual(), b.rawKg(), b.printed())).toList();
         return service.submit(new Submission(f.batchNo(), f.vendorId(), f.productId(), f.specId(), f.warehouseId(),
-                boxes), me);
+                f.boxes().stream().map(BoxForm::toInput).toList()), me);
     }
 }

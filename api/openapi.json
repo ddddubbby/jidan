@@ -163,6 +163,68 @@
         }
       }
     },
+    "/api/orders/{id}" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "detail",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "update_3",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/options" : {
       "get" : {
         "tags" : [ "options-controller" ],
@@ -510,6 +572,55 @@
       }
     },
     "/api/orders" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "name" : "tab",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "q",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 1
+          }
+        }, {
+          "name" : "pageSize",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResultOrderRow"
+                }
+              }
+            }
+          }
+        }
+      },
       "post" : {
         "tags" : [ "order-controller" ],
         "operationId" : "submit",
@@ -641,7 +752,7 @@
     "/api/accounts" : {
       "get" : {
         "tags" : [ "account-controller" ],
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -705,6 +816,78 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WithPassword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/records" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "records",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Records"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/next-pending" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "nextPending",
+        "parameters" : [ {
+          "name" : "after",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NextPending"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/counts" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "counts",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Counts"
                 }
               }
             }
@@ -821,6 +1004,32 @@
                   "items" : {
                     "$ref" : "#/components/schemas/Farmer"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/boxes/lookup" : {
+      "get" : {
+        "tags" : [ "order-admin-controller" ],
+        "operationId" : "lookup",
+        "parameters" : [ {
+          "name" : "code",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BoxLookup"
                 }
               }
             }
@@ -1210,6 +1419,261 @@
           }
         }
       },
+      "BoxForm" : {
+        "type" : "object",
+        "properties" : {
+          "seq" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "netKg" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "grossKg" : {
+            "type" : "number"
+          },
+          "tareKg" : {
+            "type" : "number"
+          },
+          "tareName" : {
+            "type" : "string"
+          },
+          "groupNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "groupK" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "rawKg" : {
+            "type" : "number"
+          },
+          "printed" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "netKg", "seq" ]
+      },
+      "UpdateForm" : {
+        "type" : "object",
+        "properties" : {
+          "bizDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "vendorId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "productId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "warehouseId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "boxes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BoxForm"
+            },
+            "minItems" : 1
+          }
+        },
+        "required" : [ "bizDate", "boxes", "productId", "specId", "vendorId", "warehouseId" ]
+      },
+      "OrderDetail" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "bizDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "PUSHED", "VOID" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "APP", "WEB" ]
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "approver" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "vendor" : {
+            "$ref" : "#/components/schemas/VendorRef"
+          },
+          "warehouse" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "product" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/SpecRef"
+          },
+          "hsId" : {
+            "type" : "string"
+          },
+          "pushError" : {
+            "type" : "string"
+          },
+          "submittedPrice" : {
+            "type" : "number"
+          },
+          "submittedAmount" : {
+            "type" : "number"
+          },
+          "submittedDiffers" : {
+            "type" : "boolean"
+          },
+          "frozen" : {
+            "type" : "boolean"
+          },
+          "manualCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pricing" : {
+            "$ref" : "#/components/schemas/Result"
+          }
+        }
+      },
+      "Ref" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Result" : {
+        "type" : "object",
+        "properties" : {
+          "boxCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalKg" : {
+            "type" : "number"
+          },
+          "rawAvgKg" : {
+            "type" : "number"
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "standardNetKg" : {
+            "type" : "number"
+          },
+          "basePrice" : {
+            "type" : "number"
+          },
+          "ruleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "ruleName" : {
+            "type" : "string"
+          },
+          "coefficient" : {
+            "type" : "number"
+          },
+          "tailKg" : {
+            "type" : "number"
+          },
+          "priceDiff" : {
+            "type" : "number"
+          },
+          "unitPrice" : {
+            "type" : "number"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "roundMode" : {
+            "type" : "string",
+            "enum" : [ "HALF", "FLOOR", "CEIL" ]
+          },
+          "issues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "SpecRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "stdNetKg" : {
+            "type" : "number"
+          }
+        }
+      },
+      "VendorRef" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "hsCode" : {
+            "type" : "string"
+          },
+          "phones" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
       "BindingForm" : {
         "type" : "object",
         "properties" : {
@@ -1372,46 +1836,6 @@
         },
         "required" : [ "coef", "kind", "name", "productId", "specId" ]
       },
-      "BoxForm" : {
-        "type" : "object",
-        "properties" : {
-          "seq" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "netKg" : {
-            "type" : "number",
-            "minimum" : 0
-          },
-          "grossKg" : {
-            "type" : "number"
-          },
-          "tareKg" : {
-            "type" : "number"
-          },
-          "tareName" : {
-            "type" : "string"
-          },
-          "groupNo" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "groupK" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "manual" : {
-            "type" : "boolean"
-          },
-          "rawKg" : {
-            "type" : "number"
-          },
-          "printed" : {
-            "type" : "boolean"
-          }
-        },
-        "required" : [ "netKg", "seq" ]
-      },
       "SubmitForm" : {
         "type" : "object",
         "properties" : {
@@ -1521,62 +1945,6 @@
         },
         "required" : [ "productId", "specId", "vendorId" ]
       },
-      "Result" : {
-        "type" : "object",
-        "properties" : {
-          "boxCount" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "totalKg" : {
-            "type" : "number"
-          },
-          "rawAvgKg" : {
-            "type" : "number"
-          },
-          "avgKg" : {
-            "type" : "number"
-          },
-          "standardNetKg" : {
-            "type" : "number"
-          },
-          "basePrice" : {
-            "type" : "number"
-          },
-          "ruleId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "ruleName" : {
-            "type" : "string"
-          },
-          "coefficient" : {
-            "type" : "number"
-          },
-          "tailKg" : {
-            "type" : "number"
-          },
-          "priceDiff" : {
-            "type" : "number"
-          },
-          "unitPrice" : {
-            "type" : "number"
-          },
-          "amount" : {
-            "type" : "number"
-          },
-          "roundMode" : {
-            "type" : "string",
-            "enum" : [ "HALF", "FLOOR", "CEIL" ]
-          },
-          "issues" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          }
-        }
-      },
       "BatchForm" : {
         "type" : "object",
         "properties" : {
@@ -1682,6 +2050,234 @@
           }
         }
       },
+      "OrderRow" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "bizDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "PUSHED", "VOID" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "APP", "WEB" ]
+          },
+          "vendorName" : {
+            "type" : "string"
+          },
+          "vendorPhone" : {
+            "type" : "string"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "specName" : {
+            "type" : "string"
+          },
+          "boxCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "price" : {
+            "type" : "number"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "submittedAmount" : {
+            "type" : "number"
+          },
+          "amountChanged" : {
+            "type" : "boolean"
+          },
+          "operatorName" : {
+            "type" : "string"
+          },
+          "pushError" : {
+            "type" : "string"
+          },
+          "manualCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "issues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "PageResultOrderRow" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderRow"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pageSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "Box" : {
+        "type" : "object",
+        "properties" : {
+          "seq" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "netKg" : {
+            "type" : "number"
+          },
+          "grossKg" : {
+            "type" : "number"
+          },
+          "tareKg" : {
+            "type" : "number"
+          },
+          "tareName" : {
+            "type" : "string"
+          },
+          "groupNo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "groupK" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "rawKg" : {
+            "type" : "number"
+          },
+          "printed" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "Group" : {
+        "type" : "object",
+        "properties" : {
+          "kg" : {
+            "type" : "number"
+          },
+          "boxes" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "Records" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "editable" : {
+            "type" : "boolean"
+          },
+          "boxes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Box"
+            }
+          },
+          "groups" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Group"
+            }
+          },
+          "manualCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "NextPending" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "vendorName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Counts" : {
+        "type" : "object",
+        "properties" : {
+          "pending" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "failed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "missingBasePrices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MissingPrice"
+            }
+          }
+        }
+      },
+      "MissingPrice" : {
+        "type" : "object",
+        "properties" : {
+          "specId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "specName" : {
+            "type" : "string"
+          }
+        }
+      },
       "Meta" : {
         "type" : "object",
         "properties" : {
@@ -1728,6 +2324,56 @@
             "items" : {
               "type" : "string"
             }
+          }
+        }
+      },
+      "BoxLookup" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "seq" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "netKg" : {
+            "type" : "number"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "rawKg" : {
+            "type" : "number"
+          },
+          "vendor" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "product" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/SpecRef"
+          },
+          "orderId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "orderCode" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "PUSHED", "VOID" ]
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "price" : {
+            "type" : "number"
           }
         }
       },
