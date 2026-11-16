@@ -2,9 +2,13 @@ package com.jidan.receiving.registry
 
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.gainscha.GainschaPrinter
+import com.jidan.receiving.device.gainscha.GainschaSdkMissing
+import kotlinx.coroutines.CoroutineScope
 
 /**
- * 型号 → 适配器（开发规格 9.3）。P6-2 两行都是占位；P8-1/P8-2 换成真适配器。
+ * 型号 → 适配器（开发规格 9.3）。秤一行仍是占位（P8-1 换）；打印机一行是 GainschaPrinter（P8-2），
+ * 其 SDK 一层现在是 GainschaSdkMissing（缺 sdk2-release.aar，接法见 android/device/sdk-link/README.md）。
  * 不认识的型号用默认型号。
  */
 object DeviceRegistry {
@@ -19,11 +23,12 @@ object DeviceRegistry {
         }
     }
 
-    fun createPrinter(model: String?): LabelPrinter {
+    fun createPrinter(model: String?, scope: CoroutineScope, pairedId: String?): LabelPrinter {
         val key = model?.takeIf { it.isNotBlank() } ?: DEFAULT_PRINTER
         return when (key) {
-            "gainscha-gp-m32b" -> PlaceholderPrinter(key)
-            else -> PlaceholderPrinter(DEFAULT_PRINTER)
+            // 接上 SDK 时，只把这里的 GainschaSdkMissing() 换成真实现（android/device/sdk-link/README.md 第 3 步）
+            "gainscha-gp-m32b" -> GainschaPrinter(GainschaSdkMissing(), scope, pairedId)
+            else -> GainschaPrinter(GainschaSdkMissing(), scope, pairedId)
         }
     }
 }
