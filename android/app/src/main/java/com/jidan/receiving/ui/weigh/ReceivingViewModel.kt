@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.core.Box
+import com.jidan.receiving.core.EmptyBoxState
+import com.jidan.receiving.core.EmptyBoxTare
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.RecordBy
@@ -153,8 +155,13 @@ data class WeighUiState(
     val k: Int = 1,
     val candidates: Pair<Int, Int>? = null,
     val tare: Tare? = null,
+    /** 皮重热键，上一单用的排首位（不自动选中）。 */
     val tares: List<TareDto> = emptyList(),
+    /** 上一单用的皮重热键 id，用来标“上一单用的”；没有或已不在热键里为 null。 */
+    val lastTareId: Long? = null,
     val showTarePicker: Boolean = false,
+    /** 称重皮（称空箱）按钮的当下状态。 */
+    val emptyBox: EmptyBoxState = EmptyBoxState(connected = false, platform = null, stable = false),
     val boxes: List<Box> = emptyList(),
     val reweighSeq: Int? = null,
     val eventText: String = "",
@@ -267,7 +274,7 @@ class ReceivingViewModel(
             _ui.update { it.copy(loading = true, error = "") }
             try {
                 val batch = container.catalog.nextBatchNo()
-                val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
+                val tareStart = loadTares()
                 val std = Kg(h.stdNetCents ?: Kg.of(36.0).cents) // 粉蛋默认 36kg，缺字段时兜底
                 val opts = container.options.value.weighOptions()
                 val s = Session(
@@ -279,11 +286,7 @@ class ReceivingViewModel(
                 )
                 session = s
                 machine = WeighingMachine(opts, std)
-                val lastTareId = container.prefs.lastTareId
-                val last = tares.firstOrNull { it.id == lastTareId }
-                if (last != null) {
-                    applyTare(Tare(Kg.of(last.tareKg), last.name), last.id, persistOnly = false)
-                }
+                // 上一单用的排首位但不自动选中：换了包装箱而没注意，整批皮重都错（v7 APP-04）
                 _ui.update {
                     it.copy(
                         loading = false,
@@ -293,8 +296,9 @@ class ReceivingViewModel(
                         specName = s.spec.name,
                         batchNo = s.batchNo,
                         warehouseName = s.warehouse.name,
-                        tares = tares,
-                        showTarePicker = last == null,
+                        tares = tareStart.tares,
+                        lastTareId = tareStart.lastTareId,
+                        showTarePicker = tareStart.showPicker,
                         recordByButton = opts.recordBy == RecordBy.BUTTON,
                     )
                 }
@@ -309,7 +313,7 @@ class ReceivingViewModel(
 
     private fun restoreSession(s: Session) {
         viewModelScope.launch {
-            val tares = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
+            val tareStart = loadTares()
             val std = Kg(
                 container.orderDraft.header.value.stdNetCents
                     ?: s.spec.let { Kg.of(36.0).cents },
@@ -337,7 +341,8 @@ class ReceivingViewModel(
                     specName = s.spec.name,
                     batchNo = s.batchNo,
                     warehouseName = s.warehouse.name,
-                    tares = tares,
+                    tares = tareStart.tares,
+                    lastTareId = tareStart.lastTareId,
                     showTarePicker = s.tare == null,
                     recordByButton = opts.recordBy == RecordBy.BUTTON,
                 )
@@ -834,6 +839,48 @@ class ReceivingViewModel(
         }
     }
 
+    /** 皮重热键，上一单用的排首位（不自动选中）。 */
+    private suspend fun loadTares(): TareStart {
+        val all = runCatching { container.catalog.tareHotkeys() }.getOrDefault(emptyList())
+        return TareStart.of(all, container.prefs.lastTareId)
+    }
+
+    /**
+     * 称重皮（v7 `APP-04`）：秤上是一只空箱且读数稳定时，按台面读数去皮，皮重名记“空箱”。
+     * `scale.tare-by = scale` 时先让秤去皮；`app` 时只在 APP 侧记下。条件不满足时什么也不做。
+     */
+    fun weighEmptyBox() {
+        if (locked) return
+        val st = emptyBoxState()
+        val platform = st.platform
+        if (!st.available || platform == null) return
+        val t = EmptyBoxTare.tareOf(platform)
+        viewModelScope.launch {
+            if (container.options.value.weighOptions().tareBy == TareBy.SCALE) {
+                try {
+                    container.scale.tareWeigh()
+                } catch (_: Throwable) {
+                    // 秤没去成皮而 APP 记了皮重，之后每箱都会算错，所以不记
+                    flash("秤没有去皮，再试一次", ok = false)
+                    return@launch
+                }
+            }
+            machine?.setTare(t)
+            session = session?.withTare(t)
+            // 空箱没有热键 id；上一单标记不留在别的箱上
+            container.prefs.lastTareId = null
+            _ui.update { it.copy(showTarePicker = false) }
+            persist()
+            publish()
+        }
+    }
+
+    private fun emptyBoxState() = EmptyBoxState(
+        connected = container.scale.linkStatus.value == LinkStatus.CONNECTED,
+        platform = machine?.platformNow,
+        stable = machine?.isStable == true,
+    )
+
     private suspend fun applyTare(t: Tare, id: Long?, persistOnly: Boolean) {
         val opts = container.options.value.weighOptions()
         if (!persistOnly && opts.tareBy == TareBy.SCALE) {
@@ -925,6 +972,7 @@ class ReceivingViewModel(
                 k = m?.k ?: 1,
                 candidates = m?.candidates,
                 tare = m?.tare ?: s?.tare,
+                emptyBox = emptyBoxState(),
                 boxes = s?.boxes.orEmpty(),
                 reweighSeq = m?.reweighSeq,
                 recordByButton = opts.recordBy == RecordBy.BUTTON,
