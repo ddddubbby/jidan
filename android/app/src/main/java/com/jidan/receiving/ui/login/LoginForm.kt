@@ -35,12 +35,3 @@ fun loginStep(serverUrl: String, phone: String, password: String, busy: Boolean)
     password.isEmpty() -> LoginStep.PASSWORD
     else -> LoginStep.READY
 }
-
-/** 有更新时才显示下载入口：远端 versionCode 大于本机。 */
-fun shouldShowUpdate(localVersionCode: Int, remote: AppVersionLike?): Boolean {
-    if (remote == null) return false
-    if (remote.downloadUrl.isNullOrBlank()) return false
-    return remote.versionCode > localVersionCode
-}
-
-data class AppVersionLike(val versionCode: Int, val downloadUrl: String?)
