@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
+import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.core.Box
 import com.jidan.receiving.core.Kg
 import com.jidan.receiving.core.Pick
@@ -173,7 +174,15 @@ data class WeighUiState(
     val labelPreview: String = "",
     /** 已确认计量或已提交：流水只读，只能补打（APP-08）。 */
     val locked: Boolean = false,
+    /** 选项 `weigh.manual-entry`（on 才允许手工录入净重）。 */
+    val manualEntry: Boolean = true,
 ) {
+    /** 流水弹层的“手工加一箱”入口：未锁定且选项允许才出现。 */
+    val canManualAdd: Boolean get() = manualEntry && !locked
+
+    /** 单箱弹层的“手工录入”入口：选项允许才出现（单箱弹层本身只在未锁定时能打开）。 */
+    val canManualEdit: Boolean get() = manualEntry && !locked
+
     val count: Int get() = boxes.size
     val totalNet: Kg get() = boxes.map { it.net }.sum()
     fun avg(rule: RoundRule): Kg? =
@@ -187,6 +196,10 @@ data class WeighUiState(
             return boxes.takeLast(n).reversed()
         }
 }
+
+/** `weigh.manual-entry`：off 时流水弹层与单箱弹层不出现“手工加一箱”“手工录入”（开发规格 4.3）。 */
+fun manualEntryOn(options: AppOptions): Boolean =
+    !options.get("weigh.manual-entry").equals("off", ignoreCase = true)
 
 /**
  * Activity 级：持有 [Session] + [WeighingMachine]（开发规格 9.4）。
@@ -350,7 +363,7 @@ class ReceivingViewModel(
     fun hasBoxes(): Boolean = (session?.boxes?.isNotEmpty() == true)
 
     fun editManual(seq: Int, netKg: Double) {
-        if (locked) return
+        if (locked || !manualEntryOn(container.options.value)) return
         val s = session ?: return
         session = s.editManual(seq, Kg.of(netKg))
         flash("第 $seq 箱已手录", ok = true)
@@ -360,7 +373,7 @@ class ReceivingViewModel(
     }
 
     fun addManual(netKg: Double) {
-        if (locked) return
+        if (locked || !manualEntryOn(container.options.value)) return
         val before = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.addManual(Kg.of(netKg))
@@ -937,6 +950,7 @@ class ReceivingViewModel(
                 printBlock = printBlock(),
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
                 locked = locked,
+                manualEntry = manualEntryOn(container.options.value),
             )
         }
         if (confirmed) {

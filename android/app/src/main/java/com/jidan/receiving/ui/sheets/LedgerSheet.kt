@@ -43,8 +43,8 @@ class LedgerSheet : BottomSheetDialogFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.ui.collect { state ->
                     b.title.text = getString(R.string.ledger_title_n, state.count)
-                    // 确认计量后与提交后流水只读：不能手工加、重称、手录、删除，只能补打（APP-08）
-                    b.manualAdd.isVisible = !state.locked
+                    // 确认计量后与提交后流水只读：不能手工加、重称、手录、删除，只能补打（APP-08）；`weigh.manual-entry = off` 时也不出现手工加一箱
+                    b.manualAdd.isVisible = state.canManualAdd
                     val groups = SameWeight.groups(state.boxes.map { it.net })
                     b.groups.text = if (groups.isEmpty()) {
                         ""

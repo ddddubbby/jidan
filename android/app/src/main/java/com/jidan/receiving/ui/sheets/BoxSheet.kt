@@ -37,7 +37,13 @@ class BoxSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = binding ?: return
+        // `weigh.manual-entry = off`：不出现手工录入与手工加一箱（重称、删除照常）
+        val manualOk = vm.ui.value.manualEntry
         if (addMode) {
+            if (!manualOk) {
+                dismiss()
+                return
+            }
             showEdit(b, title = getString(R.string.ledger_manual_add), seq = null)
             return
         }
@@ -83,6 +89,7 @@ class BoxSheet : BottomSheetDialogFragment() {
             vm.startReweigh(s)
             dismiss()
         }
+        b.manualEdit.isVisible = manualOk
         b.manualEdit.setOnClickListener {
             showEdit(b, title = getString(R.string.box_manual_title, box.seq), seq = s)
         }
