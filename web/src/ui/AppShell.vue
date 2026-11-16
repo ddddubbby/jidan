@@ -8,7 +8,7 @@ import { useSession } from '../stores/session'
 const NAV: [string, string][] = [
   ['-', '日常'], ['orders', '采购入库单'], ['prices', '每日基准价'],
   ['-', '配置'], ['rules', '定价规则'], ['basics', '规格与皮重'],
-  ['-', '系统'], ['archive', '好生意档案'], ['accounts', '磅秤员账号'], ['settings', '系统设置'],
+  ['-', '系统'], ['archive', '好生意档案'], ['accounts', '磅秤员账号'], ['settings', '系统设置'], ['options', '高级选项'],
 ]
 
 const route = useRoute()
