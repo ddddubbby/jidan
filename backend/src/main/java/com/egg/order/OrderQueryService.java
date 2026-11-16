@@ -41,6 +41,7 @@ public class OrderQueryService {
 
     public static final String TAB_PENDING = "pending";
     public static final String TAB_FAILED = "failed";
+    public static final String TAB_UNSENT = "unsent";
     public static final String TAB_SENT = "sent";
     public static final String TAB_ALL = "all";
 
@@ -90,8 +91,8 @@ public class OrderQueryService {
     public record MissingPrice(long specId, String specName) {
     }
 
-    /** 导航提示：待审核数、回传失败数、当日没录基准价的启用规格。 */
-    public record Counts(long pending, long failed, List<MissingPrice> missingBasePrices) {
+    /** 导航提示：待审核数、回传失败数、已审核未回传数（含回传失败的）、当日没录基准价的启用规格。 */
+    public record Counts(long pending, long failed, long unsent, List<MissingPrice> missingBasePrices) {
     }
 
     /** 没有下一张时 id 等字段都是 null。 */
@@ -125,7 +126,7 @@ public class OrderQueryService {
 
     // ---------------------------------------------------------------- 列表
 
-    /** @param tab pending / failed / sent / all；q 匹配农户名、农户号码、单据编号、批次号 */
+    /** @param tab pending / failed / unsent / sent / all；q 匹配农户名、农户号码、单据编号、批次号 */
     public PageResult<OrderRow> list(String tab, String q, int page, int pageSize) {
         int p = Math.max(1, page);
         int size = Math.min(MAX_PAGE_SIZE, Math.max(1, pageSize));
@@ -134,6 +135,8 @@ public class OrderQueryService {
             case TAB_PENDING -> w.eq("status", OrderStatus.PENDING.name());
             // 已审核且带回传失败原因；没带原因的是“待回传”（push.on-approve = manual），只出现在“全部”里
             case TAB_FAILED -> w.eq("status", OrderStatus.APPROVED.name()).isNotNull("push_error");
+            // 全部已审核未回传的单（含回传失败的）：push.on-approve = manual 时页签叫“待回传”（开发规格 8.2）
+            case TAB_UNSENT -> w.eq("status", OrderStatus.APPROVED.name());
             case TAB_SENT -> w.eq("status", OrderStatus.PUSHED.name());
             case TAB_ALL -> {
             }
@@ -178,9 +181,10 @@ public class OrderQueryService {
         long pending = orders.selectCount(new QueryWrapper<PurchaseOrder>().eq("status", OrderStatus.PENDING.name()));
         long failed = orders.selectCount(new QueryWrapper<PurchaseOrder>()
                 .eq("status", OrderStatus.APPROVED.name()).isNotNull("push_error"));
+        long unsent = orders.selectCount(new QueryWrapper<PurchaseOrder>().eq("status", OrderStatus.APPROVED.name()));
         List<MissingPrice> missing = basePrices.day(LocalDate.now()).items().stream().filter(i -> i.price() == null)
                 .map(i -> new MissingPrice(i.specId(), i.specName())).toList();
-        return new Counts(pending, failed, missing);
+        return new Counts(pending, failed, unsent, missing);
     }
 
     // ---------------------------------------------------------------- 详情与流水

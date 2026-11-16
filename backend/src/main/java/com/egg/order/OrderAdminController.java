@@ -49,7 +49,7 @@ public class OrderAdminController {
         this.edit = edit;
     }
 
-    /** tab：pending（默认）/ failed / sent / all。 */
+    /** tab：pending（默认）/ failed / unsent / sent / all。 */
     @GetMapping("/api/orders")
     public PageResult<OrderRow> list(@RequestParam(required = false) String tab, @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {

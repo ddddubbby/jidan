@@ -103,7 +103,3 @@ const bindTitle = (r: RuleView) => r.binds.map((b) => b.name + (b.tail4 ? `ï¼ˆå°
 
   <RuleEditDrawer v-model:open="drawer" :rule="editing" :products="products" :specs="specs" @changed="load()" />
 </template>
-
-<style>
-.twrap { overflow-x: auto; border-radius: 16px; }
-</style>

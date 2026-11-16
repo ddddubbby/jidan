@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPrices, savePrice } from '../../api/basics'
 import { errorText } from '../../api/http'
+import { pendingBySpec } from '../../api/orders'
 import { useMeta } from '../../stores/meta'
 import { dot, shiftDay, today } from '../../ui/date'
 import { toast } from '../../ui/toast'
@@ -30,6 +31,7 @@ const isToday = computed(() => date.value >= today())
 const rows = ref<Row[]>([])
 const loading = ref(true)
 const loadErr = ref('')
+const waiting = ref<Record<string, number>>({}) // 规格名 → 这一天收购、等着这个价的待审核单张数
 const inputs = ref<Record<number, HTMLInputElement | null>>({})
 
 // 只认站内路径，免得被带到别的网站
@@ -62,6 +64,8 @@ async function load() {
   } finally {
     loading.value = false
   }
+  // 取不到只是少一句提示，不影响录价
+  pendingBySpec(date.value).then((w) => (waiting.value = w), () => (waiting.value = {}))
   await nextTick()
   const sid = Number(route.query.spec)
   focusAt(rows.value.find((r) => r.specId === sid) ?? missing.value[0])
@@ -183,7 +187,10 @@ function backTo() {
           <td class="nb">
             <span v-if="r.err" class="inline-err">{{ r.err }}</span>
             <span v-else-if="r.price != null" class="muted okmark">✓ {{ r.saved ? '已保存' : '已录' }}</span>
-            <span v-else class="tag warn">未录</span>
+            <template v-else>
+              <span class="tag warn">未录</span>
+              <span v-if="waiting[r.name]" class="muted waitnote">{{ waiting[r.name] }} 张待审核在等</span>
+            </template>
           </td>
         </tr>
         <tr v-if="!rows.length"><td colspan="5" class="empty">没有启用的规格，先到“规格与皮重”里新增</td></tr>
@@ -195,9 +202,7 @@ function backTo() {
 <style>
 .pdate { font-weight: 600; min-width: 112px; text-align: center; }
 .okmark { font-weight: 600; }
-.strip { display: flex; flex-wrap: wrap; gap: 10px; margin: -4px 0 16px; }
-.sitem { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 14px; border-radius: 12px; font-weight: 600; background: var(--warn-bg); color: var(--warn-ink); }
-.sitem .btn { min-height: 34px; }
+.waitnote { margin-left: 8px; font-size: 13px; }
 .backbtn { margin: -6px 0 10px; }
 .result { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 15px; }
 .result.ok { background: var(--ok-bg); color: var(--ok-ink); }

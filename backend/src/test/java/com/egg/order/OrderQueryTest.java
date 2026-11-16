@@ -432,6 +432,7 @@ class OrderQueryTest {
         assertThat(ids(get("/api/orders?tab=pending"))).containsExactlyInAnyOrder(pendingLiSi, pendingWang);
         assertThat(ids(get("/api/orders"))).containsExactlyInAnyOrder(pendingLiSi, pendingWang);
         assertThat(ids(get("/api/orders?tab=failed"))).containsExactly(failed);
+        assertThat(ids(get("/api/orders?tab=unsent"))).containsExactly(failed);
         assertThat(ids(get("/api/orders?tab=sent"))).containsExactly(sent);
         JsonNode all = get("/api/orders?tab=all");
         assertThat(all.get("total").asInt()).isEqualTo(5);
@@ -473,6 +474,7 @@ class OrderQueryTest {
         JsonNode c = get("/api/orders/counts");
         assertThat(c.get("pending").asInt()).isEqualTo(2);
         assertThat(c.get("failed").asInt()).isEqualTo(1);
+        assertThat(c.get("unsent").asInt()).isEqualTo(1);
         assertThat(c.get("missingBasePrices")).hasSize(1);
         assertThat(c.get("missingBasePrices").get(0).get("specName").asText()).isEqualTo("480枚/箱");
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 240)", today, s480);
@@ -485,6 +487,9 @@ class OrderQueryTest {
         jdbc.update("UPDATE purchase_order SET status = 'APPROVED' WHERE id = ?", id);
         assertThat(get("/api/orders/counts").get("failed").asInt()).isZero();
         assertThat(ids(get("/api/orders?tab=failed"))).isEmpty();
+        // “待回传”页签（unsent）与计数把它算进去
+        assertThat(get("/api/orders/counts").get("unsent").asInt()).isEqualTo(1);
+        assertThat(ids(get("/api/orders?tab=unsent"))).containsExactly(id);
         assertThat(ids(get("/api/orders?tab=all"))).containsExactly(id);
     }
 
