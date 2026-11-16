@@ -22,3 +22,9 @@ egg:
   # 库里没有业务数据时写入一套演示数据（开发规格 7.3）。开发与模拟模式默认开；
   # 正式部署设 EGG_SEED_DEMO=false。
   seed-demo: ${EGG_SEED_DEMO:true}
+
+  # 初始管理员（开发规格 7.2）：启动时库里没有任何管理员才建；已有管理员时这三项不起作用。
+  admin:
+    phone: ${EGG_ADMIN_PHONE:}
+    password: ${EGG_ADMIN_PASSWORD:}
+    name: ${EGG_ADMIN_NAME:管理员}
