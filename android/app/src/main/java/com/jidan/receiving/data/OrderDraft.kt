@@ -13,6 +13,8 @@ data class OrderHeader(
     val farmerPhone: String? = null,
     val product: Pick? = null,
     val spec: Pick? = null,
+    /** 规格标准净含量 W0（0.01kg）；称重状态机用。 */
+    val stdNetCents: Int? = null,
     val warehouse: Pick? = null,
 ) {
     val ready: Boolean

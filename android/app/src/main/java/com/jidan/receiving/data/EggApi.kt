@@ -42,4 +42,10 @@ interface EggApi {
 
     @GET("api/base-prices")
     suspend fun basePrices(@Query("date") date: String? = null): BasePriceDayDto
+
+    @GET("api/tares")
+    suspend fun tares(): List<TareDto>
+
+    @POST("api/batches")
+    suspend fun createBatch(@Body body: BatchRequest = BatchRequest()): BatchDto
 }

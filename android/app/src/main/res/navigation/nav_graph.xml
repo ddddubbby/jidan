@@ -28,5 +28,19 @@
             app:destination="@id/loginFragment"
             app:popUpTo="@id/nav_graph"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_create_to_weigh"
+            app:destination="@id/weighFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/weighFragment"
+        android:name="com.jidan.receiving.ui.weigh.WeighFragment"
+        android:label="@string/create_title">
+        <action
+            android:id="@+id/action_weigh_to_create"
+            app:destination="@id/createFragment"
+            app:popUpTo="@id/createFragment"
+            app:popUpToInclusive="false" />
     </fragment>
 </navigation>

@@ -26,4 +26,20 @@ class CatalogRepository(
 
     suspend fun basePriceBySpec(): Map<Long, Double?> =
         client.runApi { this.basePrices(null) }.items.associate { it.specId to it.price }
+
+    /** 启用且作热键的皮重。 */
+    suspend fun tareHotkeys(): List<TareDto> =
+        client.runApi { this.tares() }.filter { it.enabled && it.hotkey }
+
+    /**
+     * 取当日批次号。`POST /api/batches` 属单据任务，未合入时本地占位
+     *（附录 E P6-4），合入后走真接口。
+     */
+    suspend fun nextBatchNo(): String = try {
+        client.runApi { this.createBatch(BatchRequest()) }.batchNo
+    } catch (_: Throwable) {
+        val day = java.time.LocalDate.now()
+            .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
+        "SG$day-tmp"
+    }
 }

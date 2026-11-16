@@ -208,12 +208,15 @@ class CreateViewModel(
     fun commitHeader(): Boolean {
         val s = _ui.value
         if (!s.ready) return false
+        val std = s.specs.firstOrNull { it.id == s.specId }?.stdNetKg
+        val stdCents = std?.let { com.jidan.receiving.core.Kg.of(it).cents }
         container.orderDraft.update {
             it.copy(
                 farmer = Pick(s.farmerId!!, s.farmerName!!),
                 farmerPhone = s.farmerPhone,
                 product = Pick(s.productId!!, s.productName!!),
                 spec = Pick(s.specId!!, s.specName!!),
+                stdNetCents = stdCents,
                 warehouse = Pick(s.warehouseId!!, s.warehouseName!!),
             )
         }

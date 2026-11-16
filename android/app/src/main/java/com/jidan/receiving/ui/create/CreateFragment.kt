@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -121,8 +120,7 @@ class CreateFragment : Fragment() {
             return
         }
         if (vm.commitHeader()) {
-            // P6-4 接称重导航；此前先提示
-            Toast.makeText(requireContext(), R.string.create_ready_hint, Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_create_to_weigh)
         }
     }
 

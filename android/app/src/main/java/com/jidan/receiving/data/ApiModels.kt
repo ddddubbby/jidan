@@ -98,3 +98,20 @@ data class BasePriceItemDto(
     val stdNetKg: Double? = null,
     val price: Double? = null,
 )
+
+data class TareDto(
+    val id: Long,
+    val name: String,
+    val tareKg: Double,
+    val hotkey: Boolean = true,
+    val enabled: Boolean = true,
+)
+
+/** `POST /api/batches`；后端未合入前客户端可本地占位。 */
+data class BatchRequest(
+    val bizDate: String? = null,
+)
+
+data class BatchDto(
+    val batchNo: String,
+)
