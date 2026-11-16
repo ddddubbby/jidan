@@ -126,7 +126,9 @@ async function copyPrev() {
     r.draft = String(r.prev)
     await save(r)
   }
-  toast(`已沿用前一天：${todo.length} 个规格`)
+  const failed = todo.filter((r) => r.err).length
+  if (failed === 0) toast(`已沿用前一天：${todo.length} 个规格`)
+  else toast(`已沿用 ${todo.length - failed} 个规格，${failed} 个没存上，见各行提示`)
 }
 
 function backTo() {
