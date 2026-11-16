@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         val navHost = supportFragmentManager.findFragmentById(R.id.nav_host) as NavHostFragment
         val nav = navHost.navController
         if (savedInstanceState == null && appContainer().session.value != null) {
-            nav.navigate(R.id.action_login_to_home)
+            nav.navigate(R.id.action_login_to_create)
         }
 
         lifecycleScope.launch {
@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
                 appContainer().unauthenticated.collect {
                     if (nav.currentDestination?.id != R.id.loginFragment) {
                         nav.navigate(
-                            R.id.action_home_to_login,
+                            R.id.action_create_to_login,
                             Bundle().apply { putBoolean(LoginFragment.ARG_EXPIRED, true) },
                         )
                     }

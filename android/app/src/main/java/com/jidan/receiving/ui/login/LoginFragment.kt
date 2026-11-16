@@ -98,7 +98,7 @@ class LoginFragment : Fragment() {
             LoginStep.PHONE -> b.phone.requestFocus()
             LoginStep.PASSWORD -> b.password.requestFocus()
             LoginStep.READY -> vm.login {
-                findNavController().navigate(R.id.action_login_to_home)
+                findNavController().navigate(R.id.action_login_to_create)
             }
             LoginStep.BUSY -> Unit
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import com.jidan.receiving.data.ApiClient
 import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.AuthRepository
+import com.jidan.receiving.data.CatalogRepository
+import com.jidan.receiving.data.OrderDraftStore
 import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.data.SessionUser
 import com.jidan.receiving.data.TokenStore
@@ -56,6 +58,8 @@ class AppContainer(context: Context) {
     )
 
     val auth = AuthRepository(apiClient)
+    val catalog = CatalogRepository(apiClient)
+    val orderDraft = OrderDraftStore()
 
     val scale: Scale = DeviceFactory.createScale(
         scope,
@@ -95,6 +99,7 @@ class AppContainer(context: Context) {
         tokenStore.clear()
         _session.value = null
         _options.value = AppOptions.defaults()
+        orderDraft.clear()
     }
 
     fun applyOptions(options: AppOptions) {
