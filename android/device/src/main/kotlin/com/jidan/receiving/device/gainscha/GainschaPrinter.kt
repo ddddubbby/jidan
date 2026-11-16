@@ -131,7 +131,7 @@ class GainschaPrinter(
             bytes
         }
         is PrintPayload.Bitmap -> {
-            val built = TsplBytes.bitmapJob(PngRaster.decode(payload.png), payload.gapMm)
+            val built = TsplBytes.bitmapJob(PngRaster.decode(payload.png), payload.gapMm, payload.dotsPerMm)
             log("TSPL 位图指令（${built.bytes.size} 字节）：\r\n${built.logText}")
             built.bytes
         }

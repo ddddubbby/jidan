@@ -9,6 +9,7 @@ import com.jidan.receiving.device.PrintOutcome
 import com.jidan.receiving.device.PrinterIssue
 import com.jidan.receiving.device.label.LabelContent
 import com.jidan.receiving.device.label.LabelData
+import com.jidan.receiving.device.label.LabelGeometry
 import com.jidan.receiving.device.label.LabelRenderer
 import com.jidan.receiving.device.label.LabelTemplate
 import com.jidan.receiving.device.label.RenderMode
@@ -142,7 +143,9 @@ class PrintQueue(
             val data = labelData(s, box)
             val tpl = template()
             val mode = LabelRenderer.parseMode(options().get("print.render"))
-            val payload = LabelRenderer.render(data, tpl, mode)
+            val o = options()
+            val geo = LabelGeometry.parse(o.get("print.dpi"), o.get("print.offset-x-mm"), o.get("print.offset-y-mm"))
+            val payload = LabelRenderer.render(data, tpl, mode, geo)
             _preview.value = LabelPreview(data, tpl.content, LabelRenderer.previewText(data, tpl.content))
             when (val outcome = printer.print(payload)) {
                 is PrintOutcome.Success -> {

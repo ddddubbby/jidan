@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
+import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.core.Box
 import com.jidan.receiving.core.EmptyBoxState
 import com.jidan.receiving.core.EmptyBoxTare
@@ -180,8 +181,19 @@ data class WeighUiState(
     val labelPreview: String = "",
     /** 已确认计量或已提交：流水只读，只能补打（APP-08）。 */
     val locked: Boolean = false,
+    /** 选项 `weigh.manual-entry`（on 才允许手工录入净重）。 */
+    val manualEntry: Boolean = true,
 ) {
+    /** 单箱弹层的“手工录入”入口：选项允许才出现（单箱弹层本身只在未锁定时能打开）。 */
+    val canManualEdit: Boolean get() = manualEntry && !locked
+
     val count: Int get() = boxes.size
+
+    /** 秤没连上或断开：称重框位置换成连接卡片（原型 screenWeigh）。 */
+    val showScaleCard: Boolean get() = !scaleConnected
+
+    /** “手工加一箱”入口（连接卡片与流水弹层共用）：秤不可用时的最后兜底，0 箱也能用（APP-11）。 */
+    val showManualAdd: Boolean get() = manualEntry && !locked
     val totalNet: Kg get() = boxes.map { it.net }.sum()
     fun avg(rule: RoundRule): Kg? =
         if (count == 0) null else RoundAvg.of(totalNet, count, rule)
@@ -223,6 +235,10 @@ internal fun WeighUiState.withScaleSide(ctl: WeighController, scaleConnected: Bo
         tareError = ctl.tareError,
     )
 }
+
+/** `weigh.manual-entry`：off 时流水弹层与单箱弹层不出现“手工加一箱”“手工录入”（开发规格 4.3）。 */
+fun manualEntryOn(options: AppOptions): Boolean =
+    !options.get("weigh.manual-entry").equals("off", ignoreCase = true)
 
 /**
  * Activity 级：持有 [Session] + [WeighingMachine]（开发规格 9.4）。
@@ -379,7 +395,7 @@ class ReceivingViewModel(
     fun hasBoxes(): Boolean = (session?.boxes?.isNotEmpty() == true)
 
     fun editManual(seq: Int, netKg: Double) {
-        if (locked) return
+        if (locked || !manualEntryOn(container.options.value)) return
         val s = session ?: return
         session = s.editManual(seq, Kg.of(netKg))
         flash("第 $seq 箱已手录", ok = true)
@@ -389,7 +405,7 @@ class ReceivingViewModel(
     }
 
     fun addManual(netKg: Double) {
-        if (locked) return
+        if (locked || !manualEntryOn(container.options.value)) return
         val before = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
         session = s.addManual(Kg.of(netKg))
@@ -916,6 +932,7 @@ class ReceivingViewModel(
                 printBlock = printBlock(),
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
                 locked = locked,
+                manualEntry = manualEntryOn(container.options.value),
             )
         }
         if (confirmed) {
