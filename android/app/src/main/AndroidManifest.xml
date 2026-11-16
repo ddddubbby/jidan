@@ -5,6 +5,7 @@
 
     <!-- 联调方自部署不一定有 HTTPS，允许明文 HTTP（开发规格 6.1） -->
     <application
+        android:name=".ReceivingApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

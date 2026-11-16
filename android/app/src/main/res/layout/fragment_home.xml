@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 空首页：顶栏样式照原型 .topbar；P6-1 起换成登录页与建单页 -->
+<!-- P6-1 登录后的占位首页；P6-3 换成建单页 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -32,9 +32,33 @@
         android:layout_height="1dp"
         android:background="@color/line" />
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/bg" />
+        android:background="@color/bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/page_padding">
+
+        <TextView
+            style="@style/Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/home_placeholder"
+            android:textColor="@color/ink_2" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/logout"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginTop="24dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/logout"
+            android:textAllCaps="false"
+            android:textColor="@color/err_ink" />
+    </LinearLayout>
 </LinearLayout>
