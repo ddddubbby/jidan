@@ -1,0 +1,105 @@
+// 草稿：按《佳博 SDK2 2.0.3 API 说明文档》写的 GainschaSdk 真实现。
+// 没有 sdk2-release.aar，没编译过，未经实物验证。接法见 README.md。
+// 标了 “文档没写” 的地方是 API 说明文档没给出的类名、包名或方法，要以 aar 为准。
+package com.jidan.receiving.device.gainscha
+
+import android.content.Context
+import com.jidan.receiving.device.DiscoveredDevice
+// 文档只给了这几个类的包路径：
+import com.gainscha.sdk2.Printer
+import com.gainscha.sdk2.PrinterFinder
+// 文档没写包路径：ConnectType、ConnectionListener、PrinterResponse、PrintStatus、
+// BluetoothPrinterDevice、PrinterDevice。用 IDE 补全。
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.IOException
+import kotlin.coroutines.resume
+
+class SdkGainschaSdk(@Suppress("unused") private val context: Context) : GainschaSdk {
+    override var onDisconnected: (() -> Unit)? = null
+
+    private val found = LinkedHashMap<String, BluetoothPrinterDevice>()
+    private var printer: Printer? = null
+    private var connecting: CompletableDeferred<Boolean>? = null
+
+    private val listener = object : ConnectionListener {
+        override fun onPrinterConnected(p: Printer) {
+            printer = p
+            p.setAutoReConnect(false, 0) // 重连交给 LinkKeeper，不让 SDK 自己再连一层
+            connecting?.complete(true)
+        }
+
+        override fun onPrinterConnectFail(p: Printer) {
+            connecting?.complete(false)
+        }
+
+        override fun onPrinterDisconnect(p: Printer) {
+            if (printer === p) printer = null
+            onDisconnected?.invoke()
+        }
+    }
+
+    init {
+        Printer.addConnectionListener(listener)
+    }
+
+    // API 文档 5.2：只搜蓝牙
+    override suspend fun search(): List<DiscoveredDevice> = suspendCancellableCoroutine { cont ->
+        found.clear()
+        val finder = PrinterFinder()
+        finder.searchPrinters(
+            ConnectType.BLUETOOTH,
+            object : PrinterFinder.SimpleSearchPrinterResultListener() {
+                override fun onSearchBluetoothPrinter(device: BluetoothPrinterDevice) {
+                    // 文档没写：BluetoothPrinterDevice 怎么取蓝牙地址、信号强度（T-01）。
+                    // 先用 getPrinterName() 当 id、信号固定 2 格占位，实测时改成地址。
+                    found[device.getPrinterName()] = device
+                }
+
+                override fun onSearchCompleted() {
+                    cont.resume(found.keys.map { DiscoveredDevice(it, "GP-M32B", 2) })
+                }
+            },
+        )
+        cont.invokeOnCancellation { finder.stopSearchDevice() }
+    }
+
+    // API 文档 4.1、4.2：Printer.connect 是静态方法，结果在 ConnectionListener 里
+    override suspend fun connect(id: String): Boolean {
+        val device = found[id] ?: return false
+        val wait = CompletableDeferred<Boolean>()
+        connecting = wait
+        Printer.connect(device)
+        return wait.await()
+    }
+
+    // API 文档 4.4
+    override fun disconnect() {
+        printer?.disconnect()
+        printer = null
+    }
+
+    // API 文档 9.3、9.5：打印并自动查询一票一控状态；延迟 2 秒、超时 3 秒（9.4 的默认值）
+    override suspend fun printTracked(data: ByteArray): Int? {
+        val p = printer ?: throw IOException("打印机未连接")
+        return suspendCancellableCoroutine { cont ->
+            p.printWithStatusQuery(data, 2000L, 3000L, object : PrinterResponse<PrintStatus> {
+                override fun onPrinterResponse(status: PrintStatus?) {
+                    cont.resume(status?.getStatusCode()?.toInt()?.and(0xFF))
+                }
+            })
+        }
+    }
+
+    // API 文档 6.1.3：发送并等回复，超时回调里是 null
+    override suspend fun ask(command: ByteArray): ByteArray? {
+        val p = printer ?: return null
+        return suspendCancellableCoroutine { cont ->
+            p.print(command, 1000, object : PrinterResponse<ByteArray> {
+                override fun onPrinterResponse(responseData: ByteArray?) {
+                    cont.resume(responseData)
+                }
+            })
+        }
+    }
+}

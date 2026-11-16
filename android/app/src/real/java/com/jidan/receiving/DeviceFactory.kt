@@ -7,7 +7,7 @@ import com.jidan.receiving.device.Scale
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * 实机版：按型号取 DeviceRegistry（P6-2 为占位，未经实物验证）。
+ * 实机版：按型号取 DeviceRegistry（秤为占位，打印机为 GainschaPrinter 但 SDK 未接入，均未经实物验证）。
  */
 object DeviceFactory {
     const val variantName = "实机版"
@@ -17,5 +17,5 @@ object DeviceFactory {
         DeviceRegistry.createScale(scaleModel)
 
     fun createPrinter(scope: CoroutineScope, prefs: Prefs, printerModel: String?): LabelPrinter =
-        DeviceRegistry.createPrinter(printerModel)
+        DeviceRegistry.createPrinter(printerModel, scope, prefs.pairedPrinterId)
 }

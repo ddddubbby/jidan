@@ -14,7 +14,7 @@ import java.io.ByteArrayOutputStream
 
 /**
  * 按模板生成 TSPL 或位图（开发规格 9.3）。
- * 位图与模拟台预览共用 [drawBitmap]；真机佳博发送属 P8-2，此处只出指令/图。
+ * 位图与模拟台预览共用 [drawBitmap]；这里只出指令/图，发给佳博打印机由 `gainscha/GainschaPrinter` 做。
  * 二维码：TSPL 用 QRCODE 指令（打印机自己编码），位图用 zxing 生成的真矩阵，纠错等级两边都是 L。
  */
 object LabelRenderer {
@@ -25,7 +25,7 @@ object LabelRenderer {
      * TSPL 简体中文 24×24 点阵字库（GB 码），见 TSPL 手册 TEXT 指令的字体表（`TSS24.BF2`）。
      * 标签上的行都带中文，统一用它；字库内含半角数字与字母。
      * 注意：中文字库按 GB 码取字，所以指令字符串发给打印机时必须编成 GB18030/GBK 字节，
-     * 不能直接按 UTF-8 发送。这一步属 P8-2（佳博适配器），这里只出字符串。
+     * 不能直接按 UTF-8 发送。这一步在 `gainscha/TsplBytes.encode`，这里只出字符串。
      */
     const val FONT_CN = "TSS24.BF2"
 
@@ -35,7 +35,7 @@ object LabelRenderer {
         mode: RenderMode,
     ): PrintPayload = when (mode) {
         RenderMode.TEXT -> PrintPayload.Text(toTspl(data, template))
-        RenderMode.BITMAP -> PrintPayload.Bitmap(toPng(data, template))
+        RenderMode.BITMAP -> PrintPayload.Bitmap(toPng(data, template), template.gapMm)
     }
 
     fun parseMode(raw: String?): RenderMode =
@@ -62,28 +62,48 @@ object LabelRenderer {
         )
     }
 
+    /**
+     * 每条指令以 CR LF 结尾（TSPL 手册“设计标签”）；公制单位与数字之间要有空格，
+     * GAP 的两个参数都带 mm（手册 GAP 指令）。
+     */
     fun toTspl(data: LabelData, template: LabelTemplate): String {
         val w = template.widthMm.toInt()
         val h = template.heightMm.toInt()
         val gap = template.gapMm.toInt()
         val sb = StringBuilder()
-        sb.appendLine("SIZE $w mm,$h mm")
-        sb.appendLine("GAP $gap mm,0")
-        sb.appendLine("DIRECTION 1")
-        sb.appendLine("CLS")
+        sb.cmd("SIZE $w mm,$h mm")
+        sb.cmd("GAP $gap mm,0 mm")
+        sb.cmd("DIRECTION 1")
+        sb.cmd("CLS")
         val textByKey = lines(data, template.content).toMap()
         for (f in template.fields) {
             val text = textByKey[f.key] ?: continue
             val x = mmToDots(f.xMm)
             val y = mmToDots(f.yMm)
-            sb.appendLine("TEXT $x,$y,\"$FONT_CN\",0,1,1,\"${escapeTspl(text)}\"")
+            sb.cmd("TEXT $x,$y,\"$FONT_CN\",0,1,1,\"${escapeTspl(text)}\"")
         }
         val qx = mmToDots(template.qrXMm)
         val qy = mmToDots(template.qrYMm)
         val cell = (mmToDots(template.qrSizeMm) / qrMatrix(data.qrPayload).width).coerceIn(1, 10)
-        sb.appendLine("QRCODE $qx,$qy,L,$cell,A,0,\"${escapeTspl(data.qrPayload)}\"")
-        sb.appendLine("PRINT 1")
+        sb.cmd("QRCODE $qx,$qy,L,$cell,A,0,\"${escapeTspl(data.qrPayload)}\"")
+        sb.cmd("PRINT 1")
         return sb.toString()
+    }
+
+    /** 设备弹层的“打印测试”：一行中文，用来看字库与 GB 编码是否对。 */
+    fun testTspl(template: LabelTemplate = LabelTemplate.of(LabelContent.MINIMAL)): String {
+        val sb = StringBuilder()
+        sb.cmd("SIZE ${template.widthMm.toInt()} mm,${template.heightMm.toInt()} mm")
+        sb.cmd("GAP ${template.gapMm.toInt()} mm,0 mm")
+        sb.cmd("DIRECTION 1")
+        sb.cmd("CLS")
+        sb.cmd("TEXT 24,24,\"$FONT_CN\",0,1,1,\"收蛋 测试 0123456789\"")
+        sb.cmd("PRINT 1")
+        return sb.toString()
+    }
+
+    private fun StringBuilder.cmd(line: String) {
+        append(line).append("\r\n")
     }
 
     fun drawBitmap(data: LabelData, template: LabelTemplate): Bitmap {

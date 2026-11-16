@@ -51,7 +51,7 @@ class LabelRendererTest {
         val tpl = LabelTemplate.of(LabelContent.MINIMAL)
         val tspl = LabelRenderer.toTspl(data, tpl)
         assertTrue(tspl.contains("SIZE 60 mm,40 mm"))
-        assertTrue(tspl.contains("GAP 2 mm,0"))
+        assertTrue(tspl.contains("GAP 2 mm,0 mm"))
         assertTrue(tspl.contains("QRCODE"))
         assertTrue(tspl.contains("SG20261116-1#3"))
         assertTrue(tspl.contains("PRINT 1"))
