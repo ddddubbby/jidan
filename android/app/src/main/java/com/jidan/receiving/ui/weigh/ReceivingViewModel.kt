@@ -207,6 +207,9 @@ data class WeighUiState(
         }
 }
 
+/** [ReceivingViewModel.leaveWeigh] 的结果：已经离开可以返回，或要先问一句。 */
+enum class LeaveWeigh { Left, NeedConfirm }
+
 /** 称重框要显示的、来自秤这一侧（[Session]、状态机、皮重下发）的那部分界面状态。 */
 internal fun WeighUiState.withScaleSide(ctl: WeighController, scaleConnected: Boolean): WeighUiState {
     val s = ctl.session
@@ -546,13 +549,13 @@ class ReceivingViewModel(
     }
 
     /** 清空内存里的整张单（含提交后留着补打的箱）与打印队列，回到没有单的状态。 */
-    private fun resetAll() {
+    private fun resetAll(keepOrderDraft: Boolean = false) {
         printQueue.stop()
         startJob?.cancel()
         ctl.reset()
         confirmed = false
         submitted = false
-        container.orderDraft.clear()
+        if (!keepOrderDraft) container.orderDraft.clear()
         _ui.value = WeighUiState()
         _summary.value = SummaryUiState()
         _ruleSheet.value = RuleSheetState()
@@ -789,6 +792,19 @@ class ReceivingViewModel(
             return emptyList()
         }
         return s.boxes.filter { it.group == g }
+    }
+
+    /**
+     * 离开称重页（返回键、左上角返回）。对照原型 `leave`：
+     * 0 箱等同没有单：清掉内存里的单和本地草稿（不弹确认），建单页四项原样保留、仍可改，
+     * 再次“开始收蛋”按建单页当时的四项新开一单（批次号可能跳一个）；
+     * 有箱时不动任何东西，返回 [LeaveWeigh.NeedConfirm]，由界面问“放弃这一单 / 继续称”。
+     */
+    fun leaveWeigh(): LeaveWeigh {
+        if (hasBoxes()) return LeaveWeigh.NeedConfirm
+        container.sessionStore.clear()
+        resetAll(keepOrderDraft = true)
+        return LeaveWeigh.Left
     }
 
     /** 放弃整单：清草稿与内存，回到建单。 */
