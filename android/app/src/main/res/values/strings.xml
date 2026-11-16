@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name 按构建包在 app/build.gradle.kts 里生成 -->
+    <string name="home_title">鸡蛋采购入库</string>
+    <string name="variant_line">%1$s · 版本 %2$s</string>
+</resources>
