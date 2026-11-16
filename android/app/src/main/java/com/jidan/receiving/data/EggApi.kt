@@ -48,4 +48,7 @@ interface EggApi {
 
     @POST("api/batches")
     suspend fun createBatch(@Body body: BatchRequest = BatchRequest()): BatchDto
+
+    @POST("api/orders/quote")
+    suspend fun quote(@Body body: QuoteRequest): QuoteResult
 }

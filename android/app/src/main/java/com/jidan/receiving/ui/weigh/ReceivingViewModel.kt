@@ -18,6 +18,8 @@ import com.jidan.receiving.core.WeighOutcome
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.core.WeighingMachine
 import com.jidan.receiving.core.sum
+import com.jidan.receiving.data.QuoteRequest
+import com.jidan.receiving.data.QuoteResult
 import com.jidan.receiving.data.TareDto
 import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.device.LinkStatus
@@ -25,12 +27,36 @@ import com.jidan.receiving.printing.PrintJobState
 import com.jidan.receiving.printing.PrintQueue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+sealed class ReceivingNav {
+    data object ToSummary : ReceivingNav()
+    data object BackToWeigh : ReceivingNav()
+}
+
+data class SummaryUiState(
+    val loading: Boolean = false,
+    val refreshing: Boolean = false,
+    val m0Retried: Boolean = false,
+    val quote: QuoteResult? = null,
+    val error: String = "",
+    val farmerName: String = "",
+    val batchNo: String = "",
+    val warehouseName: String = "",
+    val productName: String = "",
+    val specName: String = "",
+    val unprinted: Int = 0,
+    val printEnabled: Boolean = true,
+    val printError: String = "",
+)
 
 data class WeighUiState(
     val ready: Boolean = false,
@@ -86,11 +112,18 @@ class ReceivingViewModel(
     private val _ui = MutableStateFlow(WeighUiState())
     val ui: StateFlow<WeighUiState> = _ui.asStateFlow()
 
+    private val _summary = MutableStateFlow(SummaryUiState())
+    val summary: StateFlow<SummaryUiState> = _summary.asStateFlow()
+
+    private val _nav = MutableSharedFlow<ReceivingNav>(extraBufferCapacity = 1)
+    val nav: SharedFlow<ReceivingNav> = _nav.asSharedFlow()
+
     private var session: Session? = null
     private var machine: WeighingMachine? = null
     private var tickJob: Job? = null
     private var eventClearJob: Job? = null
     private var scaleBound = false
+    private var confirmed = false
 
     val printQueue = PrintQueue(
         printer = container.printer,
@@ -252,9 +285,79 @@ class ReceivingViewModel(
 
     fun reprintOne(seq: Int) = printQueue.reprintOne(seq)
 
-    /** 确认计量：完成后一次打印时入队；逐箱时只补未打出的。汇总页属 P7-2。 */
+    /** 确认计量完毕：完成后一次打印入队，拉计价，进汇总页（APP-08）。 */
     fun onConfirmWeighing() {
+        if (session?.boxes.isNullOrEmpty()) return
+        confirmed = true
         printQueue.enqueueAfterConfirm()
+        viewModelScope.launch {
+            refreshQuote(resetM0Retried = true)
+            _nav.emit(ReceivingNav.ToSummary)
+        }
+    }
+
+    /** 返回计量：解锁流水继续称（原型 `back`）。 */
+    fun backToWeigh() {
+        confirmed = false
+        viewModelScope.launch { _nav.emit(ReceivingNav.BackToWeigh) }
+    }
+
+    /** 重新拉当日基准价再计价（原型 `refreshM0`）。 */
+    fun refreshBasePrice() {
+        viewModelScope.launch {
+            _summary.update { it.copy(refreshing = true, error = "") }
+            runCatching { container.catalog.basePriceBySpec() }
+            refreshQuote(resetM0Retried = false)
+            val stillMissing = _summary.value.quote?.noBasePrice == true
+            _summary.update { it.copy(refreshing = false, m0Retried = stillMissing) }
+        }
+    }
+
+    /** 规则弹层改绑或改系数后重算（P7-3 会带 trial；此处先按当前绑定重拉）。 */
+    fun reloadQuote() {
+        viewModelScope.launch { refreshQuote(resetM0Retried = false) }
+    }
+
+    private suspend fun refreshQuote(resetM0Retried: Boolean) {
+        val s = session ?: return
+        _summary.update {
+            it.copy(
+                loading = true,
+                error = "",
+                m0Retried = if (resetM0Retried) false else it.m0Retried,
+                farmerName = s.farmer.name,
+                batchNo = s.batchNo,
+                warehouseName = s.warehouse.name,
+                productName = s.product.name,
+                specName = s.spec.name,
+                unprinted = printQueue.unprintedCount(),
+                printEnabled = printQueue.enabled(),
+                printError = printQueue.lastError.value,
+            )
+        }
+        try {
+            val quote = container.orders.quote(
+                QuoteRequest(
+                    vendorId = s.farmer.id,
+                    productId = s.product.id,
+                    specId = s.spec.id,
+                    boxNetKg = s.boxes.map { it.net.toDouble() },
+                ),
+            )
+            _summary.update {
+                it.copy(
+                    loading = false,
+                    quote = quote,
+                    unprinted = printQueue.unprintedCount(),
+                    printEnabled = printQueue.enabled(),
+                    printError = printQueue.lastError.value,
+                )
+            }
+        } catch (e: Throwable) {
+            _summary.update {
+                it.copy(loading = false, error = e.userMessage(), quote = null)
+            }
+        }
     }
 
     fun canRegroup(seq: Int): Boolean = session?.canRegroup(seq) == true
@@ -381,8 +484,10 @@ class ReceivingViewModel(
         machine = null
         tickJob?.cancel()
         scaleBound = false
+        confirmed = false
         container.orderDraft.clear()
         _ui.value = WeighUiState()
+        _summary.value = SummaryUiState()
     }
 
     private fun applyOutcome(outcome: WeighOutcome?) {
@@ -447,6 +552,15 @@ class ReceivingViewModel(
                 printError = printQueue.lastError.value,
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
             )
+        }
+        if (confirmed) {
+            _summary.update {
+                it.copy(
+                    unprinted = printQueue.unprintedCount(),
+                    printEnabled = printQueue.enabled(),
+                    printError = printQueue.lastError.value,
+                )
+            }
         }
     }
 

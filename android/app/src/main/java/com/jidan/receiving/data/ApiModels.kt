@@ -119,3 +119,39 @@ data class BatchRequest(
 data class BatchDto(
     val batchNo: String,
 )
+
+/** `POST /api/orders/quote`（开发规格 5.2、APP-08）。 */
+data class QuoteRequest(
+    val vendorId: Long,
+    val productId: Long,
+    val specId: Long,
+    val date: String? = null,
+    val boxNetKg: List<Double> = emptyList(),
+    val trialRuleId: Long? = null,
+    val trialCoef: Double? = null,
+)
+
+/**
+ * 计价预览结果（后端 `PricingService.Result`）。
+ * 缺规则或缺基准价时 [unitPrice]/[amount] 为空，[issues] 含 `NO_RULE` / `NO_BASE_PRICE`。
+ */
+data class QuoteResult(
+    val boxCount: Int = 0,
+    val totalKg: Double? = null,
+    val rawAvgKg: Double? = null,
+    val avgKg: Double? = null,
+    val standardNetKg: Double? = null,
+    val basePrice: Double? = null,
+    val ruleId: Long? = null,
+    val ruleName: String? = null,
+    val coefficient: Double? = null,
+    val tailKg: Double? = null,
+    val priceDiff: Double? = null,
+    val unitPrice: Double? = null,
+    val amount: Double? = null,
+    val roundMode: String? = null,
+    val issues: List<String> = emptyList(),
+) {
+    val noRule: Boolean get() = issues.any { it.equals("NO_RULE", ignoreCase = true) }
+    val noBasePrice: Boolean get() = issues.any { it.equals("NO_BASE_PRICE", ignoreCase = true) }
+}
