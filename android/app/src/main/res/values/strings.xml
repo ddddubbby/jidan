@@ -70,6 +70,10 @@
     <string name="weigh_leave_title">离开称重</string>
     <string name="weigh_leave_keep">先放着，下次继续</string>
     <string name="weigh_abandon">放弃这一单</string>
+    <string name="print_progress">正在打印 %1$d / %2$d</string>
+    <string name="print_reprint_n">补打 %1$d 张标签</string>
+    <string name="print_failed_n">%1$d 张标签没打出来 · %2$s</string>
+    <string name="print_preview_title">标签预览</string>
     <string name="logout">退出登录</string>
     <string name="devices_title">设备</string>
     <string name="devices_scale">电子秤</string>
