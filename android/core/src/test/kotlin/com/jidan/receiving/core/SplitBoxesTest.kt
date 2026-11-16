@@ -123,4 +123,48 @@ class SplitBoxesTest {
         assertEquals(true, b.manual)
         assertEquals(null, b.gross)
     }
+
+    // ---- 序号变了，旧标签作废（打印标记清掉）----
+
+    private fun allPrinted() = sample().map { it.copy(printed = true) }
+
+    @Test
+    fun deleteGroupClearsPrintedOnlyOnBoxesWhoseSeqShifted() {
+        // 第 1 箱 | 第 2~4 箱一组 | 第 5 箱；删中间组后第 5 箱变成第 2 箱
+        val after = SplitBoxes.deleteGroup(allPrinted(), 3)
+        assertEquals(listOf(1, 2), after.map { it.seq })
+        assertEquals(listOf(true, false), after.map { it.printed })
+    }
+
+    @Test
+    fun deleteLastGroupKeepsEveryPrintMark() {
+        val after = SplitBoxes.deleteGroup(allPrinted(), 5)
+        assertEquals(listOf(1, 2, 3, 4), after.map { it.seq })
+        assertEquals(List(4) { true }, after.map { it.printed })
+    }
+
+    @Test
+    fun deleteFirstBoxClearsEveryFollowingMark() {
+        val after = SplitBoxes.deleteGroup(allPrinted(), 1)
+        assertEquals(listOf(1, 2, 3, 4), after.map { it.seq })
+        assertEquals(List(4) { false }, after.map { it.printed })
+    }
+
+    @Test
+    fun regroupClearsPrintedOnLaterBoxesOnlyWhenTheCountChanges() {
+        // 中间组 3 箱改成 2 箱：第 5 箱前移成第 4 箱；前面的第 1 箱不动
+        val shorter = SplitBoxes.regroup(allPrinted(), 2, 2)
+        assertEquals(listOf(1, 2, 3, 4), shorter.map { it.seq })
+        assertEquals(listOf(true, false, false, false), shorter.map { it.printed })
+        // 改成 4 箱：后面那箱后移成第 6 箱
+        val longer = SplitBoxes.regroup(allPrinted(), 2, 4)
+        assertEquals(listOf(1, 2, 3, 4, 5, 6), longer.map { it.seq })
+        assertEquals(listOf(true, false, false, false, false, false), longer.map { it.printed })
+    }
+
+    @Test
+    fun appendKeepsPrintedMarksOfExistingBoxes() {
+        val after = SplitBoxes.append(allPrinted(), scaled(4700, 1, 200, 4))
+        assertEquals(listOf(true, true, true, true, true, false), after.map { it.printed })
+    }
 }

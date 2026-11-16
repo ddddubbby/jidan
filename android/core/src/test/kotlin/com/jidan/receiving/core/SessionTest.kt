@@ -192,6 +192,26 @@ class SessionTest {
         assertEquals(2, s.markPrinted(1, false).unprinted.size)
     }
 
+    @Test
+    fun deleteRenumbersAndClearsPrintedOfShiftedBoxes() {
+        val printed = baseline().let { b -> b.boxes.fold(b) { acc, x -> acc.markPrinted(x.seq) } }
+        val after = printed.delete(3)
+        assertEquals((1..9).toList(), after.boxes.map { it.seq })
+        // 第 1、2 箱没动，仍是已打印；原第 4~10 箱序号前移，旧标签作废
+        assertEquals(listOf(1, 2), after.boxes.filter { it.printed }.map { it.seq })
+        assertEquals((3..9).toList(), after.unprinted.map { it.seq })
+        // 删最后一箱：谁的序号都没变
+        assertEquals(emptyList(), printed.delete(10).unprinted)
+    }
+
+    @Test
+    fun regroupClearsPrintedOfFollowingBoxes() {
+        val s = empty().weigh(13800, 3).weigh(4600).let { b -> b.boxes.fold(b) { acc, x -> acc.markPrinted(x.seq) } }
+        val after = s.regroup(1, 2)
+        assertEquals(listOf(1, 2, 3), after.boxes.map { it.seq })
+        assertEquals(listOf(1, 2, 3), after.unprinted.map { it.seq })
+    }
+
     // ---- 序列化 ----
 
     @Test
