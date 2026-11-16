@@ -1,0 +1,165 @@
+{
+  "说明": "计价与均重取整的算例。数值来自 v7 6.4、6.5、6.6、2.2；标注“补充”的是开发规格 5.3 要求另加的两例（尾差为负、标准净含量带小数）。重量单位 kg，金额单位元，按数值比较。rounding 取 half（四舍五入）、floor（抹零）、ceil（进位）。均重取整只作用于均重，收购价格与金额始终四舍五入到分。roundingTable 是 v7 2.2 精度表：同一批 10 箱，三种规则下的取整均重。",
+  "cases": [
+    {
+      "id": "v7-6.4",
+      "source": "v7 6.4",
+      "desc": "李四 10 箱粉蛋，四舍五入（默认）",
+      "input": {
+        "boxNetKg": [46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 47.8],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "half"
+      },
+      "expected": {
+        "totalKg": 460.5,
+        "rawAvgKg": 46.05,
+        "avgKg": 46,
+        "tailKg": 1,
+        "priceDiff": 1,
+        "unitPrice": 181,
+        "amount": 1810
+      }
+    },
+    {
+      "id": "v7-6.5-half",
+      "source": "v7 6.5",
+      "desc": "同一批 10 箱，四舍五入",
+      "input": {
+        "boxNetKg": [46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 47.8],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "half"
+      },
+      "expected": {
+        "totalKg": 460.5,
+        "rawAvgKg": 46.05,
+        "avgKg": 46,
+        "tailKg": 1,
+        "priceDiff": 1,
+        "unitPrice": 181,
+        "amount": 1810
+      }
+    },
+    {
+      "id": "v7-6.5-floor",
+      "source": "v7 6.5",
+      "desc": "同一批 10 箱，抹零",
+      "input": {
+        "boxNetKg": [46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 47.8],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "floor"
+      },
+      "expected": {
+        "totalKg": 460.5,
+        "rawAvgKg": 46.05,
+        "avgKg": 46,
+        "tailKg": 1,
+        "priceDiff": 1,
+        "unitPrice": 181,
+        "amount": 1810
+      }
+    },
+    {
+      "id": "v7-6.5-ceil",
+      "source": "v7 6.5",
+      "desc": "同一批 10 箱，进位",
+      "input": {
+        "boxNetKg": [46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 47.8],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "ceil"
+      },
+      "expected": {
+        "totalKg": 460.5,
+        "rawAvgKg": 46.05,
+        "avgKg": 47,
+        "tailKg": 2,
+        "priceDiff": 2,
+        "unitPrice": 182,
+        "amount": 1820
+      }
+    },
+    {
+      "id": "v7-6.6-manual",
+      "source": "v7 6.6",
+      "desc": "第 10 箱手工录入改为 52.8kg，四舍五入",
+      "input": {
+        "boxNetKg": [46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 52.8],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "half"
+      },
+      "expected": {
+        "totalKg": 465.5,
+        "rawAvgKg": 46.55,
+        "avgKg": 47,
+        "tailKg": 2,
+        "priceDiff": 2,
+        "unitPrice": 182,
+        "amount": 1820
+      }
+    },
+    {
+      "id": "extra-negative-tail",
+      "source": "补充（非 v7）",
+      "desc": "尾差为负：均重 44.25 取整 44，低于标准 45",
+      "input": {
+        "boxNetKg": [44.2, 44.4, 43.8, 44.6],
+        "standardNetKg": 45,
+        "basePrice": 180,
+        "coefficient": 1,
+        "rounding": "half"
+      },
+      "expected": {
+        "totalKg": 177,
+        "rawAvgKg": 44.25,
+        "avgKg": 44,
+        "tailKg": -1,
+        "priceDiff": -1,
+        "unitPrice": 179,
+        "amount": 716
+      }
+    },
+    {
+      "id": "extra-fractional-standard",
+      "source": "补充（非 v7）",
+      "desc": "标准净含量带小数 37.5，换算系数 1.5：价差与收购价格带到分",
+      "input": {
+        "boxNetKg": [37.8, 38.2, 38],
+        "standardNetKg": 37.5,
+        "basePrice": 150,
+        "coefficient": 1.5,
+        "rounding": "half"
+      },
+      "expected": {
+        "totalKg": 114,
+        "rawAvgKg": 38,
+        "avgKg": 38,
+        "tailKg": 0.5,
+        "priceDiff": 0.75,
+        "unitPrice": 150.75,
+        "amount": 452.25
+      }
+    }
+  ],
+  "roundingTable": [
+    {
+      "source": "v7 2.2",
+      "boxCount": 10,
+      "totalKg": 460.5,
+      "rawAvgKg": 46.05,
+      "half": 46,
+      "floor": 46,
+      "ceil": 47
+    },
+    { "source": "v7 2.2", "boxCount": 10, "totalKg": 465, "rawAvgKg": 46.5, "half": 47, "floor": 46, "ceil": 47 },
+    { "source": "v7 2.2", "boxCount": 10, "totalKg": 469, "rawAvgKg": 46.9, "half": 47, "floor": 46, "ceil": 47 }
+  ]
+}
