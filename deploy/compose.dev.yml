@@ -1,0 +1,27 @@
+# 开发用 MySQL：docker compose -f deploy/compose.dev.yml up -d
+# 端口、库名、账号都可用环境变量覆盖；默认值与 backend 的 application.yml 一致。
+# 这里的账号只用于本机开发库，部署用的配置见 P9-1 的 compose.yml 与 .env.example。
+name: egg-dev
+
+services:
+  mysql:
+    image: mysql:8.4
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${EGG_DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${EGG_DB_NAME:-egg}
+      MYSQL_USER: ${EGG_DB_USER:-egg}
+      MYSQL_PASSWORD: ${EGG_DB_PASSWORD:-egg}
+    ports:
+      - "${EGG_DB_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${EGG_DB_ROOT_PASSWORD:-root}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  mysql-data:
