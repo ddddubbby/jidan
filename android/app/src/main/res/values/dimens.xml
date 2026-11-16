@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 字号五级与控件尺寸，开发规格 9.5；原型的 px 按 1:1 换成 dp -->
+<resources>
+    <dimen name="text_13">13sp</dimen>
+    <dimen name="text_15">15sp</dimen>
+    <dimen name="text_17">17sp</dimen>
+    <dimen name="text_19">19sp</dimen>
+    <dimen name="text_26">26sp</dimen>
+
+    <dimen name="button_height">56dp</dimen>
+    <dimen name="button_small_height">44dp</dimen>
+    <dimen name="input_height">52dp</dimen>
+
+    <dimen name="radius_control">12dp</dimen>
+    <dimen name="radius_button">14dp</dimen>
+
+    <dimen name="page_padding">16dp</dimen>
+</resources>
