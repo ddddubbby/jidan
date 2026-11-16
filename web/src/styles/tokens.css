@@ -1,0 +1,26 @@
+/* 设计令牌：从 lab/web-sim.html 的 :root 原样搬入 */
+:root {
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --sunken: #f4f5f2;
+  --ink: #14181a;
+  --ink-2: #4a5357;
+  --ink-3: #6b7471;
+  --line: #dde1db;
+  --edge: #8b9590;
+  --accent: #0b6b3a;
+  --accent-press: #095a31;
+  --ok-bg: #e1f2e6;
+  --ok-ink: #0a5a31;
+  --warn-bg: #fff1cf;
+  --warn-ink: #734600;
+  --err-bg: #fde4e1;
+  --err-ink: #9c1f18;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --side: 224px;
+}
+
+@media (max-width: 1100px) {
+  :root { --side: 188px; }
+}
