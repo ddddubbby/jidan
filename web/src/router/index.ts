@@ -3,6 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useSession } from '../stores/session'
 import PlaceholderPage from '../ui/PlaceholderPage.vue'
 import LoginPage from '../features/login/LoginPage.vue'
+import ArchivePage from '../features/archive/ArchivePage.vue'
+import AccountsPage from '../features/accounts/AccountsPage.vue'
+import SettingsPage from '../features/settings/SettingsPage.vue'
+import OptionsPage from '../features/options/OptionsPage.vue'
 import PricesPage from '../features/prices/PricesPage.vue'
 import BasicsPage from '../features/basics/BasicsPage.vue'
 import RulesPage from '../features/rules/RulesPage.vue'
@@ -15,10 +19,15 @@ const pages: [string, string][] = [
   ['archive', '好生意档案'],
   ['accounts', '磅秤员账号'],
   ['settings', '系统设置'],
+  ['options', '高级选项'],
 ]
 
 // 已经做出来的页面
 const done: Record<string, Component> = {
+  archive: ArchivePage,
+  accounts: AccountsPage,
+  settings: SettingsPage,
+  options: OptionsPage,
   prices: PricesPage,
   basics: BasicsPage,
 }
