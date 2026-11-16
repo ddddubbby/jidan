@@ -37,12 +37,16 @@ data class AppVersion(
 )
 
 /**
- * `GET /app/bootstrap` 精简契约（开发规格 5.2）。完整档案列表等 P2-2 合入后再用；
- * 此处先收 options，供 [AppOptions.from] 使用。
+ * `GET /app/bootstrap`（开发规格 5.2）。APP 只取两张键值表：
+ * [settings] 是业务设置（打印时机、标签内容、设备型号、均重取整等），
+ * [options] 是高级选项里 APP 生效的两组。两张表合起来交给 [AppOptions.from]。
  */
 data class BootstrapResponse(
-    val options: Map<String, String>? = null,
-)
+    val settings: Map<String, String?>? = null,
+    val options: Map<String, String?>? = null,
+) {
+    fun allValues(): Map<String, String?> = (settings ?: emptyMap()) + (options ?: emptyMap())
+}
 
 data class FarmerDto(
     val id: Long,
@@ -107,9 +111,9 @@ data class TareDto(
     val enabled: Boolean = true,
 )
 
-/** `POST /api/batches`；后端未合入前客户端可本地占位。 */
+/** `POST /api/batches`。磅秤员调用时后端一律取当日，APP 不传日期。 */
 data class BatchRequest(
-    val bizDate: String? = null,
+    val date: String? = null,
 )
 
 data class BatchDto(

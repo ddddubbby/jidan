@@ -31,15 +31,7 @@ class CatalogRepository(
     suspend fun tareHotkeys(): List<TareDto> =
         client.runApi { this.tares() }.filter { it.enabled && it.hotkey }
 
-    /**
-     * 取当日批次号。`POST /api/batches` 属单据任务，未合入时本地占位
-     *（附录 E P6-4），合入后走真接口。
-     */
-    suspend fun nextBatchNo(): String = try {
+    /** 取当日批次号；失败时抛出，由称重页显示错误。 */
+    suspend fun nextBatchNo(): String =
         client.runApi { this.createBatch(BatchRequest()) }.batchNo
-    } catch (_: Throwable) {
-        val day = java.time.LocalDate.now()
-            .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
-        "SG$day-tmp"
-    }
 }

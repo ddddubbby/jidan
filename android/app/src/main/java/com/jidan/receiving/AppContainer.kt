@@ -19,6 +19,7 @@ import com.jidan.receiving.platform.BluetoothGate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -109,9 +110,16 @@ class AppContainer(context: Context) {
         _options.value = options
     }
 
-    /** 进程启动时已有会话：恢复自动连。 */
+    /** 取 `GET /app/bootstrap` 的业务设置与选项。 */
+    suspend fun refreshOptions() {
+        applyOptions(AppOptions.from(auth.bootstrap().allValues()))
+    }
+
+    /** 进程启动时已有会话：恢复自动连，并重新取一次下发的设置。 */
     fun onAppStart() {
-        if (_session.value != null) linkKeeper.start()
+        if (_session.value == null) return
+        linkKeeper.start()
+        scope.launch { runCatching { refreshOptions() } }
     }
 }
 

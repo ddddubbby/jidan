@@ -4,7 +4,7 @@ import com.jidan.receiving.core.WeighOptions
 
 /**
  * APP 端选项镜像（开发规格 4.3 / 9.4）。默认值即 v7 做法。
- * 正常从 `GET /app/bootstrap` 解析；P2-2 未合入前始终用 [defaults]。
+ * 登录后与进程启动时从 `GET /app/bootstrap` 的 settings + options 解析。
  */
 data class AppOptions(
     val values: Map<String, String> = DEFAULTS,
@@ -49,8 +49,7 @@ data class AppOptions(
         fun defaults(): AppOptions = AppOptions(DEFAULTS)
 
         /**
-         * [raw] 为 bootstrap 下发的选项键值；缺项用默认值。
-         * P2-2 合入后由 AuthRepository / 建单流程调用。
+         * [raw] 为 bootstrap 下发的键值（[BootstrapResponse.allValues]）；缺项用默认值。
          */
         fun from(raw: Map<String, String?>?): AppOptions {
             if (raw.isNullOrEmpty()) return defaults()

@@ -50,4 +50,16 @@ class AppOptionsTest {
     fun fromNullUsesDefaults() {
         assertEquals(AppOptions.defaults(), AppOptions.from(null))
     }
+
+    @Test
+    fun bootstrapSettingsAndOptionsBothApply() {
+        val boot = BootstrapResponse(
+            settings = mapOf("print.timing" to "after-confirm", "label.content" to "full"),
+            options = mapOf("weigh.record-by" to "button"),
+        )
+        val o = AppOptions.from(boot.allValues())
+        assertEquals("after-confirm", o.get("print.timing"))
+        assertEquals("full", o.get("label.content"))
+        assertEquals("button", o.get("weigh.record-by"))
+    }
 }

@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.BuildConfig
 import com.jidan.receiving.data.ApiError
-import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.SessionUser
 import com.jidan.receiving.data.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,9 +119,7 @@ class LoginViewModel(
                         role = result.role,
                     ),
                 )
-                // 待 P2-2：bootstrap 失败则保持 ch.4 默认值
-                val boot = container.auth.bootstrapOrNull()
-                container.applyOptions(AppOptions.from(boot?.options))
+                container.refreshOptions()
                 _ui.update { it.copy(busy = false, password = "", error = "") }
                 onSuccess()
             } catch (e: Throwable) {
