@@ -1,0 +1,65 @@
+package com.jidan.receiving.data
+
+import com.jidan.receiving.core.RecordBy
+import com.jidan.receiving.core.TareBy
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class AppOptionsTest {
+    @Test
+    fun defaultsMatchSpecChapter4() {
+        val o = AppOptions.defaults()
+        assertEquals("scale", o.get("scale.tare-by"))
+        assertEquals("true", o.get("scale.reading-is-net"))
+        assertEquals("sdk", o.get("scale.stable-by"))
+        assertEquals("auto", o.get("weigh.record-by"))
+        assertEquals("auto", o.get("weigh.merge-detect"))
+        assertEquals("on", o.get("weigh.manual-entry"))
+        assertEquals("on", o.get("print.enabled"))
+        assertEquals("block", o.get("submit.without-price"))
+        assertEquals("half", o.get("round.mode"))
+        assertEquals("per-box", o.get("print.timing"))
+        assertEquals("NO_INVOICE", o.get("invoice.type"))
+        assertEquals("0", o.get("invoice.tax-rate"))
+        assertEquals("60", o.get("label.width-mm"))
+        assertEquals("40", o.get("label.height-mm"))
+        assertEquals("2", o.get("label.gap-mm"))
+        assertEquals("minimal", o.get("label.content"))
+        assertEquals("lanstar-ble", o.get("device.scale-model"))
+        assertEquals("gainscha-gp-m32b", o.get("device.printer-model"))
+    }
+
+    @Test
+    fun fromMergesKnownKeysOnly() {
+        val o = AppOptions.from(
+            mapOf(
+                "weigh.record-by" to "button",
+                "unknown.key" to "x",
+                "print.enabled" to null,
+            ),
+        )
+        assertEquals("button", o.get("weigh.record-by"))
+        assertEquals("on", o.get("print.enabled"))
+        assertTrue("unknown.key" !in o.values)
+        assertEquals(RecordBy.BUTTON, o.weighOptions().recordBy)
+        assertEquals(TareBy.SCALE, o.weighOptions().tareBy)
+    }
+
+    @Test
+    fun fromNullUsesDefaults() {
+        assertEquals(AppOptions.defaults(), AppOptions.from(null))
+    }
+
+    @Test
+    fun bootstrapSettingsAndOptionsBothApply() {
+        val boot = BootstrapResponse(
+            settings = mapOf("print.timing" to "after-confirm", "label.content" to "full"),
+            options = mapOf("weigh.record-by" to "button"),
+        )
+        val o = AppOptions.from(boot.allValues())
+        assertEquals("after-confirm", o.get("print.timing"))
+        assertEquals("full", o.get("label.content"))
+        assertEquals("button", o.get("weigh.record-by"))
+    }
+}
