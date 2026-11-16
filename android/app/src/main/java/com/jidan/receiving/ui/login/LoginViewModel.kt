@@ -8,6 +8,8 @@ import com.jidan.receiving.BuildConfig
 import com.jidan.receiving.data.ApiError
 import com.jidan.receiving.data.SessionUser
 import com.jidan.receiving.data.userMessage
+import com.jidan.receiving.ui.update.UpdateOffer
+import com.jidan.receiving.ui.update.fetchUpdateOffer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,8 +24,7 @@ data class LoginUiState(
     val error: String = "",
     val busy: Boolean = false,
     val expiredHint: Boolean = false,
-    val updateUrl: String? = null,
-    val updateLabel: String? = null,
+    val update: UpdateOffer? = null,
 ) {
     val step: LoginStep get() = loginStep(serverUrl, phone, password, busy)
 }
@@ -73,31 +74,13 @@ class LoginViewModel(
     fun refreshVersion() {
         val base = container.prefs.normalizedBaseUrl()
         if (base.isEmpty()) {
-            _ui.update { it.copy(updateUrl = null, updateLabel = null) }
+            _ui.update { it.copy(update = null) }
             return
         }
         viewModelScope.launch {
-            try {
-                container.apiClient.invalidate()
-                val v = container.auth.appVersion()
-                val show = shouldShowUpdate(
-                    BuildConfig.VERSION_CODE,
-                    AppVersionLike(v.versionCode, v.downloadUrl),
-                )
-                _ui.update {
-                    it.copy(
-                        updateUrl = if (show) v.downloadUrl else null,
-                        updateLabel = if (show) {
-                            "有新版本 ${v.versionName ?: v.versionCode}，点此下载"
-                        } else {
-                            null
-                        },
-                    )
-                }
-            } catch (_: Exception) {
-                // P2-2 / 部署未就绪时接口不存在，隐藏入口即可
-                _ui.update { it.copy(updateUrl = null, updateLabel = null) }
-            }
+            container.apiClient.invalidate()
+            val offer = fetchUpdateOffer(BuildConfig.VERSION_CODE) { container.auth.appVersion() }
+            _ui.update { it.copy(update = offer) }
         }
     }
 

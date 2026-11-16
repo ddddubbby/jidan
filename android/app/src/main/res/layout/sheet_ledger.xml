@@ -19,6 +19,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
 
+    <!-- 重量种类超过 8 种：先列 6 种，点开看全部（原型 sheetLog） -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/groupsToggle"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/button_small_height"
+        android:layout_marginTop="8dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:textAllCaps="false"
+        android:visibility="gone" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/manualAdd"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"

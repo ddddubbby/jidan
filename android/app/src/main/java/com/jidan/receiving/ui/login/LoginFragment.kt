@@ -1,7 +1,5 @@
 package com.jidan.receiving.ui.login
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -11,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -21,6 +18,7 @@ import androidx.navigation.fragment.findNavController
 import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.databinding.FragmentLoginBinding
+import com.jidan.receiving.ui.update.bindUpdateEntry
 import kotlinx.coroutines.launch
 
 class LoginFragment : Fragment() {
@@ -72,10 +70,6 @@ class LoginFragment : Fragment() {
         }
         b.togglePassword.setOnClickListener { vm.togglePassword() }
         b.action.setOnClickListener { onAction() }
-        b.updateEntry.setOnClickListener {
-            val url = vm.ui.value.updateUrl ?: return@setOnClickListener
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-        }
         b.serverUrl.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 requireContext().appContainer().prefs.serverUrl = b.serverUrl.text?.toString().orEmpty()
@@ -152,8 +146,7 @@ class LoginFragment : Fragment() {
             if (bad) R.drawable.bg_login_fields_bad else R.drawable.bg_login_fields,
         )
 
-        b.updateEntry.isVisible = state.updateLabel != null
-        b.updateEntry.text = state.updateLabel
+        b.updateEntry.bindUpdateEntry(state.update)
 
         b.action.isEnabled = state.step != LoginStep.BUSY
         when (state.step) {

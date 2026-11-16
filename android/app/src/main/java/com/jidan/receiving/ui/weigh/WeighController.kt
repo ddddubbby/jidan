@@ -14,6 +14,7 @@ import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.data.OrderHeader
 import com.jidan.receiving.data.TareDto
 import com.jidan.receiving.data.userMessage
+import com.jidan.receiving.device.DeviceScaleReading
 import com.jidan.receiving.device.LinkStatus
 import com.jidan.receiving.device.Scale
 import kotlinx.coroutines.CancellationException
@@ -52,6 +53,9 @@ interface WeighHost {
  *   取不到、或取不到 W0，都不进入可称重状态，由 [startError] 说明原因，界面给“重试”。不做本地缓存，也没有默认 W0。
  * - `scale.tare-by = scale` 时，每次秤转为已连接且有皮重都重新下发；下发失败则状态机保持未设皮重，
  *   [tareError] 写失败原因，界面按钮直达 [retryTare]。
+ * - `scale.tare-by = scale` 且这一单还没有皮重时，秤里可能还留着上一单下发的数字皮：开始称重与每次转为已连接
+ *   都先 `clearTare()`，清成功前读数不喂给状态机（否则“称空箱”按的是已被旧皮重扣过的读数）。
+ *   清失败同样写 [tareError]，[retryTare] 重试清皮。`scale.tare-by = app` 时不调（9.3 契约）。
  */
 class WeighController(
     private val scope: CoroutineScope,
@@ -90,6 +94,9 @@ class WeighController(
 
     /** 当前这条连接上，秤已经收到 [wantedTare]。 */
     private var tareSynced = false
+
+    /** 当前这条连接上，秤里上一单留下的皮重已清掉（只在 [needsClear] 时用）。 */
+    private var clearSynced = false
 
     private val tareLock = Mutex()
     private var jobs: List<Job> = emptyList()
@@ -133,6 +140,7 @@ class WeighController(
             tares = list
             tareError = ""
             tareSynced = false
+            clearSynced = false
             scaleLost = false
             wantedTare = s.tare
             val m = WeighingMachine(opts, s.stdNet!!)
@@ -171,6 +179,7 @@ class WeighController(
         machine = null
         wantedTare = null
         tareSynced = false
+        clearSynced = false
     }
 
     /** 回到没有单的状态。 */
@@ -189,11 +198,18 @@ class WeighController(
         return Kg.of(kg)
     }
 
-    /** 把 [wantedTare] 交给状态机，`scale.tare-by = scale` 且秤已连接时先下发到秤。 */
+    /** 这一单还没有皮重、皮重由秤负责：秤里可能留着上一单的数字皮，要先清掉。 */
+    private fun needsClear(): Boolean = options.tareBy == TareBy.SCALE && wantedTare == null
+
+    /** 把 [wantedTare] 交给状态机，`scale.tare-by = scale` 且秤已连接时先下发到秤；还没有皮重时改为清掉秤里的旧皮重。 */
     private suspend fun pushTare() {
         tareLock.withLock {
             val m = machine ?: return
-            val t = wantedTare ?: return
+            val t = wantedTare
+            if (t == null) {
+                clearStaleTare()
+                return
+            }
             if (options.tareBy != TareBy.SCALE || scale.linkStatus.value != LinkStatus.CONNECTED) {
                 // 不用下发，或秤没连着：先放着，秤连上时 bind 里会再下发一次
                 m.setTare(t)
@@ -222,6 +238,42 @@ class WeighController(
         }
     }
 
+    /**
+     * 清掉秤里上一单留下的皮重（同一台秤连着收第二单，秤里仍是上一单下发的数字皮）。
+     * 成功前读数不喂状态机；成功后把秤此刻的读数补喂一次，因为清皮若没让读数变化，秤不会再回调。
+     * 在 [tareLock] 里调用。
+     */
+    private suspend fun clearStaleTare() {
+        if (!needsClear() || scale.linkStatus.value != LinkStatus.CONNECTED) return
+        clearSynced = false
+        try {
+            scale.clearTare()
+            clearSynced = true
+            tareError = ""
+            scale.readings.value?.let(::feed)
+        } catch (e: TimeoutCancellationException) {
+            tareError = "秤没有响应"
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            tareError = e.message?.takeIf { it.isNotBlank() } ?: "秤没有清掉上一单的皮重"
+        }
+        onChange()
+    }
+
+    /** 读数交给状态机；锁定（已确认计量）、没有状态机、皮重还没确认到秤上时丢弃。 */
+    private fun feed(r: DeviceScaleReading) {
+        if (isLocked()) return
+        val m = machine ?: return
+        // 皮重还没确认下到这条连接上时，读数不是已扣皮的，不能喂给状态机
+        if (options.tareBy == TareBy.SCALE && m.tare != null && !tareSynced) return
+        // 这一单还没有皮重：秤里上一单的皮重没清掉前，读数是被旧皮重扣过的
+        if (needsClear() && !clearSynced) return
+        val outcome = m.onReading(ScaleReading(r.raw, r.stable), now())
+        if (outcome != null) onOutcome(outcome)
+        onChange()
+    }
+
     private fun bind() {
         val link = scope.launch {
             scale.linkStatus.collect { st ->
@@ -230,22 +282,17 @@ class WeighController(
                     (st == LinkStatus.CONNECTING && (session?.boxes?.isNotEmpty() == true))
                 if (!connected) {
                     tareSynced = false
+                    clearSynced = false
                     machine?.resetScale()
                 }
                 onChange()
-                // 秤重启或换了实例就没有皮重：每次转为已连接都重发
+                // 秤重启或换了实例就没有皮重：每次转为已连接都重发；还没有皮重时改为清掉秤里的旧皮重
                 if (connected) pushTare()
             }
         }
         val readings = scope.launch {
             scale.readings.collect { r ->
-                if (r == null || isLocked()) return@collect
-                val m = machine ?: return@collect
-                // 皮重还没确认下到这条连接上时，读数不是已扣皮的，不能喂给状态机
-                if (options.tareBy == TareBy.SCALE && m.tare != null && !tareSynced) return@collect
-                val outcome = m.onReading(ScaleReading(r.raw, r.stable), now())
-                if (outcome != null) onOutcome(outcome)
-                onChange()
+                if (r != null) feed(r)
             }
         }
         val tick = scope.launch {
