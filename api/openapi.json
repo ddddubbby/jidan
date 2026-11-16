@@ -537,6 +537,150 @@
         }
       }
     },
+    "/api/orders/{id}/void" : {
+      "post" : {
+        "tags" : [ "order-flow-controller" ],
+        "operationId" : "voidOrder",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Flow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/unapprove" : {
+      "post" : {
+        "tags" : [ "order-flow-controller" ],
+        "operationId" : "unapprove",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Flow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/push" : {
+      "post" : {
+        "tags" : [ "order-flow-controller" ],
+        "operationId" : "push",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Flow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/mark-pushed" : {
+      "post" : {
+        "tags" : [ "order-flow-controller" ],
+        "operationId" : "markPushed",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MarkPushedForm"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Flow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/approve" : {
+      "post" : {
+        "tags" : [ "order-flow-controller" ],
+        "operationId" : "approve",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Flow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orders/quote" : {
       "post" : {
         "tags" : [ "order-controller" ],
@@ -558,6 +702,34 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dev/chanjet/fail-next" : {
+      "post" : {
+        "tags" : [ "dev-chanjet-controller" ],
+        "operationId" : "failNext",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FailForm"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FailState"
                 }
               }
             }
@@ -1485,6 +1657,59 @@
           }
         }
       },
+      "Flow" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "batchNo" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "APPROVED", "PUSHED", "VOID" ]
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "hsId" : {
+            "type" : "string"
+          },
+          "pushError" : {
+            "type" : "string"
+          },
+          "boxCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalNetKg" : {
+            "type" : "number"
+          },
+          "avgKg" : {
+            "type" : "number"
+          },
+          "price" : {
+            "type" : "number"
+          },
+          "amount" : {
+            "type" : "number"
+          }
+        }
+      },
+      "MarkPushedForm" : {
+        "type" : "object",
+        "properties" : {
+          "hsId" : {
+            "type" : "string"
+          }
+        }
+      },
       "QuoteForm" : {
         "type" : "object",
         "properties" : {
@@ -1574,6 +1799,22 @@
             "items" : {
               "type" : "string"
             }
+          }
+        }
+      },
+      "FailForm" : {
+        "type" : "object",
+        "properties" : {
+          "mode" : {
+            "type" : "string"
+          }
+        }
+      },
+      "FailState" : {
+        "type" : "object",
+        "properties" : {
+          "pending" : {
+            "type" : "string"
           }
         }
       },
