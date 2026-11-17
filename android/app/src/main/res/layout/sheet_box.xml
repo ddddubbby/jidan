@@ -55,13 +55,11 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/saveNet"
+            style="@style/Widget.Jidan.Button"
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height"
             android:layout_marginTop="10dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="@string/box_save"
-            android:textAllCaps="false" />
+            android:text="@string/box_save" />
     </LinearLayout>
 
     <LinearLayout
@@ -73,32 +71,26 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/reweigh"
+            style="@style/Widget.Jidan.Button"
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="@string/box_reweigh"
-            android:textAllCaps="false" />
+            android:text="@string/box_reweigh" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/manualEdit"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Jidan.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height"
             android:layout_marginTop="8dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="@string/box_manual"
-            android:textAllCaps="false" />
+            android:text="@string/box_manual" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/delete"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.Jidan.Button.Text"
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height"
             android:layout_marginTop="8dp"
             android:text="@string/box_delete"
-            android:textAllCaps="false"
             android:textColor="@color/err_ink" />
     </LinearLayout>
 </LinearLayout>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 凹陷面板：浅灰底、1dp 线色描边、16dp 圆角（原型 .money-card / .scale） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/sunken" />
+    <stroke android:width="@dimen/stroke_hairline" android:color="@color/line" />
+    <corners android:radius="@dimen/radius_panel" />
+</shape>

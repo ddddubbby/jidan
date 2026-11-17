@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  样式底座（F4-3），数值取自 lab/app-sim.html；各页面按它换样式，不在布局里再写字号、颜色、圆角。
+  一、文字：正文层级（中文，系统字体）、数字层级（Inter，等宽数字）
+  二、按钮：主按钮 / 描边按钮 / 无框文字按钮，各有 Small、Large 两档
+  三、面：卡片、凹陷面板、浅灰块、胶囊、小标签
+-->
+<resources>
+
+    <!-- ============ 一、文字（中文，系统字体） ============ -->
+    <style name="Text" parent="">
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">@dimen/type_body</item>
+    </style>
+    <!-- 标签：小、次级灰（ink-3），配在值的上面或左边；值用 Strong / Value，大而粗 -->
+    <style name="Text.Label">
+        <item name="android:textColor">@color/ink_3</item>
+        <item name="android:textSize">@dimen/type_label</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <!-- 区块标签：比 Label 大一档、颜色深一档（原型 .scr-create .label） -->
+    <style name="Text.Section">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_15</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <style name="Text.Caption">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/type_caption</item>
+    </style>
+    <style name="Text.Note">
+        <item name="android:textSize">@dimen/text_14</item>
+    </style>
+    <style name="Text.Body">
+        <item name="android:textSize">@dimen/type_body</item>
+    </style>
+    <style name="Text.Strong">
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Text.Value">
+        <item name="android:textSize">@dimen/type_section</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- 页面标题 -->
+    <style name="Text.Title">
+        <item name="android:textSize">@dimen/type_page_title</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <!-- ============ 数字（Inter，等宽数字 tnum；与 Web 同一套规则，附录 E F4-2 / F4-3） ============
+         随包的 Inter 只含 0-9 , . % + - × −，汉字、字母（kg）自动落到系统字体。
+         字重：Medium 500、SemiBold 600（行内数值）、Bold 700（大数字）。
+         数字与单位成对出现时用 ui/widgets/NumText.kt 拼：单位缩小、ink-3、500 字重、一条细缝、不留空格。 -->
+    <style name="Text.Num">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:fontFeatureSettings">"tnum"</item>
+    </style>
+    <style name="Text.Num.Caption">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/type_caption</item>
+    </style>
+    <style name="Text.Num.Body">
+        <item name="android:textSize">@dimen/type_body</item>
+    </style>
+    <style name="Text.Num.Strong">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/text_17</item>
+    </style>
+    <style name="Text.Num.Value">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/type_section</item>
+    </style>
+    <style name="Text.Num.Title">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/type_page_title</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+    <!-- 称重大数字：原型 .weight，最大 96，字距 -0.02em -->
+    <style name="Text.Num.Weight">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/type_weight</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <!-- 金额大数字：原型 .amt，最大 64，字距 -0.02em -->
+    <style name="Text.Num.Amount">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/type_amount</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- ============ 二、按钮 ============
+         Material 默认的字距（0.09em）与全大写对中文是错的：在 TextAppearance 里统一关掉（主题 textAppearanceButton）。
+         原型 .btn：高 56、圆角 14、17 / 600；Small 44、15；Large（页脚主操作）60、18、圆角 16。
+         不可用：灰底灰字（#e3e6e1 / ink-3），不留描边。 -->
+    <style name="TextAppearance.Jidan.Button" parent="TextAppearance.MaterialComponents.Button">
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- 主按钮：绿底白字 -->
+    <style name="Widget.Jidan.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:textColor">@color/btn_text_on_accent</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="backgroundTint">@color/btn_bg_primary</item>
+        <item name="rippleColor">@color/ripple</item>
+        <item name="cornerRadius">@dimen/radius_button</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+    <style name="Widget.Jidan.Button.Small">
+        <item name="android:minHeight">@dimen/button_small_height</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Widget.Jidan.Button.Large">
+        <item name="android:minHeight">@dimen/button_large_height</item>
+        <item name="android:textSize">@dimen/text_18</item>
+        <item name="cornerRadius">@dimen/radius_button_large</item>
+    </style>
+    <!-- 深色按钮：墨色底（原型 .btn.dark，确认类弹窗里的“继续”） -->
+    <style name="Widget.Jidan.Button.Dark">
+        <item name="backgroundTint">@color/btn_bg_dark</item>
+    </style>
+
+    <!-- 描边按钮：白底、1.5dp 边线色描边、墨色字 -->
+    <style name="Widget.Jidan.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:textColor">@color/btn_text_ink</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="backgroundTint">@color/btn_bg_outlined</item>
+        <item name="strokeColor">@color/btn_stroke_outlined</item>
+        <item name="strokeWidth">@dimen/stroke_control</item>
+        <item name="rippleColor">@color/ripple</item>
+        <item name="cornerRadius">@dimen/radius_button</item>
+    </style>
+    <style name="Widget.Jidan.Button.Outlined.Small">
+        <item name="android:minHeight">@dimen/button_small_height</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Widget.Jidan.Button.Outlined.Large">
+        <item name="android:minHeight">@dimen/button_large_height</item>
+        <item name="android:textSize">@dimen/text_18</item>
+        <item name="cornerRadius">@dimen/radius_button_large</item>
+    </style>
+    <!-- 红字红边：删除、放弃这类（原型 .btn.danger） -->
+    <style name="Widget.Jidan.Button.Outlined.Danger">
+        <item name="android:textColor">@color/btn_text_danger</item>
+        <item name="strokeColor">@color/btn_stroke_danger</item>
+    </style>
+
+    <!-- 无框文字按钮：安静的次要入口（原型 .btn.ghost-link），默认次级灰字；Accent 为绿字 -->
+    <style name="Widget.Jidan.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">@dimen/button_small_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textSize">@dimen/text_15</item>
+        <item name="android:textColor">@color/btn_text_quiet</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="backgroundTint">@color/btn_bg_text</item>
+        <item name="rippleColor">@color/ripple</item>
+        <item name="cornerRadius">@dimen/radius_control</item>
+    </style>
+    <style name="Widget.Jidan.Button.Text.Accent">
+        <item name="android:textColor">@color/btn_text_accent</item>
+    </style>
+    <style name="Widget.Jidan.Button.Text.Danger">
+        <item name="android:textColor">@color/btn_text_danger</item>
+    </style>
+
+    <!-- ============ 三、面 ============ -->
+    <!-- 卡片：白底、线色描边、14 圆角（原型 .card） -->
+    <style name="Surface.Card" parent="">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:paddingHorizontal">@dimen/card_padding_h</item>
+        <item name="android:paddingVertical">6dp</item>
+    </style>
+    <!-- 凹陷面板：浅灰底、线色描边、16 圆角（原型 .money-card / .scale） -->
+    <style name="Surface.Panel" parent="">
+        <item name="android:background">@drawable/bg_panel</item>
+        <item name="android:padding">@dimen/panel_padding</item>
+    </style>
+    <!-- 无描边浅灰块（原型 .preview / .print-prog） -->
+    <style name="Surface.Sunken" parent="">
+        <item name="android:background">@drawable/bg_sunken</item>
+        <item name="android:paddingHorizontal">12dp</item>
+        <item name="android:paddingVertical">10dp</item>
+    </style>
+
+    <!-- 胶囊（原型 .chip）：13 / 600，高度靠内边距；默认绿（正常），Warn 黄、Err 红、Neutral 灰 -->
+    <style name="Chip" parent="Text">
+        <item name="android:background">@drawable/bg_pill</item>
+        <item name="android:backgroundTint">@color/ok_bg</item>
+        <item name="android:textColor">@color/ok_ink</item>
+        <item name="android:textSize">@dimen/text_13</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingHorizontal">@dimen/chip_padding_h</item>
+        <item name="android:paddingVertical">@dimen/chip_padding_v</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+    <style name="Chip.Warn">
+        <item name="android:backgroundTint">@color/warn_bg</item>
+        <item name="android:textColor">@color/warn_ink</item>
+    </style>
+    <style name="Chip.Err">
+        <item name="android:backgroundTint">@color/err_bg</item>
+        <item name="android:textColor">@color/err_ink</item>
+    </style>
+    <style name="Chip.Neutral">
+        <item name="android:backgroundTint">@color/sunken</item>
+        <item name="android:textColor">@color/ink_2</item>
+    </style>
+
+    <!-- 小标签（原型 .tag）：方一点的小块，装“45.6kg-4箱”这类归类 -->
+    <style name="Tag" parent="Text">
+        <item name="android:background">@drawable/bg_tag</item>
+        <item name="android:textSize">@dimen/text_14</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingHorizontal">@dimen/chip_padding_h</item>
+        <item name="android:paddingVertical">@dimen/chip_padding_v</item>
+    </style>
+</resources>

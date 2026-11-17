@@ -88,9 +88,12 @@ class ScreenHarness(
         }
     }
 
+    /** 找文字时不计显示用的不换行空格和零宽连接符（F4-3，数字与单位不拆行用的），按原型的写法匹配。 */
+    private fun plain(t: CharSequence): String = t.toString().replace("\u2060", "").replace('\u00A0', ' ')
+
     /** 只在弹层里找。 */
     fun hasDialogText(contains: String): Boolean =
-        dialogs().any { d -> textViews(d.window!!.decorView).any { it.isShown && it.text.toString().contains(contains) } }
+        dialogs().any { d -> textViews(d.window!!.decorView).any { it.isShown && plain(it.text).contains(contains) } }
 
     fun hasText(contains: String): Boolean = runCatching { findText(contains) }.isSuccess
 
@@ -101,7 +104,7 @@ class ScreenHarness(
     fun findText(contains: String): TextView {
         val roots = dialogs().map { it.window!!.decorView } + activity().window.decorView
         for (root in roots) {
-            val hit = textViews(root).firstOrNull { it.isShown && it.text.toString().contains(contains) }
+            val hit = textViews(root).firstOrNull { it.isShown && plain(it.text).contains(contains) }
             if (hit != null) return hit
         }
         error("找不到文字「$contains」")

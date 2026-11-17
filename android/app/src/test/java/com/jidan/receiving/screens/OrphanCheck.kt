@@ -12,7 +12,9 @@ object OrphanLine {
         Character.MODIFIER_SYMBOL, Character.OTHER_SYMBOL,
     ).map { it.toInt() }.toSet()
 
-    private fun isSpace(cp: Int) = Character.isWhitespace(cp) || Character.isSpaceChar(cp)
+    /** 空白，以及零宽的格式字符（WORD JOINER 等，F4-3 拿它把数字和单位粘在一起），都不算“一个字”。 */
+    private fun isSpace(cp: Int) =
+        Character.isWhitespace(cp) || Character.isSpaceChar(cp) || Character.getType(cp) == Character.FORMAT.toInt()
 
     private fun isPunct(cp: Int) = Character.getType(cp) in punctTypes
 

@@ -43,4 +43,14 @@ class LedgerGroupsTest {
         val v = ledgerGroupsView(SameWeight.groups(weights), expanded = false)
         assertEquals("46kg-3箱", v.shown.first().label())
     }
+
+    @Test
+    fun displayLabelOnlyAddsInvisibleJoiners() {
+        val g = SameWeight.groups(listOf(Kg.of(45.6), Kg.of(45.6))).first()
+        assertEquals("45.6kg-2箱", g.label())   // 回传备注用的原文不变
+        val shown = g.displayLabel()
+        assertEquals(g.label(), shown.replace("\u2060", ""))
+        // 能断开的地方都放了连接符：“-”后面、“2”与“箱”之间
+        assertTrue(shown.contains("-\u20602\u2060箱"))
+    }
 }

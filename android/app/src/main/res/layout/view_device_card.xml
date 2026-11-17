@@ -40,12 +40,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/cardAction"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
+        style="@style/Widget.Jidan.Button.Text"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/button_small_height"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:minWidth="0dp"
-        android:textAllCaps="false"
         android:textSize="@dimen/text_13" />
 </LinearLayout>

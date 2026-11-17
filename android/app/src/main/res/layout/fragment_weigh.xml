@@ -13,12 +13,10 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/back"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.Jidan.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
             android:text="@string/weigh_back"
-            android:textAllCaps="false"
             android:textColor="@color/ink"
             android:textSize="@dimen/text_26" />
 
@@ -102,13 +100,11 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/startRetry"
+                    style="@style/Widget.Jidan.Button.Small"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_small_height"
                     android:layout_marginTop="10dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
                     android:text="@string/weigh_start_retry"
-                    android:textAllCaps="false"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -138,12 +134,11 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/tareWeighBtn"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.Jidan.Button.Outlined"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:enabled="false"
-                    android:textAllCaps="false" />
+                    android:enabled="false" />
             </LinearLayout>
 
             <!-- 秤没连上或断开：称重框位置换成连接卡片，只给当前该做的连接操作和“手工加一箱”（原型 screenWeigh） -->
@@ -167,23 +162,18 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/scaleCardAction"
+                    style="@style/Widget.Jidan.Button"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_height"
-                    android:layout_marginTop="10dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:textAllCaps="false" />
+                    android:layout_marginTop="10dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/scaleCardManual"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    style="@style/Widget.Jidan.Button.Text"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_small_height"
                     android:layout_marginTop="8dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="@string/ledger_manual_add"
-                    android:textAllCaps="false" />
+                    android:text="@string/ledger_manual_add" />
             </LinearLayout>
 
             <LinearLayout
@@ -218,7 +208,7 @@
 
                 <TextView
                     android:id="@+id/weight"
-                    style="@style/Text.Title"
+                    style="@style/Text.Num.Title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -257,14 +247,10 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/changeTare"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
                         android:layout_width="wrap_content"
                         android:layout_height="@dimen/button_small_height"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minWidth="0dp"
-                        android:text="@string/weigh_change_tare"
-                        android:textAllCaps="false" />
+                        android:text="@string/weigh_change_tare" />
                 </LinearLayout>
 
                 <!-- 皮重没能下发到秤：写原因，按钮直达重新设皮重；称重框保持未设皮重 -->
@@ -279,13 +265,11 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/retryTare"
+                    style="@style/Widget.Jidan.Button.Small"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_small_height"
                     android:layout_marginTop="8dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
                     android:text="@string/weigh_retry_tare"
-                    android:textAllCaps="false"
                     android:visibility="gone" />
 
                 <LinearLayout
@@ -306,24 +290,19 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/cancelReweigh"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
                         android:layout_width="wrap_content"
                         android:layout_height="@dimen/button_small_height"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/weigh_cancel_reweigh"
-                        android:textAllCaps="false" />
+                        android:text="@string/weigh_cancel_reweigh" />
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/recordBtn"
+                    style="@style/Widget.Jidan.Button"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_height"
                     android:layout_marginTop="12dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
                     android:text="@string/weigh_record"
-                    android:textAllCaps="false"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -346,13 +325,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/reprint"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.Jidan.Button.Outlined.Small"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/button_small_height"
                 android:layout_marginTop="8dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:textAllCaps="false"
                 android:visibility="gone" />
 
             <TextView
@@ -401,12 +377,10 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/openLedger"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        style="@style/Widget.Jidan.Button.Text.Accent"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:minWidth="0dp"
                         android:text="@string/weigh_open_ledger"
-                        android:textAllCaps="false"
                         android:visibility="gone" />
                 </LinearLayout>
 
@@ -433,11 +407,9 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/finish"
+        style="@style/Widget.Jidan.Button"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_height"
         android:layout_margin="@dimen/page_padding"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:text="@string/weigh_finish"
-        android:textAllCaps="false" />
+        android:text="@string/weigh_finish" />
 </LinearLayout>

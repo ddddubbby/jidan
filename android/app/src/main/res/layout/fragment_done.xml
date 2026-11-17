@@ -73,11 +73,10 @@
 
                 <TextView
                     android:id="@+id/amountValue"
+                    style="@style/Text.Num.Amount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/ink"
-                    android:textSize="48sp"
-                    android:textStyle="bold" />
+                    android:textSize="48sp" />
 
                 <TextView
                     android:id="@+id/amountUnit"
@@ -101,11 +100,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/ledgerLine"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/Widget.Jidan.Button.Text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textAllCaps="false"
                 android:textColor="@color/ink" />
 
             <TextView
@@ -135,12 +133,11 @@
             <!-- 提交后还能补打：打印机有问题时写明缺什么，点了去设备弹层 -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/reprint"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.Jidan.Button.Outlined"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:minHeight="52dp"
-                android:textAllCaps="false"
                 android:visibility="gone" />
         </LinearLayout>
     </ScrollView>
@@ -152,12 +149,10 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/again"
-            style="@style/Widget.MaterialComponents.Button"
+            style="@style/Widget.Jidan.Button.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="60dp"
-            android:text="@string/done_again"
-            android:textAllCaps="false"
-            android:textSize="@dimen/text_17" />
+            android:text="@string/done_again" />
     </FrameLayout>
 </LinearLayout>

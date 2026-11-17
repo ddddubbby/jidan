@@ -62,7 +62,7 @@ class LedgerSheet : BottomSheetDialogFragment() {
         b.manualAdd.isVisible = state.showManualAdd
         val groups = SameWeight.groups(state.boxes.map { it.net })
         val groupsView = ledgerGroupsView(groups, showAllGroups)
-        b.groups.text = groupsView.shown.joinToString("  ") { it.label() }
+        b.groups.text = groupsView.shown.joinToString("  ") { it.displayLabel() }
         b.groupsToggle.isVisible = groupsView.foldable
         b.groupsToggle.text = if (showAllGroups) {
             getString(R.string.ledger_groups_less)

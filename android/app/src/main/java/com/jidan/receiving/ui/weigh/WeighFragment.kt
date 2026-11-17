@@ -30,6 +30,8 @@ import com.jidan.receiving.ui.devices.LinkActionKind
 import com.jidan.receiving.ui.devices.label
 import com.jidan.receiving.ui.devices.linkAction
 import com.jidan.receiving.ui.sheets.LedgerSheet
+import com.jidan.receiving.ui.widgets.NumText
+import com.jidan.receiving.ui.widgets.TextGlue
 import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
@@ -174,7 +176,7 @@ class WeighFragment : Fragment() {
                 ).also { it.topMargin = 8 }
                 btn.isAllCaps = false
                 val tag = if (t.id == state.lastTareId) " · 上一单用的" else ""
-                btn.text = "${t.name}$tag\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()} kg"
+                btn.text = "${t.name}$tag\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()}${TextGlue.NBSP}kg"
                 btn.setOnClickListener { vm.selectTare(t) }
                 b.tareChoices.addView(btn)
             }
@@ -199,7 +201,7 @@ class WeighFragment : Fragment() {
                 },
             ),
         )
-        b.weight.text = (state.displayNet?.format1() ?: "0.0") + " kg"
+        b.weight.text = NumText.big(requireContext(), state.displayNet?.format1() ?: "0.0", "kg")
 
         val cand = state.candidates
         b.askRow.isVisible = cand != null
@@ -217,7 +219,7 @@ class WeighFragment : Fragment() {
         }
 
         b.tareRow.isVisible = !state.showTarePicker
-        b.tareText.text = state.tare?.let { "${it.name} · ${it.unit.format()} kg" } ?: "—"
+        b.tareText.text = state.tare?.let { "${it.name} · ${it.unit.format()}${TextGlue.NBSP}kg" } ?: "—"
 
         val tareFailed = state.ready && state.tareError.isNotBlank()
         b.tareErrorText.isVisible = tareFailed
