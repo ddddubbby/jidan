@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 当前要输的那一格、还没有数字时：边框同 bg_otp_cell_cur，中间多一根光标线（原型 .cell.cur:empty::after） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/bg_otp_cell_cur" />
+    <item
+        android:width="2dp"
+        android:height="28dp"
+        android:gravity="center">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+        </shape>
+    </item>
+</layer-list>

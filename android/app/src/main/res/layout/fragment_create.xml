@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html screenCreate：竖向步骤条，当前步展开成浅绿卡片，做完的收成一行，设备卡片压在页底 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
+        android:gravity="top"
         android:orientation="horizontal"
-        android:padding="@dimen/page_padding">
+        android:paddingStart="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="14dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -27,7 +32,7 @@
 
             <TextView
                 android:id="@+id/subtitle"
-                style="@style/Text.Caption"
+                style="@style/Text.Num.Sub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp" />
@@ -37,35 +42,30 @@
             android:id="@+id/account"
             style="@style/Widget.Jidan.Button.Text"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/ink" />
+            android:layout_height="wrap_content" />
     </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/line" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/bg"
         android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/page_padding">
+            android:paddingStart="20dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="16dp">
 
             <TextView
                 android:id="@+id/error"
-                style="@style/Text.Caption"
+                style="@style/Note.Err"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:textColor="@color/err_ink"
                 android:visibility="gone" />
 
             <TextView
@@ -84,75 +84,174 @@
                 android:id="@+id/stepFarmer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:background="@drawable/bg_step_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/farmerTitle"
-                    style="@style/Text.Strong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/create_ask_farmer" />
-
-                <TextView
-                    android:id="@+id/farmerSummary"
-                    style="@style/Text.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone" />
+                <include
+                    android:id="@+id/railFarmer"
+                    layout="@layout/view_step_rail"
+                    android:layout_width="32dp"
+                    android:layout_height="match_parent" />
 
                 <LinearLayout
-                    android:id="@+id/farmerBody"
-                    android:layout_width="match_parent"
+                    android:id="@+id/cardFarmer"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/Text.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/create_tail_label" />
-
-                    <EditText
-                        android:id="@+id/tail"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/input_height"
-                        android:layout_marginTop="6dp"
-                        android:background="@drawable/bg_login_fields"
-                        android:hint="@string/create_tail_hint"
-                        android:importantForAutofill="no"
-                        android:inputType="number"
-                        android:maxLength="4"
-                        android:paddingHorizontal="14dp"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_19" />
-
-                    <TextView
-                        android:id="@+id/noMatch"
-                        style="@style/Text.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textColor="@color/warn_ink"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/recentLabel"
-                        style="@style/Text.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="@string/create_recent"
-                        android:visibility="gone" />
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp">
 
                     <LinearLayout
-                        android:id="@+id/farmerList"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/farmerTitle"
+                                style="@style/Text.Section"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <TextView
+                                android:id="@+id/farmerSummary"
+                                style="@style/Text.Value"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/farmerChev"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_chevron_right"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/farmerBody"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tailLabel"
+                            style="@style/Text.Section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:labelFor="@id/tail"
+                            android:text="@string/create_tail_label" />
+
+                        <!-- 手机尾号：4 个格子，一眼看出只要 4 位；输入框透明地盖在格子上，点哪格都在输 -->
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="64dp"
+                            android:layout_marginTop="8dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:importantForAccessibility="no"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/cell0"
+                                    style="@style/Text.Num.Title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_otp_cell"
+                                    android:gravity="center"
+                                    android:includeFontPadding="false"
+                                    android:textSize="30sp" />
+
+                                <TextView
+                                    android:id="@+id/cell1"
+                                    style="@style/Text.Num.Title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_otp_cell"
+                                    android:gravity="center"
+                                    android:includeFontPadding="false"
+                                    android:textSize="30sp" />
+
+                                <TextView
+                                    android:id="@+id/cell2"
+                                    style="@style/Text.Num.Title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_otp_cell"
+                                    android:gravity="center"
+                                    android:includeFontPadding="false"
+                                    android:textSize="30sp" />
+
+                                <TextView
+                                    android:id="@+id/cell3"
+                                    style="@style/Text.Num.Title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_otp_cell"
+                                    android:gravity="center"
+                                    android:includeFontPadding="false"
+                                    android:textSize="30sp" />
+                            </LinearLayout>
+
+                            <EditText
+                                android:id="@+id/tail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:alpha="0"
+                                android:background="@null"
+                                android:cursorVisible="false"
+                                android:hint="@string/create_tail_hint"
+                                android:importantForAutofill="no"
+                                android:inputType="number"
+                                android:maxLength="4" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/noMatch"
+                            style="@style/Note.Warn"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/recentLabel"
+                            style="@style/Text.Section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="18dp"
+                            android:text="@string/create_recent"
+                            android:visibility="gone" />
+
+                        <LinearLayout
+                            android:id="@+id/farmerList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_card"
+                            android:clipToOutline="true"
+                            android:orientation="vertical"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
                 </LinearLayout>
             </LinearLayout>
 
@@ -161,32 +260,67 @@
                 android:id="@+id/stepProduct"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:background="@drawable/bg_step_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/productTitle"
-                    style="@style/Text.Strong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/create_step_product" />
-
-                <TextView
-                    android:id="@+id/productSummary"
-                    style="@style/Text.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone" />
+                <include
+                    android:id="@+id/railProduct"
+                    layout="@layout/view_step_rail"
+                    android:layout_width="32dp"
+                    android:layout_height="match_parent" />
 
                 <LinearLayout
-                    android:id="@+id/productChoices"
-                    android:layout_width="match_parent"
+                    android:id="@+id/cardProduct"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:visibility="gone" />
+                    android:paddingStart="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/productTitle"
+                                style="@style/Text.Section"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <TextView
+                                android:id="@+id/productSummary"
+                                style="@style/Text.Value"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/productChev"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_chevron_right"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/productChoices"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 规格 -->
@@ -194,40 +328,76 @@
                 android:id="@+id/stepSpec"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:background="@drawable/bg_step_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/specTitle"
-                    style="@style/Text.Strong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/create_step_spec" />
-
-                <TextView
-                    android:id="@+id/specSummary"
-                    style="@style/Text.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/specHints"
-                    style="@style/Text.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone" />
+                <include
+                    android:id="@+id/railSpec"
+                    layout="@layout/view_step_rail"
+                    android:layout_width="32dp"
+                    android:layout_height="match_parent" />
 
                 <LinearLayout
-                    android:id="@+id/specChoices"
-                    android:layout_width="match_parent"
+                    android:id="@+id/cardSpec"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:visibility="gone" />
+                    android:paddingStart="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/specTitle"
+                                style="@style/Text.Section"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <TextView
+                                android:id="@+id/specSummary"
+                                style="@style/Text.Value"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/specChev"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_chevron_right"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <!-- 规则与基准价的提醒挂在规格这一步（两者都由“商品 + 规格”决定） -->
+                    <LinearLayout
+                        android:id="@+id/specHints"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/specChoices"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 仓库 -->
@@ -235,47 +405,104 @@
                 android:id="@+id/stepWarehouse"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:background="@drawable/bg_step_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/warehouseTitle"
-                    style="@style/Text.Strong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/create_step_warehouse" />
-
-                <TextView
-                    android:id="@+id/warehouseSummary"
-                    style="@style/Text.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone" />
+                <include
+                    android:id="@+id/railWarehouse"
+                    layout="@layout/view_step_rail"
+                    android:layout_width="32dp"
+                    android:layout_height="match_parent" />
 
                 <LinearLayout
-                    android:id="@+id/warehouseList"
-                    android:layout_width="match_parent"
+                    android:id="@+id/cardWarehouse"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:visibility="gone" />
+                    android:paddingStart="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/warehouseTitle"
+                                style="@style/Text.Section"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <TextView
+                                android:id="@+id/warehouseSummary"
+                                style="@style/Text.Value"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/warehouseChev"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_chevron_right"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/warehouseList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card"
+                        android:clipToOutline="true"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
+
+                </LinearLayout>
             </LinearLayout>
 
-            <include
-                android:id="@+id/scaleCard"
-                layout="@layout/view_device_card"
+            <!-- 把设备卡片推到页底；内容多时它缩成 0 -->
+            <Space
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
-            <include
-                android:id="@+id/printerCard"
-                layout="@layout/view_device_card"
+            <!-- 设备：一张卡，两行（原型 .dev-card） -->
+            <LinearLayout
+                android:id="@+id/deviceCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_step_card"
+                android:clipToOutline="true"
+                android:orientation="vertical">
+
+                <include
+                    android:id="@+id/scaleCard"
+                    layout="@layout/view_device_line"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/line" />
+
+                <include
+                    android:id="@+id/printerCard"
+                    layout="@layout/view_device_line"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
 
             <FrameLayout
                 android:id="@+id/simHost"
@@ -285,15 +512,14 @@
         </LinearLayout>
     </ScrollView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/line" />
-
+    <!-- 页脚主操作：“还差 N 步”（白底绿边，点了直达缺的那步）/“开始收蛋”（绿底） -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action"
-        style="@style/Widget.Jidan.Button.Large"
+        style="@style/Widget.Jidan.Button.Action"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_large_height"
-        android:layout_margin="@dimen/page_padding" />
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp" />
 </LinearLayout>

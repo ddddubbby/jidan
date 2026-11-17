@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 品牌蛋形：40×50，上圆下略扁（原型 .brand .mark：border-radius 50% 50% 46% 46% / 60% 60% 40% 40%） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="50dp"
+    android:viewportWidth="40"
+    android:viewportHeight="50">
+    <path
+        android:fillColor="@color/accent"
+        android:pathData="M20,0 A20,30 0 0 1 40,30 A18.4,20 0 0 1 21.6,50 L18.4,50 A18.4,20 0 0 1 0,30 A20,30 0 0 1 20,0 Z" />
+</vector>

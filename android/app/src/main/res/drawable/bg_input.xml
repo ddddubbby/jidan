@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  输入框：白底、1.5dp 边线色（edge）、12dp 圆角（原型 .input / .lfield input）。
+  焦点：强调色 2dp 边，边里一圈淡光晕（画在框内，输入框大小不变）；activated 表示出错：红边（原型 .lfields.bad）。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/stroke_control" android:color="@color/err_ink" />
+            <corners android:radius="@dimen/radius_control" />
+        </shape>
+    </item>
+    <item android:state_focused="true">
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/surface" />
+                    <stroke android:width="@dimen/stroke_panel" android:color="@color/accent" />
+                    <corners android:radius="@dimen/radius_control" />
+                </shape>
+            </item>
+            <item
+                android:bottom="2dp"
+                android:left="2dp"
+                android:right="2dp"
+                android:top="2dp">
+                <shape android:shape="rectangle">
+                    <stroke android:width="3dp" android:color="@color/glow" />
+                    <corners android:radius="10dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/stroke_control" android:color="@color/edge" />
+            <corners android:radius="@dimen/radius_control" />
+        </shape>
+    </item>
+</selector>

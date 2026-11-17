@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -143,35 +142,22 @@ class LoginFragment : Fragment() {
 
         b.error.text = state.error
         val bad = state.error.isNotBlank() && !state.expiredHint
-        b.fields.background = ContextCompat.getDrawable(
-            requireContext(),
-            if (bad) R.drawable.bg_login_fields_bad else R.drawable.bg_login_fields,
-        )
+        // 出错时三个输入框一起红边（原型 .lfields.bad）；样式在 bg_input 的 activated 状态里
+        listOf(b.serverUrl, b.phone, b.password).forEach { it.isActivated = bad }
 
         b.updateEntry.bindUpdateEntry(state.update)
 
         b.action.isEnabled = state.step != LoginStep.BUSY
-        when (state.step) {
-            LoginStep.BUSY -> {
-                b.action.text = getString(R.string.login_busy)
-                stylePrimary(b)
-            }
-            LoginStep.SERVER, LoginStep.PHONE, LoginStep.PASSWORD -> {
-                b.action.text = getString(R.string.login_go)
-                stylePrimary(b)
-            }
-            LoginStep.READY -> {
-                b.action.text = getString(
-                    if (state.error.contains("连不上")) R.string.login_retry else R.string.login_go,
-                )
-                stylePrimary(b)
-            }
+        // 按钮始终写“登录”【变更 C-2】；还缺哪一格时画成白底绿边（原型 .btn.todo），点了直达那一格
+        b.action.isActivated = state.step == LoginStep.SERVER ||
+            state.step == LoginStep.PHONE || state.step == LoginStep.PASSWORD
+        b.action.text = when (state.step) {
+            LoginStep.BUSY -> getString(R.string.login_busy)
+            LoginStep.READY -> getString(
+                if (state.error.contains("连不上")) R.string.login_retry else R.string.login_go,
+            )
+            else -> getString(R.string.login_go)
         }
-    }
-
-    private fun stylePrimary(b: FragmentLoginBinding) {
-        b.action.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent))
-        b.action.setTextColor(ContextCompat.getColor(requireContext(), R.color.on_accent))
     }
 
     private fun focusField(v: View) {

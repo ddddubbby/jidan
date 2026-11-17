@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 当前要输的那一格（原型 .otp .cell.cur）：强调色 2dp 边，边里一圈淡光晕（光晕画在框内，格子大小不变） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/stroke_panel" android:color="@color/accent" />
+            <corners android:radius="@dimen/radius_button" />
+        </shape>
+    </item>
+    <item
+        android:bottom="2dp"
+        android:left="2dp"
+        android:right="2dp"
+        android:top="2dp">
+        <shape android:shape="rectangle">
+            <stroke android:width="3dp" android:color="@color/glow" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</layer-list>

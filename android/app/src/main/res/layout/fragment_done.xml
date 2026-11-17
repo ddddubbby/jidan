@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html screenDone：偏上居中，只有对勾动一下 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -14,21 +17,25 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical"
-            android:padding="@dimen/page_padding"
-            android:paddingTop="48dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="72dp">
 
-            <TextView
+            <FrameLayout
                 android:id="@+id/check"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
-                android:background="@drawable/bg_done_check"
-                android:gravity="center"
-                android:text="✓"
-                android:textColor="@color/on_accent"
-                android:textSize="34sp"
-                android:textStyle="bold" />
+                android:background="@drawable/bg_done_check">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_check" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -44,15 +51,11 @@
                     android:text="@string/done_submitted" />
 
                 <TextView
+                    style="@style/Tagline"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_choice"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:text="@string/done_pending"
-                    android:textColor="@color/ink_2"
-                    android:textSize="@dimen/text_13" />
+                    android:text="@string/done_pending" />
             </LinearLayout>
 
             <TextView
@@ -63,12 +66,13 @@
                 android:layout_marginTop="18dp"
                 android:gravity="center" />
 
+            <!-- 金额：Inter 大数字 + 小一档的“元”，按基线对齐；字号按位数缩小（原型 .amt） -->
             <LinearLayout
                 android:id="@+id/amountRow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:gravity="bottom"
+                android:baselineAligned="true"
                 android:orientation="horizontal">
 
                 <TextView
@@ -76,16 +80,18 @@
                     style="@style/Text.Num.Amount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="48sp" />
+                    android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/amountUnit"
-                    style="@style/Text.Strong"
+                    style="@style/Text.Value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="@string/summary_yuan"
-                    android:textColor="@color/ink_2" />
+                    android:textColor="@color/ink_2"
+                    android:textStyle="normal" />
             </LinearLayout>
 
             <TextView
@@ -98,17 +104,26 @@
                 android:textColor="@color/warn_ink"
                 android:visibility="gone" />
 
+            <!-- “商品 规格 · N 箱 ›”：点开流水（原型 .done-line） -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/ledgerLine"
                 style="@style/Widget.Jidan.Button.Text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="@color/ink" />
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/inter_semibold"
+                android:minHeight="@dimen/button_small_height"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_17"
+                app:icon="@drawable/ic_chevron_right"
+                app:iconGravity="textEnd"
+                app:iconPadding="2dp"
+                app:iconSize="20dp"
+                app:iconTint="@null" />
 
             <TextView
                 android:id="@+id/sub"
-                style="@style/Text.Caption"
+                style="@style/Text.Num.Lead"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center" />
@@ -118,7 +133,7 @@
                 style="@style/Text.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center" />
 
             <TextView
@@ -145,14 +160,16 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/page_padding">
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/again"
             style="@style/Widget.Jidan.Button.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="60dp"
             android:text="@string/done_again" />
     </FrameLayout>
 </LinearLayout>

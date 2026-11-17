@@ -24,6 +24,12 @@
         <item name="android:textSize">@dimen/text_15</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
+    <!-- 输入框上方的字段标签（原型 .lfield .k）：13，次级灰，600 -->
+    <style name="Text.FieldLabel">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/type_label</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
     <style name="Text.Caption">
         <item name="android:textColor">@color/ink_2</item>
         <item name="android:textSize">@dimen/type_caption</item>
@@ -33,6 +39,10 @@
     </style>
     <style name="Text.Body">
         <item name="android:textSize">@dimen/type_body</item>
+    </style>
+    <!-- 列表行的主文字：17，正常字重；名称加粗、副行变小用 span 在文字里做 -->
+    <style name="Text.Row">
+        <item name="android:textSize">@dimen/text_17</item>
     </style>
     <style name="Text.Strong">
         <item name="android:textSize">@dimen/text_17</item>
@@ -56,6 +66,18 @@
     <style name="Text.Num">
         <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="android:fontFeatureSettings">"tnum"</item>
+    </style>
+    <!-- 15 号次级灰数字：页面副标题（日期）、列表行第二行（手机号） -->
+    <style name="Text.Num.Sub">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <!-- 行内 17 号次级灰数字：完成页的“均重 · 单价”行 -->
+    <style name="Text.Num.Lead">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_17</item>
     </style>
     <style name="Text.Num.Caption">
         <item name="android:fontFamily">@font/inter_medium</item>
@@ -91,6 +113,33 @@
         <item name="android:textSize">@dimen/type_amount</item>
         <item name="android:letterSpacing">-0.02</item>
         <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 建单步骤标题的三种样子（原型 .scr-create .step-title）：未做的灰、进行中的绿大字、做完的收成小标签 -->
+    <style name="TextAppearance.Jidan.StepTodo" parent="android:TextAppearance">
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:textColor">@color/step_todo</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="TextAppearance.Jidan.StepActive" parent="android:TextAppearance">
+        <item name="android:textSize">@dimen/text_19</item>
+        <item name="android:textColor">@color/ok_ink</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.Jidan.StepDone" parent="android:TextAppearance">
+        <item name="android:textSize">@dimen/text_13</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <!-- 步骤下的绿色提示行（原型 .step-hint.ok） -->
+    <style name="TextAppearance.Jidan.Hint" parent="android:TextAppearance">
+        <item name="android:textSize">@dimen/text_13</item>
+        <item name="android:textColor">@color/ok_ink</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
     <!-- ============ 二、按钮 ============
@@ -135,6 +184,13 @@
         <item name="android:textSize">@dimen/text_18</item>
         <item name="cornerRadius">@dimen/radius_button_large</item>
     </style>
+    <!-- 页脚主操作（建单“还差 N 步 / 开始收蛋”、登录）：activated = 还差一步，白底绿边绿字（原型 .btn.todo），仍可点，点了直达缺的那步；否则绿底白字 -->
+    <style name="Widget.Jidan.Button.Action" parent="Widget.Jidan.Button.Large">
+        <item name="android:textColor">@color/btn_text_action</item>
+        <item name="backgroundTint">@color/btn_bg_action</item>
+        <item name="strokeColor">@color/btn_stroke_action</item>
+        <item name="strokeWidth">@dimen/stroke_control</item>
+    </style>
     <!-- 深色按钮：墨色底（原型 .btn.dark，确认类弹窗里的“继续”） -->
     <style name="Widget.Jidan.Button.Dark">
         <item name="backgroundTint">@color/btn_bg_dark</item>
@@ -170,6 +226,12 @@
         <item name="android:minHeight">@dimen/button_large_height</item>
         <item name="android:textSize">@dimen/text_18</item>
         <item name="cornerRadius">@dimen/radius_button_large</item>
+    </style>
+    <!-- 选项按钮（原型 .seg button）：白底、边线色描边，选中墨底白字；用在建单的商品、规格 -->
+    <style name="Widget.Jidan.Button.Outlined.Choice">
+        <item name="android:textColor">@color/btn_text_choice</item>
+        <item name="backgroundTint">@color/btn_bg_choice</item>
+        <item name="strokeColor">@color/btn_stroke_choice</item>
     </style>
     <!-- 红字红边：删除、放弃这类（原型 .btn.danger） -->
     <style name="Widget.Jidan.Button.Outlined.Danger">
@@ -243,6 +305,51 @@
     <style name="Chip.Neutral">
         <item name="android:backgroundTint">@color/sunken</item>
         <item name="android:textColor">@color/ink_2</item>
+    </style>
+
+    <!-- 输入框（原型 .input / .lfield input）：高 56、边线色 1.5dp、12 圆角，焦点强调色，activated 红边 -->
+    <style name="Input" parent="">
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:minHeight">@dimen/input_large_height</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textColorHint">@color/ink_3</item>
+        <item name="android:textSize">@dimen/text_19</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:importantForAutofill">no</item>
+    </style>
+
+    <!-- 提示条（原型 .note）：14 号字、10 圆角；Warn 黄、Err 红 -->
+    <style name="Note" parent="Text.Note">
+        <item name="android:paddingHorizontal">12dp</item>
+        <item name="android:paddingVertical">10dp</item>
+    </style>
+    <style name="Note.Warn">
+        <item name="android:background">@drawable/bg_note_warn</item>
+        <item name="android:textColor">@color/warn_ink</item>
+    </style>
+    <style name="Note.Err">
+        <item name="android:background">@drawable/bg_note_err</item>
+        <item name="android:textColor">@color/err_ink</item>
+    </style>
+
+    <!-- 行内小标（原型 .tagline）：比 Chip 方，13 / 700；默认灰（如“待审核”），Warn 黄、Ok 绿 -->
+    <style name="Tagline" parent="Text">
+        <item name="android:background">@drawable/bg_tagline</item>
+        <item name="android:backgroundTint">@color/sunken</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_13</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingHorizontal">8dp</item>
+        <item name="android:paddingVertical">1dp</item>
+    </style>
+    <style name="Tagline.Warn">
+        <item name="android:backgroundTint">@color/warn_bg</item>
+        <item name="android:textColor">@color/warn_ink</item>
+    </style>
+    <style name="Tagline.Ok">
+        <item name="android:backgroundTint">@color/ok_bg</item>
+        <item name="android:textColor">@color/ok_ink</item>
     </style>
 
     <!-- 小标签（原型 .tag）：方一点的小块，装“45.6kg-4箱”这类归类 -->

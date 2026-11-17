@@ -26,6 +26,9 @@
     <color name="disabled_bg">#e3e6e1</color>
     <color name="grab">#c9cec8</color>
     <color name="card_tint">#f3f9f5</color>
+    <!-- 建单步骤：未做步骤的标题灰（原型 .scr-create .step-title）、焦点光晕（强调色 18%） -->
+    <color name="step_todo">#7a837f</color>
+    <color name="glow">#2e0b6b3a</color>
     <color name="scrim">#730a0e10</color>
     <color name="ripple">#1f14181a</color>
 </resources>

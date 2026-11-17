@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 对照原型 devLine：建单页底部那张设备卡里的一行（● 名称 型号 ··尾号 状态）；缺什么时右侧多一个操作按钮 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/lineRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="8dp">
+
+    <View
+        android:id="@+id/lineDot"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:background="@drawable/bg_brand_mark" />
+
+    <TextView
+        android:id="@+id/lineName"
+        style="@style/Text.Strong"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/lineModel"
+        style="@style/Text.Num.Caption"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/lineStatus"
+        style="@style/Text.Strong"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:textSize="@dimen/text_15" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/lineAction"
+        style="@style/Widget.Jidan.Button.Text.Accent"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/button_small_height"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="-8dp" />
+</LinearLayout>

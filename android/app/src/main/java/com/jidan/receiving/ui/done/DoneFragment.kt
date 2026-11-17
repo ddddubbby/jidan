@@ -1,9 +1,11 @@
 package com.jidan.receiving.ui.done
 
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -82,7 +84,9 @@ class DoneFragment : Fragment() {
         } else {
             b.amountRow.isVisible = true
             b.pendingPrice.isVisible = false
-            b.amountValue.text = formatMoney(state.amount)
+            val money = formatMoney(state.amount)
+            b.amountValue.text = money
+            fitAmount(b.amountValue, money.length + 1)
         }
         val total = state.totalNetKg?.let { Kg.of(it).format() } ?: "—"
         b.ledgerLine.text = getString(
@@ -117,6 +121,14 @@ class DoneFragment : Fragment() {
             onPrint = { vm.reprintUnprinted() },
             onFixPrinter = { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) },
         )
+    }
+
+    /** 金额字号随位数缩小（原型 .amt：min(64, 容器宽 × 1.55 / 字符数)），长金额也一行放得下。 */
+    private fun fitAmount(view: TextView, chars: Int) {
+        val dm = resources.displayMetrics
+        val widthDp = dm.widthPixels / dm.density - 2 * 20f - 8f
+        val fit = widthDp * 1.55f / chars / resources.configuration.fontScale
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, minOf(64f, fit))
     }
 
     override fun onDestroyView() {

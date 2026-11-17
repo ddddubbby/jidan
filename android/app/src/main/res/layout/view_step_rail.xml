@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 建单步骤左侧的圆标与竖线（原型 .step-num、.step::before）；位置与颜色由 CreateFragment 按状态设 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="32dp"
+    android:layout_height="match_parent"
+    android:importantForAccessibility="no">
+
+    <View
+        android:id="@+id/railLineTop"
+        android:layout_width="2dp"
+        android:layout_height="14dp"
+        android:layout_gravity="top|center_horizontal"
+        android:background="@color/line" />
+
+    <View
+        android:id="@+id/railLineBottom"
+        android:layout_width="2dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="46dp"
+        android:background="@color/line" />
+
+    <FrameLayout
+        android:id="@+id/railCircle"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_step_num_todo">
+
+        <TextView
+            android:id="@+id/railNum"
+            style="@style/Text.Num.Strong"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="@color/ink_3"
+            android:textSize="16sp" />
+
+        <ImageView
+            android:id="@+id/railCheck"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check"
+            android:visibility="gone" />
+    </FrameLayout>
+</FrameLayout>
