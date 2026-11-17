@@ -38,7 +38,6 @@ function onChange(next: boolean, details: { returnValue?: string }) {
 .dialog h2 { font-size: 19px; }
 .dialog .dbody { margin: 0; }
 .dialog .amt { margin: 12px 0 2px; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.dialog .amt small { font-size: 17px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
 .dialog .acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 @media (prefers-reduced-motion: reduce) { .dialog { transition: none !important; } }
 </style>

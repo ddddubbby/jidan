@@ -214,7 +214,7 @@ async function fail(mode: FailMode) {
 </template>
 
 <style>
-.setcard .btn[aria-pressed="true"] { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.setcard .btn[aria-pressed="true"] { border-color: var(--ink); background: var(--sunken); box-shadow: inset 0 0 0 1px var(--ink); }
 .opt-only { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
 .demo-tag { margin-left: 8px; font-size: 13px; vertical-align: 2px; }
 .optlist { display: grid; }

@@ -12,6 +12,7 @@ import { createRule, listRules, type RuleView } from '../../api/rules'
 import { useMeta } from '../../stores/meta'
 import DateField from '../../ui/DateField.vue'
 import { dot, today } from '../../ui/date'
+import Num from '../../ui/Num.vue'
 import { fmtPhone } from '../../ui/phone'
 import { toast } from '../../ui/toast'
 import BoxEntryTable from './BoxEntryTable.vue'
@@ -440,7 +441,7 @@ onBeforeUnmount(() => {
     <aside class="card nw-side">
       <span class="k">金额</span>
       <template v-if="result && result.unitPrice != null && boxes.length">
-        <div class="nw-amt">{{ money(result.amount ?? 0) }}<small> 元</small></div>
+        <div class="nw-amt"><Num :value="money(result.amount ?? 0)" unit="元" /></div>
         <span class="nw-calc">{{ num(result.unitPrice) }} 元/箱 × {{ result.boxCount }} 箱</span>
         <p class="nw-formula">{{ formula }}</p>
       </template>
@@ -486,13 +487,12 @@ onBeforeUnmount(() => {
 .pick button:last-child { border-bottom: 0; }
 .pick button .num { flex: none; white-space: nowrap; }
 .pick button:hover:not(:disabled) { background: var(--sunken); }
-.nw-rulepick { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); }
-.nw-rulepick .t2 { font-weight: 600; color: var(--warn-ink); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nw-rulepick { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--sunken); }
+.nw-rulepick .t2 { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .nw-sum { margin-bottom: 10px; }
 .nw-side { position: sticky; top: 24px; padding: 20px; }
 .nw-side .k { font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .nw-amt { margin: 4px 0 2px; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.nw-amt small { font-size: 17px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
 .nw-calc { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .nw-formula { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .nw-fixline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }

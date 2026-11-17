@@ -13,6 +13,7 @@
 .result { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; font-size: 15px; }
 .result.err { background: var(--err-bg); color: var(--err-ink); }
 .result.ok { background: var(--ok-bg); color: var(--ok-ink); }
-.result.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.result.warn { position: relative; padding-left: 32px; background: var(--sunken); color: var(--ink); }
+.result.warn::before { content: ""; position: absolute; left: 15px; top: 1.05em; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
 .result b { display: block; }
 @media (max-width: 900px) { .opts, .opts.two { grid-template-columns: 1fr; } }
