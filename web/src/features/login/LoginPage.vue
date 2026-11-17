@@ -5,7 +5,7 @@ import { login } from '../../api/auth'
 import { errorText } from '../../api/http'
 import { useSession } from '../../stores/session'
 
-// 原型 pageLogin：按钮按“还缺什么”依次写成“填写手机号”“填写密码”，点了直达那一格
+// 登录按钮始终写“登录”【变更 C-2】；还没填完时点它，直达还缺的那一格
 const route = useRoute()
 const router = useRouter()
 const session = useSession()
@@ -63,8 +63,6 @@ function next() {
         </label>
         <p class="inline-err" role="alert">{{ error }}</p>
         <button v-if="step === 'busy'" type="button" class="btn primary lg" disabled><span class="spin"></span> 登录中</button>
-        <button v-else-if="step === 'phone'" type="button" class="btn todo lg" @click="phoneEl?.focus()">填写手机号</button>
-        <button v-else-if="step === 'pw'" type="button" class="btn todo lg" @click="pwEl?.focus()">填写密码</button>
         <button v-else type="submit" class="btn primary lg">登录</button>
       </div>
     </form>
