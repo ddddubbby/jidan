@@ -12,8 +12,7 @@
   --accent-press: #095a31;
   --ok-bg: #e1f2e6;
   --ok-ink: #0a5a31;
-  --warn-bg: #fff1cf;
-  --warn-ink: #734600;
+  --amber: #c98a00; /* 提示用的琥珀小点；不作底色、不作文字色（附录 E，2026-11-17 F4-2） */
   --err-bg: #fde4e1;
   --err-ink: #9c1f18;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);

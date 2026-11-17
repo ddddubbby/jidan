@@ -5,6 +5,7 @@ import { errorText } from '../../api/http'
 import { listArchive, type HeadPatch, type OrderDetail } from '../../api/orders'
 import DateField from '../../ui/DateField.vue'
 import InlineEdit from '../../ui/InlineEdit.vue'
+import Num from '../../ui/Num.vue'
 import { dot } from '../../ui/date'
 import { fmtPhone } from '../../ui/phone'
 
@@ -13,7 +14,7 @@ import { fmtPhone } from '../../ui/phone'
 // 保存由页面做（整单覆盖，见 api/orders.ts 的 saveHead），失败时页面给提示，这里的浮层保持打开。
 // 审核后（含回传失败）整块锁定，没有下划线。
 const props = defineProps<{ d: OrderDetail; editable: boolean; save: (p: HeadPatch) => Promise<boolean> }>()
-const emit = defineEmits<{ bindRule: [] }>()
+const emit = defineEmits<{ bindRule: []; fixPrice: [] }>()
 
 type Opt = { id: number; name: string; phones?: string[] }
 const warehouses = ref<Opt[]>([])
@@ -165,7 +166,8 @@ async function commitDate(iso: string, close: () => void) {
           <td class="r">
             <template v-if="d.pricing?.unitPrice != null">{{ d.pricing.unitPrice }}</template>
             <!-- 缺项：直接给能补上的那个按钮，不写“请先…” -->
-            <button v-else-if="d.pricing?.issues?.includes('NO_RULE') && !d.pricing?.issues?.includes('NO_BASE_PRICE')" class="btn fix sm" @click="emit('bindRule')">绑定规则</button>
+            <button v-else-if="d.pricing?.issues?.includes('NO_RULE') && !d.pricing?.issues?.includes('NO_BASE_PRICE')" class="fixlink" @click="emit('bindRule')">绑定规则</button>
+            <button v-else-if="editable" class="fixlink" @click="emit('fixPrice')">录入基准价</button>
             <span v-else class="tag warn">缺基准价</span>
           </td>
           <td class="r"><b>{{ d.pricing?.amount != null ? d.pricing.amount.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : '—' }}</b></td>

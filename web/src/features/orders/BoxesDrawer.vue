@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { errorText } from '../../api/http'
 import { getRecords, saveBoxes, type BoxRec, type OrderDetail, type OrderRecords } from '../../api/orders'
 import Drawer from '../../ui/Drawer.vue'
+import Num from '../../ui/Num.vue'
 import { toast } from '../../ui/toast'
 
 // 逐箱流水抽屉（原型 drawerBoxes，WEB-07）：同重归类、只看手录、改净重、删除（待审核单才能改）。
@@ -175,8 +176,8 @@ async function addBoxes() {
                 @keydown.esc.stop.prevent="cancelEdit"
                 @input="editBad = false"
               />
-              <button v-else-if="editable" class="netbtn" :disabled="busy" :aria-label="`改第 ${b.seq} 箱净重`" @click="startEdit(b)">{{ kg(b.netKg) }} kg</button>
-              <b v-else class="num">{{ kg(b.netKg) }} kg</b>
+              <button v-else-if="editable" class="netbtn" :disabled="busy" :aria-label="`改第 ${b.seq} 箱净重`" @click="startEdit(b)"><Num :value="kg(b.netKg)" unit="kg" /></button>
+              <b v-else class="num"><Num :value="kg(b.netKg)" unit="kg" /></b>
               <span v-if="b.manual && b.rawKg != null && editing !== b.seq" class="orig">秤读数 {{ kg(b.rawKg) }} kg</span>
             </td>
             <td><span v-if="b.manual" class="tag warn">手录</span></td>
@@ -219,7 +220,7 @@ async function addBoxes() {
 
     <template v-if="editable" #foot>
       <div><span class="k">箱数</span><span class="v"><s v-if="base.n !== p?.boxCount">{{ base.n }}</s>{{ p?.boxCount }}</span></div>
-      <div><span class="k">均重</span><span class="v"><s v-if="base.avg !== p?.avgKg">{{ base.avg }}</s>{{ p?.avgKg }} kg</span></div>
+      <div><span class="k">均重</span><span class="v"><s v-if="base.avg !== p?.avgKg">{{ base.avg }}</s><Num :value="p?.avgKg" unit="kg" /></span></div>
       <div>
         <span class="k">单价</span>
         <span class="v"><s v-if="base.price != null && p?.unitPrice != null && base.price !== p.unitPrice">{{ base.price }}</s>{{ p?.unitPrice ?? '—' }}</span>
@@ -236,6 +237,8 @@ async function addBoxes() {
 .boxes .orig { display: block; font-size: 12px; color: var(--ink-2); }
 .groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
 .groups span { padding: 2px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--sunken); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.mfilter { min-height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; font-weight: 600; white-space: nowrap; }
-.mfilter[aria-pressed="true"] { background: var(--warn-ink); color: #fff; }
+.mfilter { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.mfilter::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.mfilter:hover { background: var(--sunken); }
+.mfilter[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
 </style>

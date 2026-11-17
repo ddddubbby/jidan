@@ -6,6 +6,7 @@ import { errorText } from '../../api/http'
 import { pendingBySpec } from '../../api/orders'
 import { useMeta } from '../../stores/meta'
 import { dot, shiftDay, today } from '../../ui/date'
+import Num from '../../ui/Num.vue'
 import { toast } from '../../ui/toast'
 
 // 每日基准价（WEB-04，原型 pagePrices）：回车或离开输入框即保存该行，回车后跳到下一个空格。
@@ -158,7 +159,7 @@ function backTo() {
     <div v-if="missing.length" class="strip">
       <div class="sitem">
         {{ missing.length }} 个规格未录
-        <button v-if="canCopy" class="btn sm fix" @click="copyPrev">全部沿用前一天</button>
+        <button v-if="canCopy" class="btn sm" @click="copyPrev">全部沿用前一天</button>
       </div>
     </div>
 
@@ -170,8 +171,8 @@ function backTo() {
         <template v-for="r in rows" :key="r.specId">
         <tr :class="{ warnrow: r.price == null, errfirst: !!r.err }">
           <td class="spname"><b>{{ r.name }}</b></td>
-          <td class="r">{{ r.stdNetKg }} kg</td>
-          <td class="r">{{ r.prev ?? '—' }}</td>
+          <td class="r"><Num :value="r.stdNetKg" unit="kg" /></td>
+          <td class="r"><Num :value="r.prev" /></td>
           <td>
             <input
               :ref="(el) => (inputs[r.specId] = el as HTMLInputElement | null)"
