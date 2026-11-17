@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -88,9 +89,10 @@ class LoginFragment : Fragment() {
     private fun onAction() {
         val b = binding ?: return
         when (vm.ui.value.step) {
-            LoginStep.SERVER -> b.serverUrl.requestFocus()
-            LoginStep.PHONE -> b.phone.requestFocus()
-            LoginStep.PASSWORD -> b.password.requestFocus()
+            // 按钮始终写“登录”【变更 C-2】；还缺哪一格，点了直达那一格并弹出键盘
+            LoginStep.SERVER -> focusField(b.serverUrl)
+            LoginStep.PHONE -> focusField(b.phone)
+            LoginStep.PASSWORD -> focusField(b.password)
             LoginStep.READY -> vm.login {
                 val nav = findNavController()
                 val c = requireContext().appContainer()
@@ -154,17 +156,9 @@ class LoginFragment : Fragment() {
                 b.action.text = getString(R.string.login_busy)
                 stylePrimary(b)
             }
-            LoginStep.SERVER -> {
-                b.action.text = getString(R.string.login_need_server)
-                styleTodo(b)
-            }
-            LoginStep.PHONE -> {
-                b.action.text = getString(R.string.login_need_phone)
-                styleTodo(b)
-            }
-            LoginStep.PASSWORD -> {
-                b.action.text = getString(R.string.login_need_password)
-                styleTodo(b)
+            LoginStep.SERVER, LoginStep.PHONE, LoginStep.PASSWORD -> {
+                b.action.text = getString(R.string.login_go)
+                stylePrimary(b)
             }
             LoginStep.READY -> {
                 b.action.text = getString(
@@ -180,9 +174,10 @@ class LoginFragment : Fragment() {
         b.action.setTextColor(ContextCompat.getColor(requireContext(), R.color.on_accent))
     }
 
-    private fun styleTodo(b: FragmentLoginBinding) {
-        b.action.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.warn_bg))
-        b.action.setTextColor(ContextCompat.getColor(requireContext(), R.color.warn_ink))
+    private fun focusField(v: View) {
+        v.requestFocus()
+        val imm = requireContext().getSystemService(InputMethodManager::class.java)
+        imm?.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT)
     }
 
     override fun onDestroyView() {
