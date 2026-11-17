@@ -30,3 +30,7 @@ local.properties
 # 部署运行时产物（deploy/）：APK 的版本信息、数据库备份
 deploy/apk/version.json
 deploy/backups/
+
+# UI 对照截图（F4-1）：原型与 APP 渲染的输出，每次现生成
+tools/ui-compare/out/
+android/app/build/screens/
