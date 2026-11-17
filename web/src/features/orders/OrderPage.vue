@@ -11,6 +11,7 @@ import {
 import { useMeta } from '../../stores/meta'
 import ConfirmDialog from '../../ui/ConfirmDialog.vue'
 import { dot } from '../../ui/date'
+import Num from '../../ui/Num.vue'
 import { toast } from '../../ui/toast'
 import BoxesDrawer from './BoxesDrawer.vue'
 import OrderInfo from './OrderInfo.vue'
@@ -91,11 +92,17 @@ watch(id, () => {
   error.value = ''
   load()
 })
-onMounted(() => {
-  load()
+onMounted(async () => {
+  const opening = load()
   getOptions()
     .then((items) => (manualPush.value = items.find((i) => i.key === 'push.on-approve')?.value === 'manual'))
     .catch(() => {})
+  // 列表里缺规则的单点“绑定规则”过来（?bindRule=1）：详情载入后直接打开绑定规则的抽屉，并把这个参数从地址里去掉
+  await opening
+  if (route.query.bindRule) {
+    if (missRule.value) ruleOpen.value = true
+    router.replace({ path: route.path })
+  }
 })
 
 // ---- 改表头（待审核）
@@ -168,7 +175,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
 
     <div class="dgrid">
       <div>
-        <OrderInfo :d="d" :editable="editable" :save="saveField" @bind-rule="ruleOpen = true" />
+        <OrderInfo :d="d" :editable="editable" :save="saveField" @bind-rule="ruleOpen = true" @fix-price="fixPrice" />
         <div class="underrow">
           <p class="formula">{{ formula }}</p>
           <div class="ops">
@@ -183,7 +190,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
       <aside class="card side-panel">
         <span class="k">金额</span>
         <template v-if="d.pricing?.unitPrice != null">
-          <div class="amt">{{ money(d.pricing.amount) }}<small> 元</small></div>
+          <div class="amt"><Num :value="money(d.pricing.amount)" unit="元" /></div>
           <span class="calc">{{ d.pricing.unitPrice }} 元/箱 × {{ d.pricing.boxCount }} 箱</span>
           <span v-if="d.submittedDiffers && d.submittedAmount != null" class="was">
             APP 提交时 {{ d.submittedPrice ?? '—' }} 元/箱 · {{ money(d.submittedAmount) }} 元
@@ -194,10 +201,10 @@ const goNext = () => router.push('/orders/' + next.value!.id)
           <div class="fixline"><span class="tag warn">{{ issues.includes('NO_BASE_PRICE') ? `无 ${dot(d.bizDate ?? '')} 基准价` : '无收购规则' }}</span></div>
         </template>
         <hr />
-        <div class="row"><span class="muted">累计净重</span><span class="v">{{ d.pricing?.totalKg }} kg</span></div>
+        <div class="row"><span class="muted">累计净重</span><span class="v"><Num :value="d.pricing?.totalKg" unit="kg" /></span></div>
         <div class="row">
           <span class="muted">均重</span>
-          <span class="v">{{ d.pricing?.avgKg }} kg <span class="muted" style="font-weight: 400">（原始 {{ d.pricing?.rawAvgKg?.toFixed(2) }}）</span></span>
+          <span class="v"><Num :value="d.pricing?.avgKg" unit="kg" /> <span class="muted" style="font-weight: 400">（原始 {{ d.pricing?.rawAvgKg?.toFixed(2) }}）</span></span>
         </div>
         <div class="row"><span class="muted">定价规则</span><span class="v" style="max-width: 190px">{{ d.pricing?.ruleName ?? '—' }}</span></div>
         <div v-if="manualCount" class="row"><span class="muted">手录</span><span class="v"><span class="tag warn">{{ manualCount }} 箱</span></span></div>
@@ -251,7 +258,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
     <OrderRuleDrawer v-model:open="ruleOpen" :order="d" @changed="load" />
 
     <ConfirmDialog v-model:open="approveOpen" :title="manualPush ? '审核这张单？' : '审核并回传好生意？'" :confirm-text="manualPush ? '审核' : '审核并回传'" @confirm="approveGo">
-      <div class="amt">{{ money(d.pricing?.amount) }}<small> 元</small></div>
+      <div class="amt"><Num :value="money(d.pricing?.amount)" unit="元" /></div>
       <p class="calc" style="margin: 0">{{ d.vendor?.name }} · {{ d.product?.name }} {{ d.spec?.name }} · {{ d.pricing?.boxCount }} 箱 × {{ d.pricing?.unitPrice }} 元</p>
       <p class="muted" style="margin: 14px 0 0; font-size: 13px">
         {{ manualPush ? `审核后单据锁定；回传到「${meta.book}」要另外点“回传”` : `回传到「${meta.book}」，之后单据锁定` }}
@@ -273,7 +280,6 @@ const goNext = () => router.push('/orders/' + next.value!.id)
 .side-panel { position: sticky; top: 24px; padding: 20px; }
 .side-panel .k { font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .amt { margin: 4px 0 2px; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.amt small { font-size: 17px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
 .calc { font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .was { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .fixline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }

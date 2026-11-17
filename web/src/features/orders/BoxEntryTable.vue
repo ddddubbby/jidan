@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
+import Num from '../../ui/Num.vue'
 
 // 逐箱净重录入表（WEB-06，原型 boxTable / addBoxes）：一箱一回车；也可粘贴一整列（Excel 复制来的多行）。
 // 箱序号按录入顺序自动编号，删一箱后后面的往前排。净重是 kg，最多两位小数。
@@ -120,7 +121,7 @@ defineExpose({ focus: () => addEl.value?.focus() })
             @keydown.esc.prevent="cancelEdit"
             @input="editBad = false"
           />
-          <button v-else class="netbtn" :aria-label="`改第 ${i + 1} 箱净重`" @click="startEdit(i)">{{ kg(n) }} kg</button>
+          <button v-else class="netbtn" :aria-label="`改第 ${i + 1} 箱净重`" @click="startEdit(i)"><Num :value="kg(n)" unit="kg" /></button>
         </td>
         <td class="r nb">
           <button v-if="editing !== i" class="btn sm ghost del" :aria-label="`删除第 ${i + 1} 箱`" @click="remove(i)">删除</button>

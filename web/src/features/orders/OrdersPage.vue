@@ -6,7 +6,9 @@ import { getOptions } from '../../api/options'
 import { getOrderCounts } from '../../api/nav'
 import { listOrders, type OrderRow, type OrderTab } from '../../api/orders'
 import type { OrderCounts } from '../../api/types'
+import { getSpecs } from '../../api/basics'
 import { dot } from '../../ui/date'
+import Num from '../../ui/Num.vue'
 import { fmtPhone } from '../../ui/phone'
 
 // 采购入库单列表（WEB-08，原型 pageOrders / orderTable / statusStrip）：四个页签、检索、缺基准价提示条。
@@ -102,7 +104,22 @@ function fixPrice(specId: number) {
   router.push({ path: '/prices', query: { spec: String(specId), back: route.fullPath, backLabel: '采购入库单' } })
 }
 
-const issueText: Record<string, string> = { NO_BASE_PRICE: '缺基准价', NO_RULE: '缺收购规则' }
+// 缺项就地补：缺基准价的单，单价格里给“录入基准价”，去的是同一个地方，只是带上这张单的收购日期与规格；
+// 缺规则的单给“绑定规则”，去详情页并直接打开绑定规则的抽屉（详情页的主按钮也是这样）。列表行没带规格编号，按规格名对。
+const specIds = ref<Record<string, number>>({})
+getSpecs()
+  .then((l) => (specIds.value = Object.fromEntries(l.filter((s) => s.id != null && s.name).map((s) => [s.name!, s.id!]))))
+  .catch(() => {})
+const fixOf = (o: OrderRow): 'price' | 'rule' | '' =>
+  o.status !== 'PENDING' ? '' : o.issues?.includes('NO_BASE_PRICE') ? 'price' : o.issues?.includes('NO_RULE') ? 'rule' : ''
+function fixInRow(o: OrderRow) {
+  if (fixOf(o) === 'rule') return router.push({ path: '/orders/' + o.id, query: { bindRule: '1' } })
+  const spec = specIds.value[o.specName ?? ''] ?? missing.value.find((m) => m.specName === o.specName)?.specId
+  router.push({
+    path: '/prices',
+    query: { date: o.bizDate, spec: spec == null ? undefined : String(spec), back: route.fullPath, backLabel: '采购入库单' },
+  })
+}
 const firstSentence = (t: string) => t.replace(/^好生意返回：/, '').split(/[，。,]/)[0]
 const money = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
 const hhmm = (iso?: string) => (iso ?? '').slice(11, 16)
@@ -130,7 +147,7 @@ const emptyText = computed(() => (q.value.trim() ? '没有匹配的单据' : tab
   <div v-if="missing.length" class="strip">
     <div class="sitem">
       今日基准价未录：{{ missing.map((m) => m.specName).join('、') }}
-      <button class="btn sm fix" @click="fixPrice(missing[0].specId!)">录入 {{ missing[0].specName }} 基准价</button>
+      <button class="btn sm" @click="fixPrice(missing[0].specId!)">录入 {{ missing[0].specName }} 基准价</button>
     </div>
   </div>
 
@@ -151,7 +168,7 @@ const emptyText = computed(() => (q.value.trim() ? '没有匹配的单据' : tab
         <thead>
           <tr>
             <th>单据</th><th>农户</th><th class="narrowhide">商品规格</th><th class="r">箱数</th>
-            <th class="r narrowhide hf">均重</th><th class="r narrowhide hf">单价</th><th class="r">金额</th>
+            <th class="r narrowhide hf">均重</th><th class="r hf">单价</th><th class="r">金额</th>
             <th class="narrowhide hf">磅秤员</th><th>{{ lastHead }}</th>
           </tr>
         </thead>
@@ -175,8 +192,12 @@ const emptyText = computed(() => (q.value.trim() ? '没有匹配的单据' : tab
             </td>
             <td class="narrowhide"><span class="nb">{{ o.productName }} {{ o.specName }}</span></td>
             <td class="r">{{ o.boxCount }}</td>
-            <td class="r narrowhide hf">{{ o.avgKg }} kg</td>
-            <td class="r narrowhide hf">{{ o.price ?? '—' }}</td>
+            <td class="r narrowhide hf"><Num :value="o.avgKg" unit="kg" /></td>
+            <td class="r hf">
+              <button v-if="fixOf(o) === 'price'" class="fixlink" @click.stop="fixInRow(o)" @keydown.enter.stop>录入基准价</button>
+              <button v-else-if="fixOf(o) === 'rule'" class="fixlink" @click.stop="fixInRow(o)" @keydown.enter.stop>绑定规则</button>
+              <Num v-else :value="o.price" />
+            </td>
             <td class="r">
               <b>{{ o.amount != null ? money(o.amount) : '—' }}</b>
               <span v-if="o.amountChanged && o.submittedAmount != null" class="sub">原 {{ money(o.submittedAmount) }}</span>
@@ -184,7 +205,6 @@ const emptyText = computed(() => (q.value.trim() ? '没有匹配的单据' : tab
             <td class="nb narrowhide hf">{{ o.operatorName }}<span v-if="o.source === 'WEB'" class="sub">管理端自建</span></td>
             <td :class="showError(o) ? 'fill' : 'nb'">
               <template v-if="tab === 'pending'">
-                <span v-for="i in o.issues" :key="i" class="tag warn">{{ issueText[i] ?? i }}</span>
                 <span v-if="o.manualCount" class="tag warn">手录 {{ o.manualCount }} 箱</span>
               </template>
               <span v-else-if="showError(o)" class="errline" :title="o.pushError">{{ firstSentence(o.pushError!) }}</span>

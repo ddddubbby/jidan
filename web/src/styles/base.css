@@ -1,9 +1,17 @@
 /* 基础样式：从 lab/web-sim.html 搬入的通用部分；外框见 ui/AppShell.vue，抽屉、对话框等随各自组件加入 */
+
+/* 数字字体：只含数字与少数符号的 Inter 拉丁字面（随包带上，离线可用；许可见 assets/fonts/Inter-OFL.txt）。
+   汉字和字母不在 unicode-range 内，落到后面的系统中文字体。 */
+@font-face { font-family: 'EggNum'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fonts/inter-latin-500-normal.woff2') format('woff2'); unicode-range: U+0030-0039, U+002C, U+002E, U+0025, U+002B, U+002D, U+00D7, U+2212; font-feature-settings: 'tnum' 1; }
+@font-face { font-family: 'EggNum'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fonts/inter-latin-600-normal.woff2') format('woff2'); unicode-range: U+0030-0039, U+002C, U+002E, U+0025, U+002B, U+002D, U+00D7, U+2212; font-feature-settings: 'tnum' 1; }
+@font-face { font-family: 'EggNum'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fonts/inter-latin-700-normal.woff2') format('woff2'); unicode-range: U+0030-0039, U+002C, U+002E, U+0025, U+002B, U+002D, U+00D7, U+2212; font-feature-settings: 'tnum' 1; }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body {
   background: var(--bg); color: var(--ink);
-  font: 15px/1.5 system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font: 15px/1.5 'EggNum', system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -17,7 +25,7 @@ h1, h2, h3 { margin: 0; }
 /* ---------- 状态提示 ---------- */
 .cnt { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--sunken); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .reddot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #d33a2c; }
-.ambdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c98a00; }
+.ambdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
 
 /* ---------- 页头 ---------- */
 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
@@ -32,11 +40,11 @@ h1, h2, h3 { margin: 0; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--surface); font-size: 15px; font-weight: 600; white-space: nowrap; transition: transform 120ms var(--ease-out); }
 .btn:hover { background: var(--sunken); }
 .btn:active { transform: scale(0.97); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover { background: var(--accent-press); }
+/* fix：补上缺项的主按钮（v7 4.5-1：写明还缺什么，点了直达），样子就是主按钮 */
+.btn.primary, .btn.fix { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover, .btn.fix:hover { background: var(--accent-press); }
 .btn.dark { background: var(--ink); border-color: var(--ink); color: #fff; }
 .btn.todo { border-color: var(--accent); background: var(--surface); color: var(--ok-ink); }
-.btn.fix { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
 .btn.ghost { border-color: transparent; background: none; color: var(--ink-2); }
 .btn.ghost:hover { background: var(--sunken); color: var(--ink); }
 .btn.red { border-color: transparent; background: none; color: var(--err-ink); }
@@ -52,7 +60,15 @@ h1, h2, h3 { margin: 0; }
 .pill.err { background: var(--err-bg); color: var(--err-ink); }
 .pill.plain::before { display: none; }
 .tag { display: inline-block; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--sunken); color: var(--ink-2); font-size: 12px; font-weight: 600; white-space: nowrap; vertical-align: 1px; }
-.tag.warn { border-color: transparent; background: var(--warn-bg); color: var(--warn-ink); }
+/* 提示类标签：不填底色，琥珀小点加灰字 */
+.tag.warn { display: inline-flex; align-items: center; gap: 5px; padding: 0; border-color: transparent; background: none; color: var(--ink-2); font-weight: 500; vertical-align: baseline; }
+.tag.warn::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+/* 缺项就地补：落在缺值的那一格里，链接样式，点了去补 */
+.fixlink { display: inline; padding: 0; border: 0; background: none; color: var(--accent); font-weight: 600; text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 4px; white-space: nowrap; }
+.fixlink:hover { color: var(--accent-press); text-decoration-style: solid; }
+/* 数字后面的单位（ui/Num.vue）：小一号、浅一档，紧跟数字；大金额里更小 */
+.nu { margin-left: .18em; font-size: .85em; font-weight: 500; letter-spacing: 0; color: var(--ink-3); }
+.amt .nu, .nw-amt .nu { font-size: .62em; }
 
 .tabs { display: flex; gap: 4px; margin-bottom: 14px; }
 .tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-size: 15px; font-weight: 600; }
@@ -76,13 +92,16 @@ table.t { width: 100%; border-collapse: separate; border-spacing: 0; background:
 .t .errline { display: block; font-size: 13px; color: var(--err-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t td.fill { max-width: 0; width: 34%; }
 .t .clip { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.t tr.warnrow td { background: #fffaf0; }
+/* 有待处理项的行：左边缘一道琥珀竖条，不上底色 */
+.t tr.warnrow td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
+.t tbody tr:last-child td:first-child { border-bottom-left-radius: 15px; }
 .empty { padding: 40px; text-align: center; color: var(--ink-2); }
 .twrap { overflow-x: auto; border-radius: 16px; }
 
 /* ---------- 提示条：今天要先处理的事（缺基准价等） ---------- */
 .strip { display: flex; flex-wrap: wrap; gap: 10px; margin: -4px 0 16px; }
-.sitem { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 14px; border-radius: 12px; font-weight: 600; background: var(--warn-bg); color: var(--warn-ink); }
+.sitem { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 14px; border: 1px solid var(--line); border-radius: 12px; font-weight: 500; background: var(--surface); color: var(--ink); }
+.sitem::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
 .sitem .btn { min-height: 34px; }
 
 /* ---------- 输入、开关 ---------- */
@@ -95,7 +114,8 @@ table.t { width: 100%; border-collapse: separate; border-spacing: 0; background:
 .seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .seg button { min-height: 40px; padding: 0 14px; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--surface); font-weight: 600; }
 .seg button small { margin-left: 6px; font-size: 12px; color: var(--ok-ink); font-weight: 600; }
-.seg button small.w { color: var(--warn-ink); }
+.seg button small.w { color: var(--ink-2); font-weight: 500; }
+.seg button small.w::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--amber); vertical-align: 1px; }
 .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .seg button[aria-pressed="true"] small { color: #fff; }
 .seg.sm button { min-height: 34px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
