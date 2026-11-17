@@ -36,8 +36,10 @@
     <style name="Text.RuleKey" parent="Text.Section">
         <item name="android:paddingEnd">8dp</item>
     </style>
+    <!-- 规则名较长时在窄屏、大字号下折成两行：均衡折行，末行不会只剩一个字 -->
     <style name="Text.RuleValue" parent="Text.Num.Strong">
         <item name="android:gravity">end</item>
+        <item name="android:breakStrategy">balanced</item>
     </style>
     <!-- 尾差步进器中间的数字（原型 .stepper output）：22 粗，至少 64 宽 -->
     <style name="Text.Num.Stepper">
