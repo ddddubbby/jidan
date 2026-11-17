@@ -48,6 +48,8 @@ services:
       CHANJET_APP_SECRET: ${CHANJET_APP_SECRET:-}
       CHANJET_BOOK_ID: ${CHANJET_BOOK_ID:-}
       CHANJET_OPEN_TOKEN: ${CHANJET_OPEN_TOKEN:-}
+      CHANJET_CERTIFICATE: ${CHANJET_CERTIFICATE:-}
+      CHANJET_TOKEN_MODE: ${CHANJET_TOKEN_MODE:-auto}
     healthcheck:
       # 镜像里没有 curl，用 bash 自带的 /dev/tcp 探端口
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]

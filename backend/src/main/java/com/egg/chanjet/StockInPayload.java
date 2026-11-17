@@ -12,9 +12,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 采购入库单报文：全系统唯一组装的地方，只在审核时组装一次，原文存进 {@code push_payload}，
- * 之后的重新回传原样再发（开发规格 3.4、3.5）。字段映射照 v7 7.1；{@code bookid} 是路径参数，不在报文里。
+ * 之后的重新回传原样再发（开发规格 3.4、3.5）。字段映射照 v7 7.1，并已逐项对照开放平台文档“采购入库单新增”
+ * （/docs/file/apiFile/zplus/zjkcgl/30644?id=32738）：表头 {@code bizDate}、{@code code}、{@code redBlueFlagEnum}、
+ * {@code noteTypeEnum}、{@code custVendorCode}、{@code warehouseCode} 与明细 {@code productCode}、{@code warehouseCode}、
+ * {@code taxPct}、{@code transQty}、{@code transUomName}、{@code price} 是文档里的必填项，全部带上；{@code comments}、{@code amount} 选填。
  * <p>
- * 未经实物验证：字段名与日期格式只对照了 v7 7.1，没有对着真实账套发过。联调时对不上只改这个文件（开发规格 11.5）。
+ * {@code bookid}：文档的请求体表格里也列了它，但请求示例里没有，其余接口都把它列为路径参数；这里照 v7 7.1 只放在路径上。
+ * <p>
+ * 开票类型：系统设置 {@code invoice.type} 存的是 {@code NO_INVOICE / GENERAL / SPECIAL}，组装时换成文档的枚举值
+ * {@code NO_INVOICE / NORMORL_INVOICE / SPECIAL_INVOICE}（{@code NORMORL} 是文档原文的拼法，照抄）。
+ * <p>
+ * 未经实物验证：没有对着真实账套发过。联调时对不上只改这个文件（开发规格 11.5）。
  */
 public final class StockInPayload {
 
@@ -33,12 +41,24 @@ public final class StockInPayload {
     private StockInPayload() {
     }
 
+    /** 系统设置 invoice.type 的取值 → 文档的 noteTypeEnum；不认识的原样发，让好生意给出原因。 */
+    static String noteTypeEnum(String setting) {
+        if (setting == null) {
+            return "NO_INVOICE";
+        }
+        return switch (setting) {
+            case "GENERAL" -> "NORMORL_INVOICE";
+            case "SPECIAL" -> "SPECIAL_INVOICE";
+            default -> setting;
+        };
+    }
+
     public static String build(ObjectMapper json, Input in) {
         Map<String, Object> head = new LinkedHashMap<>();
         head.put("bizDate", in.bizDate().toString());
         head.put("code", in.code());
         head.put("redBlueFlagEnum", "BLUE");
-        head.put("noteTypeEnum", in.noteType());
+        head.put("noteTypeEnum", noteTypeEnum(in.noteType()));
         head.put("custVendorCode", in.vendorCode());
         head.put("warehouseCode", in.warehouseCode());
         if (in.comments() != null) {
