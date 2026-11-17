@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹层顶上的把手：40×5（原型 .sheet-grab span） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/grab" />
+    <size android:width="40dp" android:height="5dp" />
+    <corners android:radius="3dp" />
+</shape>

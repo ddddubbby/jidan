@@ -141,7 +141,7 @@
     <string name="print_failed_n">%1$d 张标签没打出来 · %2$s</string>
     <string name="print_preview_title">标签预览</string>
     <string name="logout">退出登录</string>
-    <string name="devices_title">设备</string>
+    <string name="devices_title">秤和打印机</string>
     <string name="devices_scale">电子秤</string>
     <string name="devices_printer">打印机</string>
     <string name="devices_test_print">打一张测试标签</string>
@@ -175,4 +175,25 @@
     <string name="login_go">登录</string>
     <string name="login_retry">重新登录</string>
     <string name="login_busy">登录中</string>
+    <!-- F4-5：称重页与它的弹层 -->
+    <string name="sheet_close">关闭</string>
+    <string name="weigh_back_desc">返回</string>
+    <string name="weigh_net_reweigh">净重（重称第 %1$d&#160;箱）</string>
+    <string name="weigh_reweigh_key">重称</string>
+    <string name="weigh_avg_key">均重</string>
+    <string name="weigh_mark_unprinted">未打印</string>
+    <string name="weigh_box_adjust">调整第 %1$d 箱</string>
+    <string name="ledger_groups_label">相同重量归类</string>
+    <string name="ledger_col_seq">箱序号</string>
+    <string name="ledger_col_net">净重</string>
+    <string name="ledger_col_label">标签</string>
+    <string name="ledger_row_seq">第%1$d箱</string>
+    <string name="ledger_row_desc">调整第 %1$d 箱</string>
+    <string name="ledger_label_pending">待打印</string>
+    <string name="ledger_reprint">补打</string>
+    <string name="box_net_label">净重（kg）</string>
+    <string name="box_cancel">取消</string>
+    <string name="devices_sec_scale">蓝牙电子秤</string>
+    <string name="devices_sec_printer">标签打印机</string>
+    <string name="devices_unpaired">未配对</string>
 </resources>

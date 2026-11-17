@@ -127,7 +127,7 @@ class ScreensTest(private val widthDp: Int, private val fontScale: Float) {
         h.step("11-ledger-sheet") { h.click("全部") }
         h.step("12-box-sheet") {
             h.dismissDialogs()
-            h.click("第 10 箱")
+            h.clickExact("第 10 箱")
         }
         h.step("13-box-manual") { h.click("手工录入") }
         h.step("14-devices-sheet") {

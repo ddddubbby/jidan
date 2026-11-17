@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- “手录”小标（原型 .mtag）：浅灰底、1dp 线色边、6dp 圆角 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/sunken" />
+    <stroke android:width="@dimen/stroke_hairline" android:color="@color/line" />
+    <corners android:radius="@dimen/radius_mtag" />
+</shape>

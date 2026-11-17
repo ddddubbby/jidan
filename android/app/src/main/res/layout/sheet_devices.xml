@@ -1,82 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html sheetDevices：秤和打印机 / 蓝牙电子秤 / 标签打印机 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        style="@style/Text.Title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/devices_title"
-        android:textSize="@dimen/text_19" />
-
-    <TextView
-        style="@style/Text.Strong"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/devices_scale" />
-
-    <TextView
-        android:id="@+id/scaleReading"
-        style="@style/Text.Value"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="--.- kg" />
+    android:orientation="vertical">
 
     <include
-        android:id="@+id/scaleCard"
-        layout="@layout/view_device_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" />
+        android:id="@+id/head"
+        layout="@layout/view_sheet_head" />
 
-    <LinearLayout
-        android:id="@+id/scaleScan"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="vertical"
-        android:visibility="gone" />
+        android:layout_height="wrap_content">
 
-    <TextView
-        style="@style/Text.Strong"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/devices_printer" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/page_padding"
+            android:paddingEnd="@dimen/page_padding"
+            android:paddingBottom="20dp">
 
-    <include
-        android:id="@+id/printerCard"
-        layout="@layout/view_device_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" />
+            <TextView
+                style="@style/Text.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/devices_sec_scale" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/testPrint"
-        style="@style/Widget.Jidan.Button.Outlined"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/button_height"
-        android:layout_marginTop="8dp"
-        android:text="@string/devices_test_print" />
+            <include
+                android:id="@+id/scaleRow"
+                layout="@layout/view_device_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
-    <LinearLayout
-        android:id="@+id/printerScan"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="vertical"
-        android:visibility="gone" />
+            <LinearLayout
+                android:id="@+id/scaleScan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/sheetMessage"
-        style="@style/Text.Caption"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:textColor="@color/err_ink" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:background="@color/line" />
+
+            <TextView
+                style="@style/Text.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/devices_sec_printer" />
+
+            <include
+                android:id="@+id/printerRow"
+                layout="@layout/view_device_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:id="@+id/printerScan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+            <!-- 测试标签发出去了、没连上等一句话结果；没有时不占位 -->
+            <TextView
+                android:id="@+id/sheetMessage"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/ink_2"
+                android:visibility="gone" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

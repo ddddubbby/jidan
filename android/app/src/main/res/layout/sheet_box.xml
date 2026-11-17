@@ -1,96 +1,179 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html sheetBox：第 N 箱 / 大字净重 / 皮重 / 这一次称的是几箱 / 重称、手工录入、删除；手工录入时换成输入框 + 取消、保存 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="@dimen/page_padding">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/title"
-        style="@style/Text.Strong"
+    <include
+        android:id="@+id/head"
+        layout="@layout/view_sheet_head" />
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/facts"
-        style="@style/Text.Caption"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" />
-
-    <TextView
-        android:id="@+id/regroupLabel"
-        style="@style/Text.Caption"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/box_regroup"
-        android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/regroupRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:orientation="horizontal"
-        android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/editBlock"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <EditText
-            android:id="@+id/netInput"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="@dimen/input_height"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_login_fields"
-            android:hint="@string/box_net_hint"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal"
-            android:paddingHorizontal="14dp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/page_padding"
+            android:paddingEnd="@dimen/page_padding"
+            android:paddingBottom="20dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/saveNet"
-            style="@style/Widget.Jidan.Button"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginTop="10dp"
-            android:text="@string/box_save" />
-    </LinearLayout>
+            <LinearLayout
+                android:id="@+id/detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-    <LinearLayout
-        android:id="@+id/actions"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/reweigh"
-            style="@style/Widget.Jidan.Button"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:text="@string/box_reweigh" />
+                    <TextView
+                        android:id="@+id/boxBig"
+                        style="@style/Text.Num.Title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="@dimen/text_34" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/manualEdit"
-            style="@style/Widget.Jidan.Button.Outlined"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginTop="8dp"
-            android:text="@string/box_manual" />
+                    <TextView
+                        android:id="@+id/boxManual"
+                        style="@style/Text.Mtag"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/weigh_manual_tag"
+                        android:visibility="gone" />
+                </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/delete"
-            style="@style/Widget.Jidan.Button.Text"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginTop="8dp"
-            android:text="@string/box_delete"
-            android:textColor="@color/err_ink" />
-    </LinearLayout>
+                <TextView
+                    android:id="@+id/facts"
+                    style="@style/Text.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/ink_2" />
+
+                <TextView
+                    android:id="@+id/regroupLabel"
+                    style="@style/Text.Section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/box_regroup"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/regroupRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/actions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/reweigh"
+                        style="@style/Widget.Jidan.Button.Dark"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="52dp"
+                        android:text="@string/box_reweigh" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/manualEdit"
+                        style="@style/Widget.Jidan.Button.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:minHeight="52dp"
+                        android:text="@string/box_manual" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/delete"
+                        style="@style/Widget.Jidan.Button.Text.Danger"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:minHeight="52dp"
+                        android:text="@string/box_delete"
+                        android:textSize="@dimen/text_17" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 手工录入 / 手工加一箱：数字键盘输入净重（原型 sheetBox 的 boxMode） -->
+            <LinearLayout
+                android:id="@+id/editBlock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/editHint"
+                    style="@style/Text.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/ink_2" />
+
+                <TextView
+                    style="@style/Text.FieldLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:labelFor="@id/netInput"
+                    android:text="@string/box_net_label" />
+
+                <EditText
+                    android:id="@+id/netInput"
+                    style="@style/Input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:imeOptions="actionDone"
+                    android:inputType="numberDecimal"
+                    android:selectAllOnFocus="true" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/cancelEdit"
+                        style="@style/Widget.Jidan.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:text="@string/box_cancel" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/saveNet"
+                        style="@style/Widget.Jidan.Button.Action"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        android:minHeight="56dp"
+                        android:textSize="@dimen/text_17"
+                        android:text="@string/box_save" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

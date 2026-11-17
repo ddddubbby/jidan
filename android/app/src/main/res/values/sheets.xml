@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  底部弹层（F4-5，原型 .sheet）：白底、顶上 20 圆角、遮罩 45%；把手与标题栏在 layout/view_sheet_head.xml。
+  称重页打开的流水、单箱、设备、放弃提示都用它（ui/sheets/JidanSheet.kt）。
+-->
+<resources>
+    <style name="ThemeOverlay.Jidan.BottomSheetDialog" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Jidan.BottomSheet</item>
+        <item name="android:backgroundDimAmount">0.45</item>
+    </style>
+    <style name="Widget.Jidan.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="backgroundTint">@color/surface</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Jidan.Sheet</item>
+    </style>
+    <style name="ShapeAppearanceOverlay.Jidan.Sheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">@dimen/radius_sheet</item>
+        <item name="cornerSizeTopRight">@dimen/radius_sheet</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- 弹层标题（原型 .sheet-head h2：19）与右上角的“关闭”（17、600、次级灰） -->
+    <style name="Text.SheetTitle" parent="Text.Value" />
+    <style name="Widget.Jidan.Button.Text.Close">
+        <item name="android:minWidth">64dp</item>
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+</resources>

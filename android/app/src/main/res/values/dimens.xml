@@ -10,11 +10,13 @@
     <dimen name="text_13">13sp</dimen>
     <dimen name="text_14">14sp</dimen>
     <dimen name="text_15">15sp</dimen>
+    <dimen name="text_16">16sp</dimen>
     <dimen name="text_17">17sp</dimen>
     <dimen name="text_18">18sp</dimen>
     <dimen name="text_19">19sp</dimen>
     <dimen name="text_22">22sp</dimen>
     <dimen name="text_26">26sp</dimen>
+    <dimen name="text_28">28sp</dimen>
     <dimen name="text_34">34sp</dimen>
     <dimen name="text_64">64sp</dimen>
     <dimen name="text_96">96sp</dimen>
@@ -47,6 +49,8 @@
     <dimen name="radius_panel">16dp</dimen>
     <dimen name="radius_sheet">20dp</dimen>
     <dimen name="radius_pill">999dp</dimen>
+    <dimen name="radius_scale">18dp</dimen>
+    <dimen name="radius_mtag">6dp</dimen>
 
     <!-- 描边 -->
     <dimen name="stroke_hairline">1dp</dimen>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 状态点：8dp 圆，白色，颜色由使用处的 tint 给（原型 .chip::before） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <size android:width="8dp" android:height="8dp" />
+    <solid android:color="@color/surface" />
+</shape>

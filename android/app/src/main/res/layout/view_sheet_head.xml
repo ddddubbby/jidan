@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹层顶部：把手 + 标题 + 关闭（原型 .sheet-grab / .sheet-head）。确认类弹层（放弃这一单）不带关闭，只有两个答案 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="5dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/bg_sheet_grab"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/sheetTitle"
+            style="@style/Text.SheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:accessibilityHeading="true" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sheetClose"
+            style="@style/Widget.Jidan.Button.Text.Close"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_small_height"
+            android:text="@string/sheet_close" />
+    </LinearLayout>
+</LinearLayout>

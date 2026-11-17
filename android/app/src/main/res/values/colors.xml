@@ -31,4 +31,8 @@
     <color name="glow">#2e0b6b3a</color>
     <color name="scrim">#730a0e10</color>
     <color name="ripple">#1f14181a</color>
+    <!-- 称重页（原型 .scale-row 的分隔线 ink 8%、空位行的灰条） -->
+    <color name="divider_soft">#1414181a</color>
+    <color name="slot">#eef0ec</color>
+    <color name="row_grp">#fbfcfa</color>
 </resources>

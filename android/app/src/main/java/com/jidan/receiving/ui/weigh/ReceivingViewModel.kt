@@ -179,6 +179,8 @@ data class WeighUiState(
     val printError: String = "",
     val printBlock: String = "",
     val labelPreview: String = "",
+    /** `print.timing = per-box`（默认）：每记一箱就打；完成后一次打印时，确认前的箱还不到打的时候，不算漏打。 */
+    val printPerBox: Boolean = true,
     /** 已确认计量或已提交：流水只读，只能补打（APP-08）。 */
     val locked: Boolean = false,
     /** 选项 `weigh.manual-entry`（on 才允许手工录入净重）。 */
@@ -931,6 +933,7 @@ class ReceivingViewModel(
                 printError = printQueue.lastError.value,
                 printBlock = printBlock(),
                 labelPreview = printQueue.preview.value?.text.orEmpty(),
+                printPerBox = printQueue.timingPerBox(),
                 locked = locked,
                 manualEntry = manualEntryOn(container.options.value),
             )

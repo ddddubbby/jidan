@@ -133,6 +133,17 @@ class ScreenHarness(
         advance(50)
     }
 
+    /** 点文字整段正好是 [exact] 的那一个（如列表行里的“第 10 箱”，不点称重框里“✓ 第 10 箱已记录”）。 */
+    fun clickExact(exact: String) {
+        val roots = dialogs().map { it.window!!.decorView } + activity().window.decorView
+        val v = roots.asSequence().flatMap { textViews(it) }.firstOrNull { it.isShown && plain(it.text).trim() == exact }
+            ?: error("找不到文字「$exact」")
+        var target: View = v
+        while (!target.hasOnClickListeners()) target = target.parent as? View ?: break
+        (if (target.hasOnClickListeners()) target else v).performClick()
+        advance(50)
+    }
+
     private fun textViews(root: View): Sequence<TextView> = sequence {
         if (root is TextView) yield(root)
         if (root is ViewGroup) for (i in 0 until root.childCount) yieldAll(textViews(root.getChildAt(i)))
