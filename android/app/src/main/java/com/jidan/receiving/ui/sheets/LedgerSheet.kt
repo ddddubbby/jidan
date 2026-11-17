@@ -153,7 +153,7 @@ class LedgerSheet : JidanSheet() {
         if (!box.printed) {
             val ctx = requireContext()
             r.ledgerPrint.setTextColor(ContextCompat.getColor(ctx, R.color.warn_ink))
-            r.ledgerPrint.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.warn_bg))
+            r.ledgerPrint.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.hint_bg))
             r.ledgerPrint.strokeColor = ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.warn_ink))
             r.ledgerPrint.strokeWidth = resources.getDimensionPixelSize(R.dimen.stroke_control)
         }

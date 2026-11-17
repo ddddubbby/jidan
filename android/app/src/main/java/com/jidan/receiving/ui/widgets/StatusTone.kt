@@ -16,7 +16,7 @@ import com.jidan.receiving.device.PrinterIssue
  */
 enum class StatusTone(@ColorRes val ink: Int, @ColorRes val bg: Int, @ColorRes val dot: Int) {
     OK(R.color.ok_ink, R.color.ok_bg, R.color.accent),
-    WARN(R.color.warn_ink, R.color.warn_bg, R.color.warn_ink),
+    WARN(R.color.warn_ink, R.color.hint_bg, R.color.warn_ink),
     ERR(R.color.err_ink, R.color.err_bg, R.color.err_ink),
     BUSY(R.color.ink_2, R.color.sunken, R.color.faint),
 }
@@ -65,7 +65,7 @@ fun TextView.bindEventTone(tone: StatusTone?) {
     }
     val bg = when (tone) {
         StatusTone.OK -> R.color.ok_bg
-        StatusTone.WARN -> R.color.warn_bg
+        StatusTone.WARN -> R.color.hint_bg
         StatusTone.ERR -> R.color.err_bg
         else -> R.color.sunken
     }

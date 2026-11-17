@@ -295,7 +295,7 @@
         <item name="android:gravity">center_vertical</item>
     </style>
     <style name="Chip.Warn">
-        <item name="android:backgroundTint">@color/warn_bg</item>
+        <item name="android:backgroundTint">@color/hint_bg</item>
         <item name="android:textColor">@color/warn_ink</item>
     </style>
     <style name="Chip.Err">
@@ -344,7 +344,7 @@
         <item name="android:paddingVertical">1dp</item>
     </style>
     <style name="Tagline.Warn">
-        <item name="android:backgroundTint">@color/warn_bg</item>
+        <item name="android:backgroundTint">@color/hint_bg</item>
         <item name="android:textColor">@color/warn_ink</item>
     </style>
     <style name="Tagline.Ok">

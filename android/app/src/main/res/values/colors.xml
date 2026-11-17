@@ -16,6 +16,8 @@
     <color name="ok_ink">#0a5a31</color>
     <color name="warn_bg">#fff1cf</color>
     <color name="warn_ink">#734600</color>
+    <!-- 提示类元素（标签、提示条、补打按钮）的底色：中性灰，不用米黄（业务方 2026-11-17 决定，与 Web 一致）；米黄 warn_bg 只留给称重框“待拿下 / 几箱？”这类作业状态 -->
+    <color name="hint_bg">@color/sunken</color>
     <color name="err_bg">#fde4e1</color>
     <color name="err_ink">#9c1f18</color>
     <color name="on_accent">#ffffff</color>
