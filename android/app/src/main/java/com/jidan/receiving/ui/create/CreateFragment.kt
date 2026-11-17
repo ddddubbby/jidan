@@ -490,7 +490,7 @@ class CreateFragment : Fragment() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
         ).also { it.topMargin = dp(4) }
         tv.text = text
-        tv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.warn_bg))
+        tv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.hint_bg))
         tv.setTextColor(ContextCompat.getColor(requireContext(), R.color.warn_ink))
         return tv
     }

@@ -1,264 +1,320 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html sheetRule：定价规则 / 规则名称、适用、标准净含量、今日基准价（发丝线隔开的表）、
+     每 kg 尾差 − 1 元 +、凹陷的“本单收购价”一行、更换规则 / 解绑（安静的两个按钮）。
+     没有绑定规则或点了“更换规则”时下面出候选列表。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="@dimen/page_padding">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/title"
-        style="@style/Text.Value"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/rule_sheet_title" />
+    <include
+        android:id="@+id/head"
+        layout="@layout/view_sheet_head" />
 
-    <TextView
-        android:id="@+id/scope"
-        style="@style/Text.Caption"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp" />
-
-    <TextView
-        android:id="@+id/error"
-        style="@style/Text.Caption"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textColor="@color/err_ink"
-        android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/loading"
-        style="@style/Text.Caption"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/rule_sheet_loading"
-        android:visibility="gone" />
-
-    <!-- 已绑定：调阅表 -->
-    <LinearLayout
-        android:id="@+id/boundBlock"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp">
+            android:orientation="vertical"
+            android:paddingStart="@dimen/page_padding"
+            android:paddingEnd="@dimen/page_padding"
+            android:paddingBottom="20dp">
 
+            <!-- 未绑定 / 更换规则时的“适用”说明；已绑定时它在表里是一行 -->
             <TextView
-                style="@style/Text.Caption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_name" />
-
-            <TextView
-                android:id="@+id/ruleName"
-                style="@style/Text.Strong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/line" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp">
-
-            <TextView
-                style="@style/Text.Caption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_std" />
-
-            <TextView
-                android:id="@+id/stdNet"
-                style="@style/Text.Strong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/line" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp">
-
-            <TextView
-                style="@style/Text.Caption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_base" />
-
-            <TextView
-                android:id="@+id/basePrice"
-                style="@style/Text.Strong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/line" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <TextView
+                android:id="@+id/scope"
                 style="@style/Text.Body"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_coef"
-                android:textColor="@color/ink_2" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/coefMinus"
-                style="@style/Widget.Jidan.Button.Outlined.Small"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:padding="0dp"
-                android:text="−"
-                android:textSize="22sp" />
+                android:textColor="@color/ink_2"
+                android:visibility="gone" />
 
             <TextView
-                android:id="@+id/coefValue"
-                style="@style/Text.Strong"
-                android:layout_width="72dp"
+                android:id="@+id/error"
+                style="@style/Note.Err"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/coefPlus"
-                style="@style/Widget.Jidan.Button.Outlined.Small"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:padding="0dp"
-                android:text="+"
-                android:textSize="22sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/previewRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="6dp"
-            android:visibility="gone">
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
             <TextView
-                style="@style/Text.Caption"
-                android:layout_width="0dp"
+                android:id="@+id/loading"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_preview" />
+                android:layout_marginTop="12dp"
+                android:text="@string/rule_sheet_loading"
+                android:textColor="@color/ink_2"
+                android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/previewPrice"
-                style="@style/Text.Strong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+            <!-- 已绑定：调阅表 -->
+            <LinearLayout
+                android:id="@+id/boundBlock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:divider="@drawable/bg_hairline"
+                    android:orientation="vertical"
+                    android:showDividers="middle">
+
+                    <LinearLayout
+                        style="@style/RuleTableRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Text.RuleKey"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="38"
+                            android:text="@string/rule_sheet_name" />
+
+                        <TextView
+                            android:id="@+id/ruleName"
+                            style="@style/Text.RuleValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="62" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/RuleTableRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Text.RuleKey"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="38"
+                            android:text="@string/rule_sheet_scope" />
+
+                        <TextView
+                            android:id="@+id/scopeValue"
+                            style="@style/Text.RuleValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="62" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/RuleTableRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Text.RuleKey"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="38"
+                            android:text="@string/rule_sheet_std" />
+
+                        <TextView
+                            android:id="@+id/stdNet"
+                            style="@style/Text.RuleValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="62" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/RuleTableRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Text.RuleKey"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="38"
+                            android:text="@string/rule_sheet_base" />
+
+                        <TextView
+                            android:id="@+id/basePrice"
+                            style="@style/Text.RuleValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="62" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/line"
+                    android:importantForAccessibility="no" />
+
+                <!-- 每 kg 尾差：− 1 元 +（原型 .stepper，按钮 48，数字 22 粗） -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="10dp">
+
+                    <TextView
+                        style="@style/Text.Row"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/rule_sheet_coef"
+                        android:textColor="@color/ink_2" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/coefMinus"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="@string/rule_sheet_coef_down"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="−"
+                        android:textSize="24sp"
+                        app:cornerRadius="@dimen/radius_control" />
+
+                    <TextView
+                        android:id="@+id/coefValue"
+                        style="@style/Text.Num.Stepper"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="10dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/coefPlus"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="@string/rule_sheet_coef_up"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="+"
+                        android:textSize="24sp"
+                        app:cornerRadius="@dimen/radius_control" />
+                </LinearLayout>
+
+                <!-- 本单收购价（原型 .preview）：凹陷的浅灰块，改了尾差先在这里预览，保存才落规则 -->
+                <LinearLayout
+                    android:id="@+id/previewRow"
+                    style="@style/Surface.Sunken"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/Text.Row"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/rule_sheet_preview"
+                        android:textColor="@color/ink_2" />
+
+                    <TextView
+                        android:id="@+id/previewPrice"
+                        style="@style/Text.Num.Preview"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/dirtyActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/revert"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:text="@string/rule_sheet_revert" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/save"
+                        style="@style/Widget.Jidan.Button.Small"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        android:text="@string/rule_sheet_save" />
+                </LinearLayout>
+
+                <!-- 更换规则、解绑：安静的文字按钮，解绑是红字（原型 .ghost-link） -->
+                <LinearLayout
+                    android:id="@+id/boundActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/change"
+                        style="@style/Widget.Jidan.Button.Text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/rule_sheet_change" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/unbind"
+                        style="@style/Widget.Jidan.Button.Text.Danger"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/rule_sheet_unbind" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 候选列表：未绑定或「更换规则」 -->
+            <LinearLayout
+                android:id="@+id/candidateBlock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/candidateEmpty"
+                    style="@style/Text.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rule_sheet_no_rules"
+                    android:textColor="@color/ink_2"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/candidateList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:divider="@drawable/bg_hairline"
+                    android:orientation="vertical"
+                    android:showDividers="beginning|middle" />
+            </LinearLayout>
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/dirtyActions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/revert"
-                style="@style/Widget.Jidan.Button.Outlined"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_revert" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/save"
-                style="@style/Widget.Jidan.Button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_save" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/boundActions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/change"
-                style="@style/Widget.Jidan.Button.Text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_change"
-                android:textColor="@color/ink" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/unbind"
-                style="@style/Widget.Jidan.Button.Text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/rule_sheet_unbind"
-                android:textColor="@color/err_ink" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- 候选列表：未绑定或「更换规则」 -->
-    <LinearLayout
-        android:id="@+id/candidateBlock"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/candidateEmpty"
-            style="@style/Text.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/rule_sheet_no_rules"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/candidateList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

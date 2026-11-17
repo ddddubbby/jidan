@@ -61,7 +61,7 @@
         <item name="backgroundTint">@color/btn_bg_tare</item>
         <item name="strokeColor">@color/btn_stroke_tare</item>
     </style>
-    <!-- 黄底按钮（原型 .btn.warnfix）：补打标签、没打出来 -->
+    <!-- 补打按钮（原型 .btn.warnfix）：中性灰底、琥珀字与边（不用米黄） -->
     <style name="Widget.Jidan.Button.Outlined.Warn">
         <item name="android:textColor">@color/btn_text_warn</item>
         <item name="backgroundTint">@color/btn_bg_warn</item>

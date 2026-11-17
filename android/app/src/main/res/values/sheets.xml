@@ -27,4 +27,31 @@
         <item name="android:textSize">@dimen/text_17</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
+
+    <!-- 定价规则弹层的表（原型 .sheet-table）：左边 15 / 次级灰 / 500，右边 17 / 600 右对齐，行间发丝线，上下各 9 -->
+    <style name="RuleTableRow" parent="">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingVertical">9dp</item>
+    </style>
+    <style name="Text.RuleKey" parent="Text.Section">
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+    <!-- 规则名较长时在窄屏、大字号下折成两行：均衡折行，末行不会只剩一个字 -->
+    <style name="Text.RuleValue" parent="Text.Num.Strong">
+        <item name="android:gravity">end</item>
+        <item name="android:breakStrategy">balanced</item>
+    </style>
+    <!-- 尾差步进器中间的数字（原型 .stepper output）：22 粗，至少 64 宽 -->
+    <style name="Text.Num.Stepper">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">@dimen/text_22</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+    </style>
+    <!-- 本单收购价（原型 .preview b）：20 粗，单位用 NumText 缩小 -->
+    <style name="Text.Num.Preview">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textSize">20sp</item>
+    </style>
 </resources>

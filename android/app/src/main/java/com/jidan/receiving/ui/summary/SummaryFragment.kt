@@ -1,11 +1,12 @@
 package com.jidan.receiving.ui.summary
 
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -27,6 +28,7 @@ import com.jidan.receiving.ui.weigh.ReceivingViewModel
 import com.jidan.receiving.ui.weigh.SummaryUiState
 import com.jidan.receiving.ui.widgets.NumText
 import com.jidan.receiving.ui.widgets.bindReprint
+import com.jidan.receiving.ui.widgets.fitAmount
 import kotlinx.coroutines.launch
 
 class SummaryFragment : Fragment() {
@@ -95,6 +97,21 @@ class SummaryFragment : Fragment() {
         RuleSheet().show(parentFragmentManager, RuleSheet.TAG)
     }
 
+    /** 定价规则一行：没绑定时“未绑定”前放一个琥珀圆点，不用黄底。 */
+    private fun setUnbound(b: FragmentSummaryBinding, unbound: Boolean) {
+        b.factRuleValue.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            if (unbound) R.drawable.ic_dot else 0, 0, 0, 0,
+        )
+    }
+
+    /** “10 箱 · 460.5 kg”：kg 缩小变灰，与均重、称重页同一套（NumText）。 */
+    private fun ledgerValue(boxCount: Int, totalKg: Double?): CharSequence {
+        val head = getString(R.string.summary_ledger_count, boxCount)
+        if (totalKg == null) return "$head · —"
+        return SpannableStringBuilder(head).append(" · ")
+            .append(NumText.row(requireContext(), Kg.of(totalKg).format(), "kg"))
+    }
+
     private fun render(state: SummaryUiState) {
         val b = binding ?: return
         b.title.text = state.farmerName
@@ -104,34 +121,31 @@ class SummaryFragment : Fragment() {
         val q = state.quote
         val missing = q != null && (q.noBasePrice || q.noRule)
         val pendingAllowed = missing && state.allowWithoutPrice
-        b.moneyCard.background = ContextCompat.getDrawable(
-            requireContext(),
-            if (missing && !state.allowWithoutPrice) R.drawable.bg_money_card_warn else R.drawable.bg_money_card,
-        )
 
         if (q == null) {
             b.amountRow.isVisible = false
             b.amountCalc.isVisible = false
             b.warnRow.isVisible = false
-            b.factRuleValue.text = getString(R.string.summary_rule_unbound)
+            setUnbound(b, true)
             b.factFormula.isVisible = false
             b.factLedgerValue.text = "—"
             b.factAvg.text = "—"
         } else {
-            b.factRuleValue.text = q.ruleName?.takeIf { it.isNotBlank() }
-                ?: getString(R.string.summary_rule_unbound)
+            val ruleName = q.ruleName?.takeIf { it.isNotBlank() }
+            b.factRuleValue.text = ruleName ?: getString(R.string.summary_rule_unbound)
+            setUnbound(b, ruleName == null)
             val formula = formulaLine(q)
             b.factFormula.isVisible = formula.isNotBlank()
             b.factFormula.text = formula
-            val total = q.totalKg?.let { Kg.of(it).format() } ?: "—"
-            b.factLedgerValue.text = getString(R.string.summary_ledger_value, q.boxCount, total)
-            b.factAvg.text = q.avgKg?.let { NumText.row(requireContext(), formatMoney(it), "kg") } ?: "—"
+            b.factLedgerValue.text = ledgerValue(q.boxCount, q.totalKg)
+            b.factAvg.text = q.avgKg?.let { NumText.row(requireContext(), formatNum(it), "kg") } ?: "—"
 
             when {
                 pendingAllowed -> {
                     b.amountRow.isVisible = true
                     b.amountCalc.isVisible = false
                     b.amountValue.text = getString(R.string.summary_pending_price)
+                    b.amountValue.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
                     b.amountUnit.isVisible = false
                     b.warnRow.isVisible = true
                     b.warnTag.text = when {
@@ -163,10 +177,12 @@ class SummaryFragment : Fragment() {
                     b.amountRow.isVisible = true
                     b.amountCalc.isVisible = true
                     b.amountUnit.isVisible = true
-                    b.amountValue.text = formatMoney(q.amount)
+                    val money = formatMoney(q.amount)
+                    b.amountValue.text = money
+                    b.amountValue.fitAmount(money.length + 1, insetDp = 2 * 16f + 2 * 18f + 2f)
                     b.amountCalc.text = getString(
                         R.string.summary_calc,
-                        formatMoney(q.unitPrice),
+                        formatNum(q.unitPrice),
                         q.boxCount,
                     )
                     b.warnRow.isVisible = false
@@ -175,8 +191,15 @@ class SummaryFragment : Fragment() {
             }
         }
 
+        val job = state.printJob
+        b.printProgress.isVisible = job != null
+        if (job != null) {
+            b.printProgressText.text = getString(R.string.print_progress, job.done, job.total)
+            b.printBar.max = job.total.coerceAtLeast(1)
+            b.printBar.progress = job.done
+        }
         b.reprint.bindReprint(
-            action = reprintAction(state.printEnabled, state.unprinted, state.printBlock),
+            action = if (job == null) reprintAction(state.printEnabled, state.unprinted, state.printBlock) else null,
             unprinted = state.unprinted,
             onPrint = { vm.reprintUnprinted() },
             onFixPrinter = { DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG) },
@@ -189,6 +212,8 @@ class SummaryFragment : Fragment() {
         }
 
         val blockMissing = !state.allowWithoutPrice
+        // 还缺一项（没有计价结果、缺基准价、缺规则）：主按钮写明缺什么并高亮，点了去补；齐了才是绿底的“提交单据”
+        b.primary.isActivated = q == null || (blockMissing && (q.noBasePrice || q.noRule))
         when {
             state.submitting -> {
                 b.primary.isEnabled = false
