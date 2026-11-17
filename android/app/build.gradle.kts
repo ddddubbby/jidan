@@ -57,6 +57,13 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    // 渲染截图（F4-1，:app:screens）要 Robolectric 读到真的资源；纯 JVM 单测不受影响
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 kotlin {
@@ -98,8 +105,49 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+    // 渲染截图（F4-1）：只在测试里用，不进 APK
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }
 
-tasks.withType<Test> {
+// 渲染截图测试（src/test/.../screens/）要下 Robolectric 的原生运行时、跑得慢，默认的 testSimDebugUnitTest 不跑它们。
+// 要跑：`./gradlew :app:screens`（或 -Pscreens）；矩阵、尺寸等参数见 tools/ui-compare/README.md。
+val screensRequested = providers.gradleProperty("screens").isPresent ||
+    gradle.startParameter.taskNames.any { it.substringAfterLast(':') == "screens" }
+val screensPackage = "com.jidan.receiving.screens.*"
+
+tasks.withType<Test>().configureEach {
     useJUnit()
+    if (screensRequested) {
+        filter.includeTestsMatching(screensPackage)
+        // 每次都重新渲染；把 -Pscreens.* 参数传进测试 JVM
+        outputs.upToDateWhen { false }
+        maxHeapSize = "2g"
+        maxParallelForks = 1
+        systemProperty("screens.run", "1")
+        // 每次运行从空目录开始：旧尺寸的图与记录不混进这一轮
+        doFirst { layout.buildDirectory.dir("screens").get().asFile.deleteRecursively() }
+        // Robolectric 的运行时 jar 默认从 Maven Central 取；网络受限的环境里可用 -Probolectric.repo=<镜像地址> 改
+        systemProperty(
+            "robolectric.dependency.repo.url",
+            providers.gradleProperty("robolectric.repo").getOrElse("https://repo.maven.apache.org/maven2"),
+        )
+        providers.gradleProperty("screens.matrix").orNull?.let { systemProperty("screens.matrix", it) }
+        providers.gradleProperty("screens.height").orNull?.let { systemProperty("screens.height", it) }
+        providers.gradleProperty("screens.only").orNull?.let { systemProperty("screens.only", it) }
+        providers.gradleProperty("screens.full").orNull?.let { systemProperty("screens.full", it) }
+        testLogging {
+            events("failed", "standard_error")
+            showStandardStreams = false
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+    } else {
+        filter.excludeTestsMatching(screensPackage)
+    }
+}
+
+tasks.register("screens") {
+    group = "verification"
+    description = "渲染每个 APP 页面与弹层为 PNG（模拟版，Robolectric），并检查孤字行；输出在 app/build/screens/"
+    dependsOn("testSimDebugUnitTest")
 }

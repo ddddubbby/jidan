@@ -1,0 +1,2 @@
+# 孤字行允许名单：每行 config<TAB>screen<TAB>lastLine<TAB>reason，# 开头为注释。
+# config 如 393-1.3，screen 如 11-ledger-sheet，前三列可写 *；reason 必填。默认为空：出现孤字行就让 :app:screens 失败。
