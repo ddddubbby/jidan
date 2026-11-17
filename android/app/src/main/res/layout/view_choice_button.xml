@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 选项按钮（原型 .seg button）：建单的商品、规格；一行放几个由代码按名字长短定 -->
+<com.google.android.material.button.MaterialButton xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Jidan.Button.Outlined.Choice"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1" />

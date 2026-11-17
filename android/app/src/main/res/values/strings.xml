@@ -24,6 +24,9 @@
     <string name="create_no_base_price">无基准价</string>
     <string name="create_missing">还差 %1$d 步</string>
     <string name="create_start">开始收蛋</string>
+    <string name="create_selected">已选</string>
+    <string name="create_dev_scale">电子秤</string>
+    <string name="create_dev_printer">标签打印机</string>
     <string name="create_ready_hint">建单完成。称重页见 P6-4。</string>
     <string name="weigh_back">‹</string>
     <string name="weigh_net">净重</string>

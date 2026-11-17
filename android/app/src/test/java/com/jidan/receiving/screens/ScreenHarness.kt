@@ -126,7 +126,10 @@ class ScreenHarness(
     fun click(contains: String) {
         val v = findText(contains)
         check(v.isEnabled) { "「$contains」点不了（未启用）" }
-        v.performClick()
+        // 真手指点在文字上，响应点击的是最近的可点击祖先（列表行是一个整体，文字本身不可点）
+        var target: View = v
+        while (!target.hasOnClickListeners()) target = target.parent as? View ?: break
+        (if (target.hasOnClickListeners()) target else v).performClick()
         advance(50)
     }
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 提示条（原型 .note.err）：红底、10dp 圆角 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/err_bg" />
+    <corners android:radius="@dimen/radius_note" />
+</shape>

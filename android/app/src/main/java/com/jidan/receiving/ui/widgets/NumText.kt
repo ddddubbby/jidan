@@ -59,7 +59,7 @@ object NumText {
     }
 
     /** `TypefaceSpan(Typeface)` 要 API 28，这里最低 26。 */
-    private class TypefaceSpanCompat(private val typeface: Typeface) : MetricAffectingSpan() {
+    internal class TypefaceSpanCompat(private val typeface: Typeface) : MetricAffectingSpan() {
         override fun updateDrawState(paint: TextPaint) { paint.typeface = typeface }
         override fun updateMeasureState(paint: TextPaint) { paint.typeface = typeface }
     }
