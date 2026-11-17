@@ -11,6 +11,13 @@
         app:popUpTo="@id/nav_graph"
         app:popUpToInclusive="true" />
 
+    <!-- 仅演示版用（退出登录后回到空白建单页，没有登录页） -->
+    <action
+        android:id="@+id/action_global_to_create"
+        app:destination="@id/createFragment"
+        app:popUpTo="@id/nav_graph"
+        app:popUpToInclusive="true" />
+
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.jidan.receiving.ui.login.LoginFragment"

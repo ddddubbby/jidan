@@ -46,7 +46,10 @@ class AppContainer(context: Context) : ReceivingDeps {
         it.register()
     }
 
-    private val _session = MutableStateFlow(tokenStore.readSession())
+    // 演示版没有登录页：启动即以演示账号登录（DemoMode.session() 在其他构建恒为 null）
+    private val _session = MutableStateFlow(
+        tokenStore.readSession() ?: DemoMode.session()?.also { tokenStore.save(it) },
+    )
     val session: StateFlow<SessionUser?> = _session.asStateFlow()
 
     private val _options = MutableStateFlow(AppOptions.defaults())
@@ -62,6 +65,8 @@ class AppContainer(context: Context) : ReceivingDeps {
             clearSession()
             _unauthenticated.tryEmit(Unit)
         },
+        demoBaseUrl = DemoMode.baseUrl,
+        demoInterceptor = DemoMode.interceptor(),
     )
 
     val auth = AuthRepository(apiClient)
@@ -124,6 +129,11 @@ class AppContainer(context: Context) : ReceivingDeps {
         _options.value = AppOptions.defaults()
         orderDraft.clear()
         // 退出登录不清称重草稿：重登后可恢复（开发规格 9.4）
+        // 演示版：没有登录页，立刻以演示账号重新登录，并把假后端的内存数据复位
+        DemoMode.session()?.let {
+            DemoMode.resetData()
+            setSession(it)
+        }
     }
 
     fun applyOptions(options: AppOptions) {
