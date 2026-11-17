@@ -52,7 +52,7 @@
     <string name="summary_rule">定价规则</string>
     <string name="summary_rule_unbound">未绑定</string>
     <string name="summary_ledger">收购流水</string>
-    <string name="summary_ledger_value">%1$d&#160;箱 · %2$s&#160;kg</string>
+    <string name="summary_ledger_count">%1$d&#160;箱</string>
     <string name="summary_avg">均重</string>
     <string name="summary_no_base">无基准价</string>
     <string name="summary_still_no_base">仍无基准价</string>
@@ -79,12 +79,13 @@
     <string name="rule_sheet_unbound">未绑定收购规则</string>
     <string name="rule_sheet_loading">加载规则…</string>
     <string name="rule_sheet_name">规则名称</string>
+    <string name="rule_sheet_scope">适用</string>
+    <string name="rule_sheet_coef_down">调低</string>
+    <string name="rule_sheet_coef_up">调高</string>
     <string name="rule_sheet_std">标准净含量</string>
     <string name="rule_sheet_base">今日基准价</string>
     <string name="rule_sheet_coef">每 kg 尾差</string>
     <string name="rule_sheet_preview">本单收购价</string>
-    <string name="rule_sheet_preview_value">%1$s&#160;元/&#8288;箱</string>
-    <string name="rule_sheet_preview_dirty">%1$s → %2$s&#160;元/&#8288;箱</string>
     <string name="rule_sheet_revert">还原</string>
     <string name="rule_sheet_save">保存到规则</string>
     <string name="rule_sheet_save_shared">保存到规则 · %1$d 户共用</string>

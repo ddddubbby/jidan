@@ -23,6 +23,7 @@ import com.jidan.receiving.device.PrintPayload
 import com.jidan.receiving.device.fake.FakePrinter
 import com.jidan.receiving.device.fake.FakeScale
 import com.jidan.receiving.ui.summary.formatMoney
+import com.jidan.receiving.ui.summary.formatNum
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -336,9 +337,9 @@ class LiSiFullFlowTest {
         val s = vm.summary.value
         val q = assertNotNull(s.quote)
         assertEquals(10, q.boxCount)
-        assertEquals("46", formatMoney(q.avgKg))
-        assertEquals("181", formatMoney(q.unitPrice))
-        assertEquals("1810", formatMoney(q.amount))
+        assertEquals("46", formatNum(q.avgKg))
+        assertEquals("181", formatNum(q.unitPrice))
+        assertEquals("1,810", formatMoney(q.amount))
         assertEquals("李四", s.farmerName)
         assertEquals("SG20261116-1", s.batchNo)
         assertTrue(s.canSubmit)
@@ -374,11 +375,11 @@ class LiSiFullFlowTest {
         assertEquals("李四", d.farmerName)
         assertEquals(10, d.boxCount)
         assertEquals("460.5", d.totalNetKg?.let { Kg.of(it).format() })
-        assertEquals(formatMoney(q.avgKg), formatMoney(d.avgKg))
-        assertEquals(formatMoney(q.unitPrice), formatMoney(d.unitPrice))
+        assertEquals(formatNum(q.avgKg), formatNum(d.avgKg))
+        assertEquals(formatNum(q.unitPrice), formatNum(d.unitPrice))
         assertEquals(formatMoney(q.amount), formatMoney(d.amount))
-        assertEquals("181", formatMoney(d.unitPrice))
-        assertEquals("1810", formatMoney(d.amount))
+        assertEquals("181", formatNum(d.unitPrice))
+        assertEquals("1,810", formatMoney(d.amount))
         assertFalse(d.pendingPrice)
         // 提交成功：草稿与建单四项清掉
         assertFalse(deps.sessionStore.exists())
@@ -427,8 +428,8 @@ class LiSiFullFlowTest {
             assertEquals(false, it.asJsonObject.get("manual").asBoolean)
             assertTrue(it.asJsonObject.get("rawKg") == null)
         }
-        assertEquals("182", formatMoney(vm.done.value.unitPrice))
-        assertEquals("1820", formatMoney(vm.done.value.amount))
+        assertEquals("182", formatNum(vm.done.value.unitPrice))
+        assertEquals("1,820", formatMoney(vm.done.value.amount))
         assertEquals(emptyList(), contract.violations.toList())
     }
 

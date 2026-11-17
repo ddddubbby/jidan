@@ -104,6 +104,8 @@ data class SummaryUiState(
     val printError: String = "",
     /** 此刻打印机挡在哪（缺纸、未连接…），空串是能打。补打按钮看它，不看 [printError]。 */
     val printBlock: String = "",
+    /** 标签还在打：汇总页显示“正在打印 N / M”与进度条；null 是没有在打。 */
+    val printJob: PrintJobState? = null,
     val submitting: Boolean = false,
     val submitError: Boolean = false,
     /** `submit.without-price = allow` 时缺价也可提交，金额显示「待定价」。 */
@@ -757,6 +759,7 @@ class ReceivingViewModel(
                 printEnabled = printQueue.enabled(),
                 printError = printQueue.lastError.value,
                 printBlock = printBlock(),
+                printJob = printQueue.job.value,
             )
         }
         try {
@@ -769,6 +772,7 @@ class ReceivingViewModel(
                     printEnabled = printQueue.enabled(),
                     printError = printQueue.lastError.value,
                     printBlock = printBlock(),
+                    printJob = printQueue.job.value,
                 )
             }
         } catch (e: Throwable) {
@@ -945,6 +949,7 @@ class ReceivingViewModel(
                     printEnabled = printQueue.enabled(),
                     printError = printQueue.lastError.value,
                     printBlock = printBlock(),
+                    printJob = printQueue.job.value,
                 )
             }
         }

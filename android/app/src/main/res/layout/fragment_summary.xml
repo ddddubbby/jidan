@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html screenSummary（.scr-summary）：顶栏（返回、农户、批次 · 仓库）、金额卡、
+     四行事实（商品 / 定价规则 › / 收购流水 › / 均重，发丝线隔开）、打印进度与补打贴在页脚上方、页脚主按钮。
+     缺基准价、缺规则时金额卡里写缺什么，页脚主按钮同名直达；不用米黄底，只在文字前放一个琥珀圆点。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -9,13 +13,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/page_padding">
+        android:paddingStart="@dimen/page_padding"
+        android:paddingTop="8dp"
+        android:paddingEnd="@dimen/page_padding"
+        android:paddingBottom="12dp">
 
+        <!-- 44 高的点按范围；左负边距抵掉按钮自己的内边距，字形与标题左对齐（原型 .back-text） -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/back"
             style="@style/Widget.Jidan.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="-12dp"
+            android:layout_marginBottom="2dp"
+            android:fontFamily="sans-serif-medium"
             android:text="@string/summary_back"
             android:textColor="@color/ink"
             android:textSize="@dimen/text_17" />
@@ -25,15 +36,22 @@
             style="@style/Text.Value"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:lineSpacingMultiplier="1.1" />
 
         <TextView
             android:id="@+id/subtitle"
-            style="@style/Text.Caption"
+            style="@style/Text.Body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp" />
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ink_2" />
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line"
+        android:importantForAccessibility="no" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -45,30 +63,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="@dimen/page_padding"
-            android:paddingBottom="8dp">
+            android:padding="@dimen/page_padding">
 
+            <!-- 金额卡（原型 .money-card）：浅灰底、线色描边、18 圆角；金额缩小以一行放下，“元”小一档 -->
             <LinearLayout
                 android:id="@+id/moneyCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_money_card"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingStart="18dp"
+                android:paddingTop="16dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="18dp">
 
                 <TextView
                     android:id="@+id/moneyLabel"
-                    style="@style/Text.Caption"
+                    style="@style/Text.Section"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/summary_amount"
-                    android:textStyle="bold" />
+                    android:text="@string/summary_amount" />
 
                 <LinearLayout
                     android:id="@+id/amountRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="bottom"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="4dp"
+                    android:baselineAligned="true"
                     android:orientation="horizontal">
 
                     <TextView
@@ -76,66 +98,73 @@
                         style="@style/Text.Num.Amount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="48sp" />
+                        android:maxLines="1" />
 
                     <TextView
                         android:id="@+id/amountUnit"
-                        style="@style/Text.Strong"
+                        style="@style/Text.Value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
+                        android:fontFamily="sans-serif-medium"
                         android:text="@string/summary_yuan"
-                        android:textColor="@color/ink_2" />
+                        android:textColor="@color/ink_2"
+                        android:textStyle="normal" />
                 </LinearLayout>
 
                 <TextView
                     android:id="@+id/amountCalc"
-                    style="@style/Text.Strong"
+                    style="@style/Text.Num.Lead"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/ink_2" />
+                    android:fontFamily="@font/inter_semibold" />
 
+                <!-- 缺什么：琥珀圆点 + 名称；缺规则时旁边一个安静的按钮，点了直达规则弹层 -->
                 <LinearLayout
                     android:id="@+id/warnRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="8dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:visibility="gone">
 
                     <TextView
                         android:id="@+id/warnTag"
-                        style="@style/Text.Caption"
-                        android:layout_width="wrap_content"
+                        style="@style/Text.Strong"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_choice"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="4dp"
-                        android:textColor="@color/warn_ink" />
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_dot"
+                        android:drawablePadding="10dp"
+                        android:drawableTint="@color/warn_ink" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/warnBind"
-                        style="@style/Widget.Jidan.Button.Text.Accent"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
                         android:text="@string/summary_bind_rule"
-                        android:textColor="@color/warn_ink"
                         android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- 事实行（原型 .facts / .fact）：左边小标签 + 值，可点的行右边一个箭头；行与行之间发丝线 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:orientation="vertical">
+                android:divider="@drawable/bg_hairline"
+                android:orientation="vertical"
+                android:showDividers="beginning|middle|end">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="64dp"
                     android:orientation="vertical"
+                    android:paddingHorizontal="2dp"
                     android:paddingVertical="10dp">
 
                     <TextView
@@ -146,15 +175,10 @@
 
                     <TextView
                         android:id="@+id/factProduct"
-                        style="@style/Text.Strong"
+                        style="@style/Text.Num.Strong"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/line" />
 
                 <LinearLayout
                     android:id="@+id/factRule"
@@ -164,6 +188,7 @@
                     android:gravity="center_vertical"
                     android:minHeight="64dp"
                     android:orientation="horizontal"
+                    android:paddingHorizontal="2dp"
                     android:paddingVertical="10dp">
 
                     <LinearLayout
@@ -182,29 +207,26 @@
                             android:id="@+id/factRuleValue"
                             style="@style/Text.Strong"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:drawablePadding="10dp"
+                            android:drawableTint="@color/warn_ink" />
 
                         <TextView
                             android:id="@+id/factFormula"
-                            style="@style/Text.Caption"
+                            style="@style/Text.Num.Caption"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:visibility="gone" />
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="›"
-                        android:textColor="@color/edge"
-                        android:textSize="24sp" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="12dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right" />
                 </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/line" />
 
                 <LinearLayout
                     android:id="@+id/factLedger"
@@ -214,6 +236,7 @@
                     android:gravity="center_vertical"
                     android:minHeight="64dp"
                     android:orientation="horizontal"
+                    android:paddingHorizontal="2dp"
                     android:paddingVertical="10dp">
 
                     <LinearLayout
@@ -235,24 +258,20 @@
                             android:layout_height="wrap_content" />
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="›"
-                        android:textColor="@color/edge"
-                        android:textSize="24sp" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="12dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right" />
                 </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/line" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="64dp"
                     android:orientation="vertical"
+                    android:paddingHorizontal="2dp"
                     android:paddingVertical="10dp">
 
                     <TextView
@@ -269,23 +288,52 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 有标签没打出来：补打按钮（打印机有问题时写明缺什么，点了去设备弹层） -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/reprint"
-                style="@style/Widget.Jidan.Button"
+            <!-- 事实行与页脚之间的空白吃掉余量，让打印进度、补打、错误提示贴着页脚（原型 .sum-tail） -->
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- 打印进度（原型 .print-prog）：标签还在打时 -->
+            <LinearLayout
+                android:id="@+id/printProgress"
+                style="@style/Surface.Sunken"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:minHeight="52dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/printProgressText"
+                    style="@style/Text.Num"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <ProgressBar
+                    android:id="@+id/printBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="8dp"
+                    android:progressDrawable="@drawable/progress_print" />
+            </LinearLayout>
+
+            <!-- 有标签没打出来：补打按钮（打印机有问题时写明缺什么，点了去设备弹层） -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reprint"
+                style="@style/Widget.Jidan.Button.Outlined.Warn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/error"
-                style="@style/Text.Caption"
+                style="@style/Note.Err"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="@color/err_ink"
                 android:visibility="gone" />
         </LinearLayout>
     </ScrollView>
@@ -293,13 +341,16 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/page_padding">
+        android:paddingStart="@dimen/page_padding"
+        android:paddingTop="8dp"
+        android:paddingEnd="@dimen/page_padding"
+        android:paddingBottom="@dimen/page_padding">
 
+        <!-- 缺什么时（activated）白底绿边绿字，仍可点，点了去补那一项；齐了才是绿底白字的“提交单据” -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/primary"
-            style="@style/Widget.Jidan.Button.Large"
+            style="@style/Widget.Jidan.Button.Action"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="60dp" />
+            android:layout_height="wrap_content" />
     </FrameLayout>
 </LinearLayout>
