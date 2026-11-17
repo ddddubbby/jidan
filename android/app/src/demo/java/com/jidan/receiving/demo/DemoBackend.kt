@@ -89,11 +89,14 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
         Farmer(4, "李四", "GYS0004", listOf("13099995678")),
     )
 
-    /** 当日基准价：今天 480枚/箱 留空（演示“缺基准价”）；昨天三种都有。 */
+    /**
+     * 当日基准价：今天三种都有。演示版没有 Web 端可以补录基准价，留空会让选 480枚/箱 的人卡在汇总页，
+     * 所以不像演示库那样故意留空；昨天三种也都有。
+     */
     private fun basePrice(date: LocalDate, specId: Long): BigDecimal? {
         val t = today()
         val table = when (date) {
-            t -> mapOf(1L to "120", 2L to "180")
+            t -> mapOf(1L to "120", 2L to "180", 3L to "240")
             t.minusDays(1) -> mapOf(1L to "118", 2L to "178", 3L to "236")
             else -> emptyMap()
         }

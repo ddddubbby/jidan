@@ -53,9 +53,8 @@ class DemoBackendTest {
         val specs = b.getAsJsonArray("specs").map { it.asJsonObject }
         assertEquals(listOf("240枚/箱", "360枚/箱", "480枚/箱"), specs.map { it.get("name").asString })
         assertEquals(listOf(30.0, 45.0, 60.0), specs.map { it.get("stdNetKg").asDouble })
-        // 今天 240、360 有基准价，480 没有（演示“缺基准价”）
-        assertEquals(listOf(120.0, 180.0), specs.take(2).map { it.get("basePrice").asDouble })
-        assertTrue(!specs[2].has("basePrice"))
+        // 演示版没有 Web 端补录，今天三种都有基准价
+        assertEquals(listOf(120.0, 180.0, 240.0), specs.map { it.get("basePrice").asDouble })
         assertEquals(listOf("1号仓库", "2号仓库"), b.getAsJsonArray("warehouses").map { it.asJsonObject.get("name").asString })
         assertEquals(
             listOf("1号包装箱" to 1.5, "2号包装箱" to 2.0, "3号包装箱" to 2.5),
@@ -172,12 +171,12 @@ class DemoBackendTest {
     @Test
     fun submitWithoutPriceIsBlockedLikeTheRealBackend() {
         val box = listOf(SubmitBoxRequest(1, 60.0, 62.0, 2.0, "2号包装箱"))
-        // 王秀英 480枚/箱（今天没有基准价、也没有她的规则）
+        // 王秀英 480枚/箱（没有她的规则）
         val r = backend.handle("POST", "/api/orders", emptyMap(), gson.toJson(SubmitRequest("SG20261117-1", 2, 1, 3, 1, box)))
         assertEquals(409, r.code)
         assertEquals("NOT_READY", obj(r).get("code").asString)
-        // 另一位李四 480 有规则、无基准价
-        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(4, 1, 3, "2026-11-17", listOf(60.0))))
+        // 另一位李四 480 有规则；前天没有基准价
+        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(4, 1, 3, "2026-11-15", listOf(60.0))))
         assertTrue(q.getAsJsonArray("issues").any { it.asString == "NO_BASE_PRICE" })
         assertTrue(!q.has("amount"))
     }
