@@ -49,3 +49,9 @@ fun LinkActionKind.label(isScale: Boolean): String = when (this) {
     LinkActionKind.RESEARCH -> "重新搜索"
     LinkActionKind.NONE -> ""
 }
+
+/**
+ * 设备弹层里那台设备右边的唯一操作：缺什么写什么；已连上、没有缺的时就是“换一台”（原型 devSection），点了去搜索。
+ */
+fun LinkActionKind.rowLabel(isScale: Boolean): String =
+    if (this == LinkActionKind.NONE) "换一台" else label(isScale)

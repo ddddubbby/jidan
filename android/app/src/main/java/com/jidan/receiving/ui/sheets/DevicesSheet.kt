@@ -10,7 +10,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.databinding.SheetDevicesBinding
@@ -21,11 +20,15 @@ import com.jidan.receiving.device.PrinterIssue
 import com.jidan.receiving.device.label.LabelRenderer
 import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.ui.devices.LinkActionKind
+import com.jidan.receiving.databinding.ViewListRowBinding
+import com.jidan.receiving.device.PrintOutcome
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
+import com.jidan.receiving.ui.widgets.shortDeviceId
+import com.jidan.receiving.ui.widgets.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-class DevicesSheet : BottomSheetDialogFragment() {
+class DevicesSheet : JidanSheet() {
     private var binding: SheetDevicesBinding? = null
 
     private val prompts = BluetoothPrompts(this)
@@ -46,16 +49,7 @@ class DevicesSheet : BottomSheetDialogFragment() {
         val c = requireContext().appContainer()
         val b = binding ?: return
 
-        b.testPrint.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                val outcome = c.printer.print(PrintPayload.Text(LabelRenderer.testTspl()))
-                b.sheetMessage.text = when (outcome) {
-                    is com.jidan.receiving.device.PrintOutcome.Success -> "测试标签已发送"
-                    is com.jidan.receiving.device.PrintOutcome.Failure -> outcome.reason
-                }
-            }
-        }
-
+        bindHead(b.head, getString(R.string.devices_title))
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { c.bluetoothGate.state.collect { refresh() } }
@@ -77,43 +71,58 @@ class DevicesSheet : BottomSheetDialogFragment() {
         val scaleModel = c.options.value.get("device.scale-model")
         val printerModel = c.options.value.get("device.printer-model")
         val reading = c.scale.readings.value
-        b.scaleReading.text = if (reading != null) {
-            "${reading.raw.format1()} kg"
-        } else {
-            "--.- kg"
-        }
 
-        DeviceCardBinder.bindScale(
-            binding = b.scaleCard,
+        DeviceCardBinder.bindScaleRow(
+            binding = b.scaleRow,
             gate = c.bluetoothGate,
             status = c.scale.linkStatus.value,
             pairedId = c.scale.pairedId.value,
-            modelLabel = scaleModel,
+            modelKey = scaleModel,
             batteryLow = c.scale.batteryLow.value,
+            reading = reading?.raw?.format1(),
             onAction = { handle(it, scale = true) },
-            onOpenSheet = {},
             searchedEmpty = scaleSearchedEmpty,
         )
-        DeviceCardBinder.bindPrinter(
-            binding = b.printerCard,
+        DeviceCardBinder.bindPrinterRow(
+            binding = b.printerRow,
             gate = c.bluetoothGate,
             status = c.printer.linkStatus.value,
             pairedId = c.printer.pairedId.value,
-            modelLabel = printerModel,
+            modelKey = printerModel,
             issue = c.printer.printerStatus.value,
+            canTest = c.printer.linkStatus.value == LinkStatus.CONNECTED &&
+                c.printer.printerStatus.value == PrinterIssue.OK,
             onAction = { handle(it, scale = false) },
-            onOpenSheet = {},
+            onTest = { testPrint() },
             searchedEmpty = printerSearchedEmpty,
         )
-        b.testPrint.isEnabled =
-            c.printer.linkStatus.value == LinkStatus.CONNECTED &&
-                c.printer.printerStatus.value == PrinterIssue.OK
+    }
+
+    private fun testPrint() {
+        val c = requireContext().appContainer()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val outcome = c.printer.print(PrintPayload.Text(LabelRenderer.testTspl()))
+            when (outcome) {
+                is PrintOutcome.Success -> message("测试标签已发送", error = false)
+                is PrintOutcome.Failure -> message(outcome.reason, error = true)
+            }
+        }
+    }
+
+    /** 一句话结果（测试标签发出去了、没连上）：没有内容时不占位；坏了才用红字。 */
+    private fun message(text: String, error: Boolean) {
+        val b = binding ?: return
+        b.sheetMessage.isVisible = text.isNotBlank()
+        b.sheetMessage.text = text
+        b.sheetMessage.setTextColor(
+            resources.getColor(if (error) R.color.err_ink else R.color.ink_2, null),
+        )
     }
 
     private fun handle(action: LinkActionKind, scale: Boolean) {
         if (prompts.handle(action)) return
         when (action) {
-            LinkActionKind.SEARCH, LinkActionKind.RESEARCH ->
+            LinkActionKind.SEARCH, LinkActionKind.RESEARCH, LinkActionKind.NONE ->
                 viewLifecycleOwner.lifecycleScope.launch { showScan(scale) }
             else -> Unit
         }
@@ -146,10 +155,26 @@ class DevicesSheet : BottomSheetDialogFragment() {
         val shown = if (isScale) view.scaleScan else view.printerScan
         shown.removeAllViews()
         if (isScale) scaleSearchedEmpty = list.isEmpty() else printerSearchedEmpty = list.isEmpty()
-        if (list.isEmpty()) {
+        // 已连着的这台不再列出来（原型 scanList）：“换一台”要找的是别的
+        val current = if (isScale) c.scale.pairedId.value.takeIf { c.scale.linkStatus.value == LinkStatus.CONNECTED }
+        else c.printer.pairedId.value.takeIf { c.printer.linkStatus.value == LinkStatus.CONNECTED }
+        val others = list.filter { it.id != current }
+        if (others.isEmpty()) {
             shown.addView(hintText("附近没有${if (isScale) "秤" else "打印机"}"))
         } else {
-            for (d in list) shown.addView(scanRow(d, isScale))
+            val card = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                background = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.bg_card)
+                clipToOutline = true
+                dividerDrawable = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.bg_hairline)
+                showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).also { it.topMargin = dp(8) }
+            }
+            for (d in others) card.addView(scanRow(d, isScale, card))
+            shown.addView(card)
         }
         refresh()
     }
@@ -160,51 +185,72 @@ class DevicesSheet : BottomSheetDialogFragment() {
 
     private fun hintText(text: String) = TextView(requireContext()).apply {
         this.text = text
+        setTextAppearance(R.style.Text_Body)
         setTextColor(resources.getColor(R.color.ink_2, null))
+        setPadding(0, dp(8), 0, 0)
     }
 
-    private fun scanRow(d: DiscoveredDevice, isScale: Boolean): View {
-        val row = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(8, 12, 8, 12)
-        }
-        val label = TextView(requireContext()).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            text = "${d.model} · ${d.id}  ${"▮".repeat(d.rssiBars.coerceIn(1, 3))}"
-            setTextColor(resources.getColor(R.color.ink, null))
-        }
-        val btn = com.google.android.material.button.MaterialButton(requireContext()).apply {
-            text = "连接"
-            setOnClickListener {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val c = requireContext().appContainer()
-                    // 连接失败时不记住这台，也不收起列表：留在列表里可以再点，或点“重新搜索”
-                    val ok = try {
-                        if (isScale) {
-                            c.scale.connect(d.id)
-                            c.scale.linkStatus.value == LinkStatus.CONNECTED
-                        } else {
-                            c.printer.connect(d.id)
-                            c.printer.linkStatus.value == LinkStatus.CONNECTED
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        false
+    /** 搜到的一台（原型 scanList 的 .row-btn）：信号格、型号 ··尾号、右边“连接”；整行可点。 */
+    private fun scanRow(d: DiscoveredDevice, isScale: Boolean, parent: ViewGroup): View {
+        val row = ViewListRowBinding.inflate(layoutInflater, parent, false)
+        row.rowMain.text = "${d.model} ··${shortDeviceId(d.id)}"
+        row.rowSide.isVisible = true
+        row.rowSide.text = "连接"
+        row.rowSide.setTextColor(resources.getColor(R.color.ok_ink, null))
+        row.rowSide.setTypeface(row.rowSide.typeface, android.graphics.Typeface.BOLD)
+        (row.rowRoot as LinearLayout).addView(signalBars(d.rssiBars.coerceIn(1, 3)), 0)
+        row.rowRoot.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val c = requireContext().appContainer()
+                // 连接失败时不记住这台，也不收起列表：留在列表里可以再点，或点“重新搜索”
+                val ok = try {
+                    if (isScale) {
+                        c.scale.connect(d.id)
+                        c.scale.linkStatus.value == LinkStatus.CONNECTED
+                    } else {
+                        c.printer.connect(d.id)
+                        c.printer.linkStatus.value == LinkStatus.CONNECTED
                     }
-                    binding?.sheetMessage?.text = if (ok) "" else "没连上，可以再点一次，或重新搜索"
-                    if (ok) {
-                        if (isScale) c.linkKeeper.onScaleConnected(d.id) else c.linkKeeper.onPrinterConnected(d.id)
-                        binding?.scaleScan?.isVisible = false
-                        binding?.printerScan?.isVisible = false
-                    }
-                    refresh()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    false
                 }
+                if (ok) message("", error = false) else message("没连上，可以再点一次，或重新搜索", error = true)
+                if (ok) {
+                    if (isScale) c.linkKeeper.onScaleConnected(d.id) else c.linkKeeper.onPrinterConnected(d.id)
+                    binding?.scaleScan?.isVisible = false
+                    binding?.printerScan?.isVisible = false
+                }
+                refresh()
             }
         }
-        row.addView(label)
-        row.addView(btn)
-        return row
+        return row.root
+    }
+
+    /** 信号强弱三格（原型 bars）：亮的墨色、暗的浅灰。 */
+    private fun signalBars(on: Int): View {
+        val ctx = requireContext()
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.BOTTOM
+            contentDescription = "信号 $on 格"
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).also { it.marginEnd = dp(12) }
+            val heights = intArrayOf(8, 13, 18)
+            for (i in 0 until 3) {
+                addView(
+                    View(ctx).apply {
+                        setBackgroundColor(resources.getColor(if (i < on) R.color.ink else R.color.grab, null))
+                        layoutParams = LinearLayout.LayoutParams(dp(5), dp(heights[i])).also {
+                            if (i > 0) it.marginStart = dp(3)
+                        }
+                    },
+                )
+            }
+        }
     }
 
     override fun onDestroyView() {

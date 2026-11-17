@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 秤断开了的连接卡片：红底红边（原型 .step-card.lost） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/err_bg" />
+    <stroke android:width="@dimen/stroke_panel" android:color="@color/err_ink" />
+    <corners android:radius="@dimen/radius_panel" />
+</shape>

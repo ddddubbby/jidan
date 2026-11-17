@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 最近几箱的空位（原型 .box-row.slot）：两条浅灰条，占着位置，记一箱填一格，版面不跳 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:gravity="center_vertical"
+    android:importantForAccessibility="no"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingEnd="8dp">
+
+    <View
+        android:layout_width="51dp"
+        android:layout_height="10dp"
+        android:layout_marginEnd="31dp"
+        android:background="@drawable/bg_slot_bar" />
+
+    <View
+        android:layout_width="88dp"
+        android:layout_height="10dp"
+        android:background="@drawable/bg_slot_bar" />
+</LinearLayout>

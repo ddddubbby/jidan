@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  称重页与它打开的弹层用的样式（F4-5），数值取自 lab/app-sim.html 的 .scr-weigh / .scale / .sheet 部分；
+  通用的文字、按钮、面仍在 styles.xml（F4-3），这里只放称重页独有的几种。
+-->
+<resources>
+
+    <!-- 称重框上的小字：“净重”与右上角的状态（原型 .scr-weigh .scale-top：15、600、次级灰） -->
+    <style name="Text.ScaleLabel">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_15</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <!-- 称重框里一行的名与值（原型 .scale-row .k / .v：15 次级灰 / 17、600） -->
+    <style name="Text.RowKey">
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Text.RowValue">
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">@dimen/text_17</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <!-- 最近几箱 / 流水里的 12 号小标（原型 .mtag：“手录”） -->
+    <style name="Text.Mtag">
+        <item name="android:background">@drawable/bg_mtag</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_12</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingHorizontal">6dp</item>
+    </style>
+    <!-- 一行提示（原型 .event）：15、600、12 圆角，底色与字色由状态定 -->
+    <style name="Text.Event">
+        <item name="android:background">@drawable/bg_event</item>
+        <item name="android:backgroundTint">@color/sunken</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">@dimen/text_15</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:paddingVertical">10dp</item>
+    </style>
+    <!-- 状态点（原型 .chip::before / .dot）：文字前的 8dp 圆点，颜色随文字色 -->
+    <style name="Chip.Status" parent="Chip">
+        <item name="android:background">@drawable/bg_chip_tap</item>
+        <item name="android:paddingVertical">12dp</item>
+        <item name="android:drawableStart">@drawable/ic_dot</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 几箱？的选项按钮（原型 .ask-row .btn）：白底、琥珀边、墨字，18 号 -->
+    <style name="Widget.Jidan.Button.Outlined.Ask">
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textSize">@dimen/text_18</item>
+        <item name="strokeColor">@color/warn_ink</item>
+    </style>
+    <!-- 称空箱（原型 .weigh-tare）：能按时是白底描边按钮，不能按时去掉底色，只留浅边与次级灰字 -->
+    <style name="Widget.Jidan.Button.Outlined.Tare">
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textColor">@color/btn_text_tare</item>
+        <item name="backgroundTint">@color/btn_bg_tare</item>
+        <item name="strokeColor">@color/btn_stroke_tare</item>
+    </style>
+    <!-- 黄底按钮（原型 .btn.warnfix）：补打标签、没打出来 -->
+    <style name="Widget.Jidan.Button.Outlined.Warn">
+        <item name="android:textColor">@color/btn_text_warn</item>
+        <item name="backgroundTint">@color/btn_bg_warn</item>
+        <item name="strokeColor">@color/warn_ink</item>
+    </style>
+    <!-- 称重框里一行右边的小按钮（“换”“取消”）：40 高，左右 14 -->
+    <style name="Widget.Jidan.Button.Outlined.Compact">
+        <item name="android:minHeight">@dimen/button_compact_height</item>
+        <item name="android:minWidth">56dp</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <!-- 流水表里“再打”“补打”（原型 .log .btn）：40 高 -->
+    <style name="Widget.Jidan.Button.Text.Compact">
+        <item name="android:minHeight">@dimen/button_compact_height</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+    <style name="Widget.Jidan.Button.Outlined.Warn.Compact">
+        <item name="android:minHeight">@dimen/button_compact_height</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:textSize">@dimen/text_15</item>
+    </style>
+</resources>

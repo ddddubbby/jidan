@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 对照 lab/app-sim.html screenWeigh（.scr-weigh）：顶栏 + 芯片，称重框是主角，下面是统计与最近几箱 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -9,56 +11,71 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/page_padding">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/back"
-            style="@style/Widget.Jidan.Button.Text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/weigh_back"
-            android:textColor="@color/ink"
-            android:textSize="@dimen/text_26" />
-
-        <!-- 农户名允许多行换行，不截断（v7 4.4-6） -->
-        <TextView
-            android:id="@+id/title"
-            style="@style/Text.Title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/subtitle"
-            style="@style/Text.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+        android:paddingStart="@dimen/page_padding"
+        android:paddingTop="4dp"
+        android:paddingEnd="@dimen/page_padding"
+        android:paddingBottom="3dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginBottom="-10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- 返回键 44×44 的点按范围，字形 28 号；上下左右负边距让字形与标题对齐（原型 .back） -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/back"
+                style="@style/Widget.Jidan.Button.Text"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="-12dp"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/weigh_back_desc"
+                android:paddingLeft="0dp"
+                android:paddingRight="0dp"
+                android:text="@string/weigh_back"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_28" />
+
+            <!-- 农户名允许多行换行，不截断（v7 4.4-6） -->
+            <TextView
+                android:id="@+id/title"
+                style="@style/Text.Value"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:lineSpacingMultiplier="1.1" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/subtitle"
+            style="@style/Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ink_2" />
+
+        <!-- 芯片自带上下各 9dp 的可点外扩，行的外边距相应收一点，看上去离副标题 10dp -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
             android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/chipScale"
-                style="@style/Text.Caption"
+                style="@style/Chip.Status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_choice"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="6dp"
-                android:text="@string/devices_scale" />
+                android:text="@string/weigh_chip_off" />
 
             <TextView
                 android:id="@+id/chipPrinter"
-                style="@style/Text.Caption"
+                style="@style/Chip.Status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:background="@drawable/bg_choice"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="6dp"
                 android:text="@string/devices_printer" />
         </LinearLayout>
     </LinearLayout>
@@ -72,7 +89,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/bg"
+        android:background="@color/surface"
         android:fillViewport="true">
 
         <LinearLayout
@@ -81,13 +98,13 @@
             android:orientation="vertical"
             android:padding="@dimen/page_padding">
 
-            <!-- 进入称重前要先取最新设置：取不到时写原因，按钮直达重试（F1-3） -->
+            <!-- 进入称重前要先取最新设置：取不到时写原因，按钮直达重试（F1-3）。中性卡片，点是灰（取）或红（取不到） -->
             <LinearLayout
                 android:id="@+id/startCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_step_active"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/bg_card"
                 android:orientation="vertical"
                 android:padding="14dp"
                 android:visibility="gone">
@@ -96,32 +113,41 @@
                     android:id="@+id/startMsg"
                     style="@style/Text.Strong"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_dot"
+                    android:drawablePadding="10dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/startRetry"
                     style="@style/Widget.Jidan.Button.Small"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_small_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/weigh_start_retry"
                     android:visibility="gone" />
             </LinearLayout>
 
+            <!-- 请选择皮重（原型 tareChoices）：三个选项排成一行的小块，下面“称空箱” -->
             <LinearLayout
                 android:id="@+id/tareCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="14dp"
                 android:background="@drawable/bg_step_active"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="14dp"
                 android:visibility="gone">
 
                 <TextView
+                    android:id="@+id/tareTitle"
                     style="@style/Text.Strong"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="34dp"
+                    android:gravity="center_vertical"
                     android:text="@string/weigh_pick_tare"
                     android:textColor="@color/ok_ink" />
 
@@ -129,27 +155,30 @@
                     android:id="@+id/tareChoices"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="2dp"
                     android:orientation="vertical" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/tareWeighBtn"
-                    style="@style/Widget.Jidan.Button.Outlined"
+                    style="@style/Widget.Jidan.Button.Outlined.Tare"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:enabled="false" />
             </LinearLayout>
 
-            <!-- 秤没连上或断开：称重框位置换成连接卡片，只给当前该做的连接操作和“手工加一箱”（原型 screenWeigh） -->
+            <!-- 秤没连上或断开：称重框位置换成连接卡片，只给当前该做的连接操作和“手工加一箱”（原型 screenWeigh）；断开时整卡变红 -->
             <LinearLayout
                 android:id="@+id/scaleCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="14dp"
                 android:background="@drawable/bg_step_active"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:paddingStart="12dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="14dp"
                 android:visibility="gone">
 
                 <TextView
@@ -164,14 +193,16 @@
                     android:id="@+id/scaleCardAction"
                     style="@style/Widget.Jidan.Button"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_height"
-                    android:layout_marginTop="10dp" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="64dp"
+                    android:textSize="@dimen/text_19" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/scaleCardManual"
                     style="@style/Widget.Jidan.Button.Text"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_small_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/ledger_manual_add" />
             </LinearLayout>
@@ -180,9 +211,12 @@
                 android:id="@+id/scalePanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_step_card"
+                android:background="@drawable/bg_scale"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="14dp">
 
                 <LinearLayout
                     android:id="@+id/scaleTop"
@@ -192,7 +226,7 @@
 
                     <TextView
                         android:id="@+id/netLabel"
-                        style="@style/Text.Caption"
+                        style="@style/Text.ScaleLabel"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -200,74 +234,89 @@
 
                     <TextView
                         android:id="@+id/phaseText"
-                        style="@style/Text.Caption"
+                        style="@style/Text.ScaleLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textStyle="bold" />
+                        android:layout_marginStart="8dp"
+                        android:gravity="end" />
                 </LinearLayout>
 
+                <!-- 字号由代码按称重框宽度定（原型 min(96px, 28cqi)），这里先放最大号 -->
                 <TextView
                     android:id="@+id/weight"
-                    style="@style/Text.Num.Title"
+                    style="@style/Text.Num.Weight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="0.0"
-                    android:textSize="48sp" />
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="end"
+                    android:maxLines="1"
+                    android:text="0.0" />
 
                 <LinearLayout
                     android:id="@+id/askRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:orientation="horizontal"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="4dp"
                     android:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/tareRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
-                    <TextView
-                        style="@style/Text.Caption"
-                        android:layout_width="wrap_content"
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_soft" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/weigh_tare" />
+                        android:gravity="center_vertical"
+                        android:minHeight="52dp"
+                        android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tareText"
-                        style="@style/Text.Body"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1" />
+                        <TextView
+                            style="@style/Text.RowKey"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/weigh_tare" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/changeTare"
-                        style="@style/Widget.Jidan.Button.Outlined.Small"
-                        android:layout_width="wrap_content"
-                        android:layout_height="@dimen/button_small_height"
-                        android:text="@string/weigh_change_tare" />
+                        <TextView
+                            android:id="@+id/tareText"
+                            style="@style/Text.RowValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="10dp"
+                            android:layout_weight="1" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/changeTare"
+                            style="@style/Widget.Jidan.Button.Outlined.Compact"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/weigh_change_tare" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- 皮重没能下发到秤：写原因，按钮直达重新设皮重；称重框保持未设皮重 -->
                 <TextView
                     android:id="@+id/tareErrorText"
-                    style="@style/Text.Body"
+                    style="@style/Note.Err"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textColor="@color/err_ink"
                     android:visibility="gone" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/retryTare"
                     style="@style/Widget.Jidan.Button.Small"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_small_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/weigh_retry_tare"
                     android:visibility="gone" />
@@ -276,31 +325,50 @@
                     android:id="@+id/reweighRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:visibility="gone">
 
-                    <TextView
-                        android:id="@+id/reweighText"
-                        style="@style/Text.Body"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_soft" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/cancelReweigh"
-                        style="@style/Widget.Jidan.Button.Outlined.Small"
-                        android:layout_width="wrap_content"
-                        android:layout_height="@dimen/button_small_height"
-                        android:text="@string/weigh_cancel_reweigh" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:minHeight="52dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            style="@style/Text.RowKey"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/weigh_reweigh_key" />
+
+                        <TextView
+                            android:id="@+id/reweighText"
+                            style="@style/Text.RowValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="10dp"
+                            android:layout_weight="1"
+                            android:textColor="@color/warn_ink" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/cancelReweigh"
+                            style="@style/Widget.Jidan.Button.Outlined.Compact"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/weigh_cancel_reweigh" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/recordBtn"
                     style="@style/Widget.Jidan.Button"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/button_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="@string/weigh_record"
                     android:visibility="gone" />
@@ -308,79 +376,54 @@
 
             <TextView
                 android:id="@+id/event"
-                style="@style/Text.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:textColor="@color/ok_ink"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/printProgress"
-                style="@style/Text.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:visibility="gone" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/reprint"
-                style="@style/Widget.Jidan.Button.Outlined.Small"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/button_small_height"
-                android:layout_marginTop="8dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/labelPreviewTitle"
-                style="@style/Text.Caption"
+                style="@style/Text.Event"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="@string/print_preview_title"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/labelPreview"
-                style="@style/Text.Caption"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_step_card"
-                android:padding="12dp"
-                android:visibility="gone" />
-
+            <!-- 最近几箱：没称之前先留 4 个空位，记一箱填一格，版面从头到尾不跳（原型 recentBoxes） -->
             <LinearLayout
                 android:id="@+id/recentSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="18dp"
                 android:orientation="vertical">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
+                    android:minHeight="44dp"
                     android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/stats"
-                        style="@style/Text.Strong"
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingTop="4dp">
 
-                    <TextView
-                        android:id="@+id/avg"
-                        style="@style/Text.Body"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp" />
+                        <TextView
+                            android:id="@+id/stats"
+                            style="@style/Text.Num"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="@dimen/text_17" />
+
+                        <TextView
+                            android:id="@+id/avg"
+                            style="@style/Text.Num"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/openLedger"
                         style="@style/Widget.Jidan.Button.Text.Accent"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="@dimen/button_compact_height"
                         android:text="@string/weigh_open_ledger"
                         android:visibility="gone" />
                 </LinearLayout>
@@ -389,9 +432,46 @@
                     android:id="@+id/recentList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="vertical" />
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_card"
+                    android:clipToOutline="true"
+                    android:divider="@drawable/bg_hairline"
+                    android:orientation="vertical"
+                    android:showDividers="middle" />
             </LinearLayout>
+
+            <!-- 打印进度、没打出来的标签（原型 unprintedBlock，在最近几箱后面） -->
+            <LinearLayout
+                android:id="@+id/printProgress"
+                style="@style/Surface.Sunken"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/printProgressText"
+                    style="@style/Text.Num"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <ProgressBar
+                    android:id="@+id/printBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="8dp"
+                    android:progressDrawable="@drawable/progress_print" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reprint"
+                style="@style/Widget.Jidan.Button.Outlined.Warn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
 
             <FrameLayout
                 android:id="@+id/simHost"
@@ -401,16 +481,14 @@
         </LinearLayout>
     </ScrollView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/line" />
-
     <com.google.android.material.button.MaterialButton
         android:id="@+id/finish"
-        style="@style/Widget.Jidan.Button"
+        style="@style/Widget.Jidan.Button.Outlined"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/button_height"
-        android:layout_margin="@dimen/page_padding"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/page_padding"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="@dimen/page_padding"
+        android:layout_marginBottom="@dimen/page_padding"
         android:text="@string/weigh_finish" />
 </LinearLayout>

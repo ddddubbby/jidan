@@ -4,17 +4,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.activityViewModels
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.button.MaterialButton
 import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
+import com.jidan.receiving.core.Box
 import com.jidan.receiving.databinding.SheetBoxBinding
+import com.jidan.receiving.databinding.ViewKChoiceBinding
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
+import com.jidan.receiving.ui.weigh.seqRangeText
+import com.jidan.receiving.ui.widgets.ChoiceGrid
+import com.jidan.receiving.ui.widgets.ChoiceItem
+import com.jidan.receiving.ui.widgets.NumText
+import com.jidan.receiving.ui.widgets.TextGlue
 
-class BoxSheet : BottomSheetDialogFragment() {
+class BoxSheet : JidanSheet() {
     private var binding: SheetBoxBinding? = null
     private val vm: ReceivingViewModel by activityViewModels {
         ReceivingViewModel.Factory(requireContext().appContainer())
@@ -37,6 +44,7 @@ class BoxSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = binding ?: return
+        bindHead(b.head, "")
         // `weigh.manual-entry = off`：不出现手工录入与手工加一箱（重称、删除照常）
         val manualOk = vm.ui.value.manualEntry
         if (addMode) {
@@ -44,7 +52,7 @@ class BoxSheet : BottomSheetDialogFragment() {
                 dismiss()
                 return
             }
-            showEdit(b, title = getString(R.string.ledger_manual_add), seq = null)
+            showEdit(b, title = getString(R.string.ledger_manual_add), seq = null, box = null)
             return
         }
         val s = seq ?: run {
@@ -55,12 +63,28 @@ class BoxSheet : BottomSheetDialogFragment() {
             dismiss()
             return
         }
+        showDetail(b, s, box, manualOk)
+    }
+
+    private fun showDetail(b: SheetBoxBinding, s: Int, box: Box, manualOk: Boolean) {
+        val ctx = requireContext()
+        b.head.sheetTitle.text = getString(R.string.weigh_box, box.seq)
+        b.detail.isVisible = true
+        b.editBlock.isVisible = false
         val group = vm.groupOf(s)
-        b.title.text = getString(R.string.weigh_box, box.seq) + " · ${box.net.format()} kg"
+
+        // 大字净重，旁边是“手录”小标；下面一行小字：皮重、手录时秤的原读数、同一次称的另几箱
+        b.boxBig.text = NumText.big(ctx, box.net.format(), "kg")
+        b.boxManual.isVisible = box.manual
         val facts = buildList {
-            add("皮重 ${box.tare.format()} kg")
-            if (box.manual && box.raw != null) add("秤原始读数 ${box.raw!!.format()} kg")
-            if (group.size > 1) add("同一次称 ${group.size} 箱")
+            add("皮重 ${TextGlue.withUnit(box.tare.format(), "kg")}")
+            if (box.manual && box.raw != null) add("秤原始读数 ${TextGlue.withUnit(box.raw!!.format(), "kg")}")
+            if (group.size > 1) {
+                val others = group.filter { it.seq != s }
+                if (others.isNotEmpty()) {
+                    add("和${seqRangeText(others.first().seq..others.last().seq)}是同一次称的")
+                }
+            }
         }
         b.facts.text = facts.joinToString(" · ")
 
@@ -68,19 +92,14 @@ class BoxSheet : BottomSheetDialogFragment() {
         b.regroupLabel.isVisible = canRegroup
         b.regroupRow.isVisible = canRegroup
         if (canRegroup) {
-            b.regroupRow.removeAllViews()
-            (1..6).forEach { k ->
-                val btn = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle)
-                btn.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    .also { it.marginEnd = 4 }
-                btn.text = k.toString()
-                btn.isAllCaps = false
-                if (k == group.size) btn.strokeWidth = 3
-                btn.setOnClickListener {
+            val items = (1..6).map { k ->
+                ChoiceItem(label = k.toString(), selected = k == group.size) {
                     vm.regroup(s, k)
                     dismiss()
                 }
-                b.regroupRow.addView(btn)
+            }
+            ChoiceGrid.fill(b.regroupRow, items, cols = 6, gapDp = 6) { parent ->
+                ViewKChoiceBinding.inflate(layoutInflater, parent, false).root
             }
         }
 
@@ -91,7 +110,7 @@ class BoxSheet : BottomSheetDialogFragment() {
         }
         b.manualEdit.isVisible = manualOk
         b.manualEdit.setOnClickListener {
-            showEdit(b, title = getString(R.string.box_manual_title, box.seq), seq = s)
+            showEdit(b, title = getString(R.string.box_manual_title, box.seq), seq = s, box = box)
         }
         b.delete.text = if (group.size > 1) {
             getString(R.string.box_delete_group, group.size)
@@ -104,23 +123,51 @@ class BoxSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun showEdit(b: SheetBoxBinding, title: String, seq: Int?) {
-        b.title.text = title
-        b.facts.isVisible = false
-        b.regroupLabel.isVisible = false
-        b.regroupRow.isVisible = false
-        b.actions.isVisible = false
+    /**
+     * 手工录入 / 手工加一箱（原型 boxMode）：改已有的一箱时先带出现在的净重并全选，直接打新数就覆盖；
+     * 没填对时“保存”变成白底绿边的“填写净重”，点了把光标送过去（先决条件靠交互，不靠说明文字）。
+     * 取消回到这一箱的详情；手工加一箱时取消就是关掉。
+     */
+    private fun showEdit(b: SheetBoxBinding, title: String, seq: Int?, box: Box?) {
+        b.head.sheetTitle.text = title
+        b.detail.isVisible = false
         b.editBlock.isVisible = true
+        b.editHint.isVisible = box != null
+        if (box != null) {
+            // 手录过的箱，秤的读数是当初的原读数；没手录过的，秤的读数就是现在的净重
+            val reading = if (box.manual && box.raw != null) box.raw!! else box.net
+            b.editHint.text = "秤的读数 ${TextGlue.withUnit(reading.format(), "kg")}"
+        }
+        fun valid(): Boolean = (b.netInput.text?.toString().orEmpty().trim().toDoubleOrNull() ?: 0.0) > 0
+        fun refresh() {
+            val ok = valid()
+            b.saveNet.isActivated = !ok
+            b.saveNet.text = getString(if (ok) R.string.box_save else R.string.box_need_net)
+        }
+        b.netInput.setText(box?.net?.format().orEmpty())
+        b.netInput.doAfterTextChanged { refresh() }
+        refresh()
+        b.cancelEdit.setOnClickListener {
+            if (seq == null || box == null) dismiss() else showDetail(b, seq, box, manualOk = true)
+        }
         b.saveNet.setOnClickListener {
-            val raw = b.netInput.text?.toString().orEmpty().trim()
-            val v = raw.toDoubleOrNull()
-            if (v == null || v <= 0) {
-                b.saveNet.text = getString(R.string.box_need_net)
+            if (!valid()) {
+                focusInput(b)
                 return@setOnClickListener
             }
+            val v = b.netInput.text.toString().trim().toDouble()
             if (seq == null) vm.addManual(v) else vm.editManual(seq, v)
             dismiss()
         }
+        focusInput(b)
+    }
+
+    private fun focusInput(b: SheetBoxBinding) {
+        b.netInput.requestFocus()
+        b.netInput.setSelection(b.netInput.text?.length ?: 0)
+        b.netInput.selectAll()
+        dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        (requireContext().getSystemService(InputMethodManager::class.java))?.showSoftInput(b.netInput, 0)
     }
 
     override fun onDestroyView() {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 相同重量归类里的一块（原型 .tag）：“45.6kg-4箱”，数字用 Inter 等宽数字，整块不许从中间断开 -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Tag"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:fontFamily="@font/inter_semibold"
+    android:fontFeatureSettings="tnum"
+    android:paddingVertical="3dp" />

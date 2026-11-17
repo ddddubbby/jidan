@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.MetricAffectingSpan
 import android.text.style.RelativeSizeSpan
@@ -23,6 +24,7 @@ import com.jidan.receiving.R
 object NumText {
     const val UNIT_SCALE_BIG = 0.62f
     const val UNIT_SCALE_ROW = 0.85f
+    const val UNIT_SP_WEIGHT = 26f
 
     /** 单位在 Web 里是系统字体 500 字重（Inter 只管数字），这里同样用系统的 medium。 */
     private val UNIT_TYPEFACE: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -32,17 +34,24 @@ object NumText {
 
     /** 称重、金额那种大数字，如 `NumText.big(ctx, "46.5", "kg")`。 */
     fun big(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
-        format(context, number, unit, UNIT_SCALE_BIG, HAIR)
+        format(context, number, unit, RelativeSizeSpan(UNIT_SCALE_BIG), HAIR)
+
+    /**
+     * 称重框里 96 号的净重：单位不跟着数字走 0.62 倍（那样 kg 会有 60 号），固定 26sp（原型 `.weight small`），
+     * 灰色、500 字重、细缝、不拆行照旧。
+     */
+    fun weight(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
+        format(context, number, unit, AbsoluteSizeSpan(UNIT_SP_WEIGHT.toInt(), true), HAIR)
 
     /** 行内数值，如 `NumText.row(ctx, "46", "kg")`。 */
     fun row(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
-        format(context, number, unit, UNIT_SCALE_ROW, THIN)
+        format(context, number, unit, RelativeSizeSpan(UNIT_SCALE_ROW), THIN)
 
     private fun format(
         context: Context,
         number: CharSequence,
         unit: CharSequence,
-        unitScale: Float,
+        sizeSpan: Any,
         gap: Char,
     ): CharSequence {
         if (unit.isEmpty()) return number
@@ -52,7 +61,7 @@ object NumText {
         out.append(TextGlue.WJ).append(gap).append(TextGlue.WJ).append(TextGlue.noBreak(unit.toString()))
         val end = out.length
         val flags = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        out.setSpan(RelativeSizeSpan(unitScale), start, end, flags)
+        out.setSpan(sizeSpan, start, end, flags)
         out.setSpan(ForegroundColorSpan(ContextCompat.getColor(context, R.color.ink_3)), start, end, flags)
         out.setSpan(TypefaceSpanCompat(UNIT_TYPEFACE), start, end, flags)
         return out

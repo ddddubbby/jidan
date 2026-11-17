@@ -13,4 +13,9 @@ object SimConsoleHook {
     ) {
         // no-op
     }
+
+    /** 实机版无模拟台，也就没有标签预览。 */
+    fun showLabelPreview(parent: ViewGroup, preview: String) {
+        // no-op
+    }
 }
