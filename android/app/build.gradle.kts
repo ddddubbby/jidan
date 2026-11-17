@@ -41,6 +41,28 @@ android {
         }
     }
 
+    // 演示版（F5-3）：给合作方离线试用，没有服务器、没有登录；包名再加 .demo，可与模拟版、实机版同装。
+    // 只有 simDemo 有意义（见下方 beforeVariants），其余构建类型的 BuildConfig.DEMO 为 false，行为不变。
+    buildTypes {
+        getByName("debug") { buildConfigField("boolean", "DEMO", "false") }
+        getByName("release") { buildConfigField("boolean", "DEMO", "false") }
+        create("demo") {
+            initWith(getByName("debug"))
+            matchingFallbacks += "debug"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            buildConfigField("boolean", "DEMO", "true")
+            // 构建类型里的 app_name 压过模拟版风味里的
+            resValue("string", "app_name", "收蛋（演示版）")
+        }
+    }
+
+    sourceSets {
+        // 非演示版共用一个什么都不做的 DemoMode；演示版的在 src/demo
+        getByName("debug").java.srcDir("src/nodemo/java")
+        getByName("release").java.srcDir("src/nodemo/java")
+    }
+
     buildFeatures {
         viewBinding = true
         buildConfig = true
@@ -62,6 +84,15 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+        }
+    }
+}
+
+// 演示版只做模拟版：实机版没有真秤真打印机，演示没有意义
+androidComponents {
+    beforeVariants { variant ->
+        if (variant.buildType == "demo" && variant.productFlavors.any { it.second == "real" }) {
+            variant.enable = false
         }
     }
 }

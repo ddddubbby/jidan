@@ -29,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.jidan.receiving.DemoMode
 import com.jidan.receiving.R
 import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
@@ -150,7 +151,10 @@ class CreateFragment : Fragment() {
             .setMessage(R.string.logout)
             .setPositiveButton(R.string.logout) { _, _ ->
                 requireContext().appContainer().clearSession()
-                findNavController().navigate(R.id.action_global_to_login)
+                // 演示版没有登录页：回到一张空白建单页（已重新以演示账号登录）
+                findNavController().navigate(
+                    if (DemoMode.enabled) R.id.action_global_to_create else R.id.action_global_to_login,
+                )
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

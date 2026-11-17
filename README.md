@@ -65,6 +65,14 @@ cd android
 deploy/publish-apk.sh android/app/build/outputs/apk/sim/debug/app-sim-debug.apk
 ```
 
+**演示版（给合作方看，不要服务器、不要登录）：**
+
+```
+cd android && ./gradlew :app:assembleSimDemo
+```
+
+产物 `android/app/build/outputs/apk/sim/demo/app-sim-demo.apk`，包名 `com.jidan.receiving.sim.demo`，桌面图标“收蛋（演示版）”，可与模拟版、实机版同装。装好直接打开，已是磅秤员“张师傅”登录，数据是 v7 演示数据（李四尾号 1234，10 箱走出 181 元/箱、1,810 元），秤和打印机用模拟台。接口由 APP 内的离线假后端回答，数据只在内存里，退出登录或杀掉进程后复位；没有更新入口，也连不上任何真实服务器。未经实物验证。详见指南 2.2。
+
 APP 登录页的“服务器”填 `http://<服务器地址>:<端口>`，用磅秤员账号登录，然后按李四算例完成一次收货验证（指南 2.3）：10 箱、均重 46kg、181 元/箱、1810 元。
 
 ### 1.3 正式上线（指南 7.1、7.2）

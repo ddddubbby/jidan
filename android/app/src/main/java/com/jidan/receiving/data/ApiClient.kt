@@ -19,11 +19,20 @@ class ApiClient(
     private val baseUrl: () -> String,
     private val token: () -> String?,
     private val onUnauthenticated: () -> Unit,
+    /** 只有演示版传（离线假后端，见 DemoMode）；其余构建恒为 null。 */
+    private val demoInterceptor: Interceptor? = null,
 ) {
-    constructor(prefs: Prefs, tokenStore: TokenStore, onUnauthenticated: () -> Unit) : this(
-        baseUrl = { prefs.normalizedBaseUrl() },
+    constructor(
+        prefs: Prefs,
+        tokenStore: TokenStore,
+        onUnauthenticated: () -> Unit,
+        demoBaseUrl: String? = null,
+        demoInterceptor: Interceptor? = null,
+    ) : this(
+        baseUrl = { demoBaseUrl ?: prefs.normalizedBaseUrl() },
         token = { tokenStore.readSession()?.token },
         onUnauthenticated = onUnauthenticated,
+        demoInterceptor = demoInterceptor,
     )
 
     private val gson = Gson()
@@ -83,6 +92,7 @@ class ApiClient(
             .addInterceptor(auth)
             .addInterceptor(unauth)
             .addInterceptor(logging)
+            .apply { demoInterceptor?.let { addInterceptor(it) } }
             .build()
         return Retrofit.Builder()
             .baseUrl(baseUrl)
