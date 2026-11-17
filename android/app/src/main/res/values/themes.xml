@@ -13,41 +13,24 @@
         <item name="android:colorBackground">@color/surface</item>
         <item name="android:textColorPrimary">@color/ink</item>
         <item name="android:textColorSecondary">@color/ink_2</item>
+        <item name="android:textColorHint">@color/ink_3</item>
         <item name="android:windowBackground">@color/surface</item>
         <item name="android:statusBarColor">@color/surface</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="shapeAppearanceMediumComponent">@style/Shape.Control</item>
+
+        <!-- 按钮：Material 默认的字距（0.09em）和全大写对中文是错的，主题里统一去掉；
+             三种按钮的默认样式换成原型的（styles.xml） -->
+        <item name="textAppearanceButton">@style/TextAppearance.Jidan.Button</item>
+        <item name="materialButtonStyle">@style/Widget.Jidan.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.Jidan.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.Jidan.Button.Text</item>
     </style>
 
     <style name="Shape.Control" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/radius_control</item>
-    </style>
-
-    <!-- 字号五级 -->
-    <style name="Text" parent="">
-        <item name="android:textColor">@color/ink</item>
-        <item name="android:textSize">@dimen/text_15</item>
-    </style>
-    <style name="Text.Caption">
-        <item name="android:textColor">@color/ink_2</item>
-        <item name="android:textSize">@dimen/text_13</item>
-    </style>
-    <style name="Text.Body">
-        <item name="android:textSize">@dimen/text_15</item>
-    </style>
-    <style name="Text.Strong">
-        <item name="android:textSize">@dimen/text_17</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-    <style name="Text.Value">
-        <item name="android:textSize">@dimen/text_19</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-    <style name="Text.Title">
-        <item name="android:textSize">@dimen/text_26</item>
-        <item name="android:textStyle">bold</item>
     </style>
 </resources>

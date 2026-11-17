@@ -35,11 +35,9 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/account"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.Jidan.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
-            android:textAllCaps="false"
             android:textColor="@color/ink" />
     </LinearLayout>
 
@@ -294,11 +292,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action"
+        style="@style/Widget.Jidan.Button.Large"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/button_height"
-        android:layout_margin="@dimen/page_padding"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:textAllCaps="false"
-        android:textSize="@dimen/text_17" />
+        android:layout_height="@dimen/button_large_height"
+        android:layout_margin="@dimen/page_padding" />
 </LinearLayout>

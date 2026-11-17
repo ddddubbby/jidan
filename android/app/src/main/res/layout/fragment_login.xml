@@ -181,12 +181,8 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/action"
-            style="@style/Widget.MaterialComponents.Button"
+            style="@style/Widget.Jidan.Button.Large"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:textAllCaps="false"
-            android:textSize="@dimen/text_17" />
+            android:layout_height="@dimen/button_large_height" />
     </FrameLayout>
 </LinearLayout>

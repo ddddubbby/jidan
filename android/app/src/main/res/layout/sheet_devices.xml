@@ -58,14 +58,11 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/testPrint"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Jidan.Button.Outlined"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_height"
         android:layout_marginTop="8dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:text="@string/devices_test_print"
-        android:textAllCaps="false" />
+        android:text="@string/devices_test_print" />
 
     <LinearLayout
         android:id="@+id/printerScan"

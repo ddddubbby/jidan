@@ -35,10 +35,14 @@ class QuoteFormatTest {
         assertEquals("181", formatMoney(q.unitPrice))
         assertEquals("46", formatMoney(q.avgKg))
         val line = formulaLine(q)
+        // 显示用的文字里夹着不换行空格和零宽连接符；去掉后就是 v7 6.4 的写法
+        val plain = line.replace("\u2060", "").replace('\u00A0', ' ')
+        assertTrue(plain.contains("基准 180 + 多 1kg × 1 元 = 181 元/箱"))
+        assertTrue("181\u00A0元/\u2060箱" in line)   // 单位不拆开
         assertTrue(line.contains("46.05"))
         assertTrue(line.contains("四舍五入为 46kg"))
         assertTrue(line.contains("基准 180"))
-        assertTrue(line.contains("181 元/箱"))
+        assertTrue(plain.contains("181 元/箱"))
     }
 
     @Test

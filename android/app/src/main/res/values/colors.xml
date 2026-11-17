@@ -6,6 +6,8 @@
     <color name="sunken">#f4f5f2</color>
     <color name="ink">#14181a</color>
     <color name="ink_2">#4a5357</color>
+    <!-- 次级文字（标签、单位）：Web 的 ink-3，原型里以字面量 #6b7471 出现 -->
+    <color name="ink_3">#6b7471</color>
     <color name="line">#d5d9d3</color>
     <color name="edge">#8b9590</color>
     <color name="accent">#0b6b3a</color>
@@ -17,4 +19,13 @@
     <color name="err_bg">#fde4e1</color>
     <color name="err_ink">#9c1f18</color>
     <color name="on_accent">#ffffff</color>
+
+    <!-- 原型里直接写字面量的几个灰绿色：右箭头与未做步骤的描边、待称重的灰数字、不可用按钮底、抓手 -->
+    <color name="faint">#a3aba6</color>
+    <color name="idle">#9aa29e</color>
+    <color name="disabled_bg">#e3e6e1</color>
+    <color name="grab">#c9cec8</color>
+    <color name="card_tint">#f3f9f5</color>
+    <color name="scrim">#730a0e10</color>
+    <color name="ripple">#1f14181a</color>
 </resources>

@@ -1,18 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 字号五级与控件尺寸，开发规格 9.5；原型的 px 按 1:1 换成 dp -->
+<!--
+  尺寸令牌，取自 lab/app-sim.html。原型手机屏内宽 370px，APP 常见 360 到 411dp：
+  按 1 CSS px = 1dp/sp 换算（开发规格 9.5；手机是“窄屏按内容排”，不是整体缩放），
+  所以原型图与 APP 图并排时 APP 略宽，不是字号差。
+-->
 <resources>
+    <!-- 字号：原型用到的各级 -->
+    <dimen name="text_12">12sp</dimen>
     <dimen name="text_13">13sp</dimen>
+    <dimen name="text_14">14sp</dimen>
     <dimen name="text_15">15sp</dimen>
     <dimen name="text_17">17sp</dimen>
+    <dimen name="text_18">18sp</dimen>
     <dimen name="text_19">19sp</dimen>
+    <dimen name="text_22">22sp</dimen>
     <dimen name="text_26">26sp</dimen>
+    <dimen name="text_34">34sp</dimen>
+    <dimen name="text_64">64sp</dimen>
+    <dimen name="text_96">96sp</dimen>
 
+    <!-- 字号按用途：页面标题 / 区块标签 / 正文 / 说明 / 称重大数字 / 金额大数字 -->
+    <dimen name="type_page_title">@dimen/text_26</dimen>
+    <dimen name="type_section">@dimen/text_19</dimen>
+    <dimen name="type_label">@dimen/text_13</dimen>
+    <dimen name="type_body">@dimen/text_15</dimen>
+    <dimen name="type_caption">@dimen/text_13</dimen>
+    <dimen name="type_weight">@dimen/text_96</dimen>
+    <dimen name="type_amount">@dimen/text_64</dimen>
+
+    <!-- 控件高度 -->
     <dimen name="button_height">56dp</dimen>
+    <dimen name="button_large_height">60dp</dimen>
     <dimen name="button_small_height">44dp</dimen>
+    <dimen name="button_compact_height">40dp</dimen>
     <dimen name="input_height">52dp</dimen>
+    <dimen name="input_large_height">56dp</dimen>
+    <dimen name="row_height">60dp</dimen>
 
+    <!-- 圆角 -->
+    <dimen name="radius_tag">8dp</dimen>
+    <dimen name="radius_note">10dp</dimen>
     <dimen name="radius_control">12dp</dimen>
     <dimen name="radius_button">14dp</dimen>
+    <dimen name="radius_card">14dp</dimen>
+    <dimen name="radius_button_large">16dp</dimen>
+    <dimen name="radius_panel">16dp</dimen>
+    <dimen name="radius_sheet">20dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
 
+    <!-- 描边 -->
+    <dimen name="stroke_hairline">1dp</dimen>
+    <dimen name="stroke_control">1.5dp</dimen>
+    <dimen name="stroke_panel">2dp</dimen>
+
+    <!-- 间距 -->
     <dimen name="page_padding">16dp</dimen>
+    <dimen name="page_padding_wide">20dp</dimen>
+    <dimen name="gap_tight">6dp</dimen>
+    <dimen name="gap">10dp</dimen>
+    <dimen name="card_padding_h">14dp</dimen>
+    <dimen name="panel_padding">16dp</dimen>
+    <dimen name="chip_padding_h">10dp</dimen>
+    <dimen name="chip_padding_v">3dp</dimen>
 </resources>

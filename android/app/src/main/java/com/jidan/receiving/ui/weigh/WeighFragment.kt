@@ -30,6 +30,9 @@ import com.jidan.receiving.ui.devices.LinkActionKind
 import com.jidan.receiving.ui.devices.label
 import com.jidan.receiving.ui.devices.linkAction
 import com.jidan.receiving.ui.sheets.LedgerSheet
+import com.jidan.receiving.ui.widgets.NumText
+import com.jidan.receiving.ui.widgets.TextGlue
+import com.jidan.receiving.ui.widgets.dp
 import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
@@ -171,10 +174,10 @@ class WeighFragment : Fragment() {
                 btn.layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                ).also { it.topMargin = 8 }
+                ).also { it.topMargin = dp(8) }
                 btn.isAllCaps = false
                 val tag = if (t.id == state.lastTareId) " · 上一单用的" else ""
-                btn.text = "${t.name}$tag\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()} kg"
+                btn.text = "${t.name}$tag\n${com.jidan.receiving.core.Kg.of(t.tareKg).format()}${TextGlue.NBSP}kg"
                 btn.setOnClickListener { vm.selectTare(t) }
                 b.tareChoices.addView(btn)
             }
@@ -199,7 +202,7 @@ class WeighFragment : Fragment() {
                 },
             ),
         )
-        b.weight.text = (state.displayNet?.format1() ?: "0.0") + " kg"
+        b.weight.text = NumText.big(requireContext(), state.displayNet?.format1() ?: "0.0", "kg")
 
         val cand = state.candidates
         b.askRow.isVisible = cand != null
@@ -208,7 +211,7 @@ class WeighFragment : Fragment() {
             listOf(cand.first, cand.second).forEach { k ->
                 val btn = MaterialButton(requireContext())
                 btn.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    .also { it.marginEnd = 8 }
+                    .also { it.marginEnd = dp(8) }
                 btn.text = getString(R.string.weigh_choose_k, k)
                 btn.isAllCaps = false
                 btn.setOnClickListener { vm.chooseK(k) }
@@ -217,7 +220,7 @@ class WeighFragment : Fragment() {
         }
 
         b.tareRow.isVisible = !state.showTarePicker
-        b.tareText.text = state.tare?.let { "${it.name} · ${it.unit.format()} kg" } ?: "—"
+        b.tareText.text = state.tare?.let { "${it.name} · ${it.unit.format()}${TextGlue.NBSP}kg" } ?: "—"
 
         val tareFailed = state.ready && state.tareError.isNotBlank()
         b.tareErrorText.isVisible = tareFailed
@@ -266,7 +269,7 @@ class WeighFragment : Fragment() {
             btn.layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).also { it.topMargin = 6 }
+            ).also { it.topMargin = dp(6) }
             btn.isAllCaps = false
             btn.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
             btn.text = buildString {

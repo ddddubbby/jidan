@@ -25,6 +25,7 @@ import com.jidan.receiving.ui.sheets.RuleSheet
 import com.jidan.receiving.ui.weigh.ReceivingNav
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
 import com.jidan.receiving.ui.weigh.SummaryUiState
+import com.jidan.receiving.ui.widgets.NumText
 import com.jidan.receiving.ui.widgets.bindReprint
 import kotlinx.coroutines.launch
 
@@ -124,7 +125,7 @@ class SummaryFragment : Fragment() {
             b.factFormula.text = formula
             val total = q.totalKg?.let { Kg.of(it).format() } ?: "—"
             b.factLedgerValue.text = getString(R.string.summary_ledger_value, q.boxCount, total)
-            b.factAvg.text = q.avgKg?.let { "${formatMoney(it)} kg" } ?: "—"
+            b.factAvg.text = q.avgKg?.let { NumText.row(requireContext(), formatMoney(it), "kg") } ?: "—"
 
             when {
                 pendingAllowed -> {

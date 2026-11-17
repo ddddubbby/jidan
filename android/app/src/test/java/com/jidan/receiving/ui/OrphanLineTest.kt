@@ -37,6 +37,13 @@ class OrphanLineTest {
     }
 
     @Test
+    fun zeroWidthJoinerAndNoBreakSpaceDoNotCountAsCharacters() {
+        // F4-3：数字与单位之间用的零宽连接符、不换行空格，不算字
+        assertTrue(OrphanLine.isOrphan("\u2060箱\u00A0"))
+        assertFalse(OrphanLine.isOrphan("1\u2060箱"))
+    }
+
+    @Test
     fun blankLineIsNotOrphan() {
         assertFalse(OrphanLine.isOrphan(""))
         assertFalse(OrphanLine.isOrphan(" \n"))

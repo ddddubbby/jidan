@@ -13,12 +13,10 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/back"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.Jidan.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
             android:text="@string/summary_back"
-            android:textAllCaps="false"
             android:textColor="@color/ink"
             android:textSize="@dimen/text_17" />
 
@@ -75,11 +73,10 @@
 
                     <TextView
                         android:id="@+id/amountValue"
+                        style="@style/Text.Num.Amount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/ink"
-                        android:textSize="48sp"
-                        android:textStyle="bold" />
+                        android:textSize="48sp" />
 
                     <TextView
                         android:id="@+id/amountUnit"
@@ -119,12 +116,10 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/warnBind"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        style="@style/Widget.Jidan.Button.Text.Accent"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:minWidth="0dp"
                         android:text="@string/summary_bind_rule"
-                        android:textAllCaps="false"
                         android:textColor="@color/warn_ink"
                         android:visibility="gone" />
                 </LinearLayout>
@@ -235,7 +230,7 @@
 
                         <TextView
                             android:id="@+id/factLedgerValue"
-                            style="@style/Text.Strong"
+                            style="@style/Text.Num.Strong"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
@@ -268,7 +263,7 @@
 
                     <TextView
                         android:id="@+id/factAvg"
-                        style="@style/Text.Strong"
+                        style="@style/Text.Num.Strong"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
@@ -277,12 +272,11 @@
             <!-- 有标签没打出来：补打按钮（打印机有问题时写明缺什么，点了去设备弹层） -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/reprint"
-                style="@style/Widget.MaterialComponents.Button"
+                style="@style/Widget.Jidan.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:minHeight="52dp"
-                android:textAllCaps="false"
                 android:visibility="gone" />
 
             <TextView
@@ -303,11 +297,9 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/primary"
-            style="@style/Widget.MaterialComponents.Button"
+            style="@style/Widget.Jidan.Button.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="60dp"
-            android:textAllCaps="false"
-            android:textSize="@dimen/text_17" />
+            android:minHeight="60dp" />
     </FrameLayout>
 </LinearLayout>

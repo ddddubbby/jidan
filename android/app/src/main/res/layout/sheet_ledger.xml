@@ -22,25 +22,19 @@
     <!-- 重量种类超过 8 种：先列 6 种，点开看全部（原型 sheetLog） -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/groupsToggle"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Jidan.Button.Outlined.Small"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_small_height"
         android:layout_marginTop="8dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:textAllCaps="false"
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/manualAdd"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Jidan.Button.Outlined.Small"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_small_height"
         android:layout_marginTop="10dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:text="@string/ledger_manual_add"
-        android:textAllCaps="false" />
+        android:text="@string/ledger_manual_add" />
 
     <!-- 上百箱时内部滚动，避免撑破弹层（v7 4.4-6） -->
     <androidx.core.widget.NestedScrollView
