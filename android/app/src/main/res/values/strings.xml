@@ -100,7 +100,7 @@
     <string name="weigh_phase_hold">↑ 待拿下</string>
     <string name="weigh_phase_ask">几箱？</string>
     <string name="weigh_phase_ready">已稳定</string>
-    <string name="weigh_stats">已称 %1$d&#160;箱 · %2$s&#160;kg</string>
+    <string name="weigh_stats">已称 %1$d&#160;箱 · %2$s kg</string>
     <string name="weigh_stats_zero">已称 0 箱</string>
     <string name="weigh_avg">均重 %1$s&#160;kg</string>
     <string name="weigh_avg_raw">（%1$s）</string>

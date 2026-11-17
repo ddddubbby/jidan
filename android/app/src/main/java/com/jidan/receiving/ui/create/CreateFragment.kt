@@ -27,6 +27,7 @@ import com.jidan.receiving.platform.BluetoothPrompts
 import com.jidan.receiving.ui.sheets.DevicesSheet
 import com.jidan.receiving.ui.update.bindUpdateEntry
 import com.jidan.receiving.ui.widgets.DeviceCardBinder
+import com.jidan.receiving.ui.widgets.dp
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -339,7 +340,7 @@ class CreateFragment : Fragment() {
         btn.layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).also { it.topMargin = 8 }
+        ).also { it.topMargin = dp(8) }
         btn.isAllCaps = false
         btn.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         val phones = if (query.length == 4) {
@@ -361,7 +362,7 @@ class CreateFragment : Fragment() {
         btn.layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).also { it.topMargin = 8 }
+        ).also { it.topMargin = dp(8) }
         btn.isAllCaps = false
         btn.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         btn.text = buildString {
@@ -383,7 +384,7 @@ class CreateFragment : Fragment() {
         btn.layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).also { it.topMargin = 8 }
+        ).also { it.topMargin = dp(8) }
         btn.isAllCaps = false
         btn.minHeight = resources.getDimensionPixelSize(R.dimen.button_height)
         btn.text = if (badge.isNullOrBlank()) label else "$label\n$badge"
