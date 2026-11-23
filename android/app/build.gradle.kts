@@ -43,6 +43,7 @@ android {
 
     // 演示版（F5-3）：给合作方离线试用，没有服务器、没有登录；包名再加 .demo，可与模拟版、实机版同装。
     // 只有 simDemo 有意义（见下方 beforeVariants），其余构建类型的 BuildConfig.DEMO 为 false，行为不变。
+    // 蓝牙实测版（F5-4）：同样免登录、离线假后端，但挂在实机版上，秤与打印机走真蓝牙；只有 realBttest。
     buildTypes {
         getByName("debug") { buildConfigField("boolean", "DEMO", "false") }
         getByName("release") { buildConfigField("boolean", "DEMO", "false") }
@@ -55,12 +56,22 @@ android {
             // 构建类型里的 app_name 压过模拟版风味里的
             resValue("string", "app_name", "收蛋（演示版）")
         }
+        // 蓝牙实测版：免登录、离线假后端（同演示版），秤与打印机走真蓝牙；只有 realBttest 有意义
+        create("bttest") {
+            initWith(getByName("demo"))
+            matchingFallbacks += "debug"
+            applicationIdSuffix = ".bttest"
+            versionNameSuffix = "-bttest"
+            buildConfigField("boolean", "DEMO", "true")
+            resValue("string", "app_name", "收蛋（蓝牙测试）")
+        }
     }
 
     sourceSets {
         // 非演示版共用一个什么都不做的 DemoMode；演示版的在 src/demo
         getByName("debug").java.srcDir("src/nodemo/java")
         getByName("release").java.srcDir("src/nodemo/java")
+        getByName("bttest").java.srcDir("src/demo/java")
     }
 
     buildFeatures {
@@ -92,6 +103,9 @@ android {
 androidComponents {
     beforeVariants { variant ->
         if (variant.buildType == "demo" && variant.productFlavors.any { it.second == "real" }) {
+            variant.enable = false
+        }
+        if (variant.buildType == "bttest" && variant.productFlavors.any { it.second == "sim" }) {
             variant.enable = false
         }
     }
