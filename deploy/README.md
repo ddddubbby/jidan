@@ -1,24 +1,27 @@
 # deploy/
 
+本分支不用 Docker：MySQL 8.4、后端（JDK 17）、nginx 都直接装在本机运行。完整步骤见 `doc/本地启动指南-无Docker.md`。
+
 | 文件 | 作用 |
 |---|---|
-| `compose.yml` | 部署：MySQL + 后端 + 站点（Web 管理端、`/api` 转发、APK 下载）。只有站点对外开放端口 |
 | `.env.example` | 全部配置项与说明；复制为 `deploy/.env`（不入库）后使用 |
-| `nginx.conf`、`backend.Dockerfile`、`web.Dockerfile` | 站点配置与两个镜像的构建，部署机器上只需要 Docker |
+| `run-backend.sh` | 读 `.env`、连本机 MySQL，用 JDK 17 起后端（还没打包时自动打一次） |
+| `egg-backend.service.example` | 可选：用 systemd 让后端开机自启 |
+| `nginx.conf` | 站点：提供 `web/dist`、把 `/api` 转到 `127.0.0.1:8080`、托管 APK |
 | `publish-apk.sh` | 发布最新 APK：拷到 `apk/`、写 `version.json`，不用重启 |
-| `backup.sh`、`backup.cron.example` | 导出一份数据库备份并清理过期备份；每日定时的写法 |
-| `compose.dev.yml` | 开发用：只起一个 MySQL，后端与 Web 在本机跑 |
+| `backup.sh`、`backup.cron.example` | 用本机 `mysqldump` 导出一份数据库备份并清理过期备份；每日定时的写法 |
 
 ## 起全套
 
 ```
-cp deploy/.env.example deploy/.env      # 第一次；至少把两个数据库密码换成自己的
-docker compose -f deploy/compose.yml up -d --build
+cp deploy/.env.example deploy/.env      # 第一次；数据库密码与在 MySQL 里建的账号一致
+deploy/run-backend.sh                   # 后端
+cd web && npm ci && npm run build       # Web 打包到 web/dist
+sudo cp deploy/nginx.conf /etc/nginx/conf.d/egg.conf   # 改好里面的 /opt/egg 目录后
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-第一次要下载镜像并构建后端与 Web，需要几分钟；之后重启很快。浏览器打开 `http://<服务器地址>:<EGG_WEB_PORT>`，
-默认模拟模式带演示数据，演示账号见 `.env.example`。停掉：`docker compose -f deploy/compose.yml down`（数据在
-数据卷里，不会丢；加 `-v` 才会删库）。
+浏览器打开 `http://<服务器地址>`，默认模拟模式带演示数据，演示账号见 `.env.example`。
 
 ## 发布 APP 新版本
 

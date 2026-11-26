@@ -1,4 +1,4 @@
-# 配置全部可用环境变量覆盖；默认值对应 deploy/compose.dev.yml 起的开发库
+# 配置全部可用环境变量覆盖；默认值对应本机 MySQL 8.4（localhost:3306 的 egg 库，账号 egg/egg），见 doc/本地启动指南-无Docker.md
 spring:
   application:
     name: egg-backend

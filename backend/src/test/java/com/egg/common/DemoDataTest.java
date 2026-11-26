@@ -12,9 +12,11 @@ import java.util.Map;
 import java.util.Set;
 
 import com.egg.EggApplication;
+import com.egg.LocalMySql;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -25,15 +27,11 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * P1-1 验收：空库启动后表齐全、演示数据在，重启不重复写入。
  * 每次 {@link #start()} 都是一次真正的应用启动（Flyway + 演示数据装载），同一个库上启动两次就是“重启”。
  */
-@Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class DemoDataTest {
 
@@ -42,15 +40,20 @@ class DemoDataTest {
             "warehouse", "spec", "tare_box", "base_price", "pricing_rule", "pricing_rule_bind", "option", "batch_seq",
             "purchase_order", "weigh_record");
 
-    @Container
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4").withEnv("TZ", "Asia/Shanghai");
+    /** 本机 MySQL 上为本测试新建的空库，测完删掉。 */
+    static final String DB = LocalMySql.createDatabase();
+
+    @AfterAll
+    static void dropDatabase() {
+        LocalMySql.drop(DB);
+    }
 
     private static ConfigurableApplicationContext start() {
         return new SpringApplicationBuilder(EggApplication.class)
                 .web(WebApplicationType.NONE)
-                .run("--spring.datasource.url=" + MYSQL.getJdbcUrl() + "?characterEncoding=utf8&connectionTimeZone=Asia/Shanghai",
-                        "--spring.datasource.username=" + MYSQL.getUsername(),
-                        "--spring.datasource.password=" + MYSQL.getPassword(),
+                .run("--spring.datasource.url=" + LocalMySql.jdbcUrl(DB),
+                        "--spring.datasource.username=" + LocalMySql.USER,
+                        "--spring.datasource.password=" + LocalMySql.PASSWORD,
                         "--egg.seed-demo=true");
     }
 

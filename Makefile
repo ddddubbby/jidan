@@ -1,6 +1,6 @@
 # 统一验收入口，命令与开发规格 14.2 一致。
 #   make verify           依次跑后端、Web、APP
-#   make verify-backend   只跑后端（需要 Docker 在运行，Testcontainers 会起一个 MySQL）
+#   make verify-backend   只跑后端（需要本机 MySQL 8.4 在运行、JDK 17；测试在里面临时建库、测完删掉，见 doc/本地启动指南-无Docker.md）
 # web/ 与 android/ 还没建出来时（P0-3、P0-4 之前）对应一步明确打印“跳过”，不当作通过。
 
 .PHONY: verify verify-backend verify-web verify-android

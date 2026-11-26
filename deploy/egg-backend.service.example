@@ -1,0 +1,18 @@
+# 让后端开机自启、挂了自动拉起（systemd，可选）。不用也行：前台跑 deploy/run-backend.sh 即可。
+#   sudo cp deploy/egg-backend.service.example /etc/systemd/system/egg-backend.service
+#   把下面的 /opt/egg 换成仓库在本机的实际目录、User 换成运行用的账号
+#   sudo systemctl daemon-reload && sudo systemctl enable --now egg-backend
+#   看日志：journalctl -u egg-backend -n 50 --no-pager
+[Unit]
+Description=egg backend
+After=network.target mysql.service mysqld.service
+
+[Service]
+User=egg
+WorkingDirectory=/opt/egg
+ExecStart=/opt/egg/deploy/run-backend.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
