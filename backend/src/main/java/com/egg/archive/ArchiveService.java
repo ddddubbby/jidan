@@ -9,7 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -65,29 +67,43 @@ public class ArchiveService {
 
     /**
      * 四类档案全量拉取，按好生意编码覆盖更新；只增改不删（历史单据引用着旧档案）。
-     * 先把四类都拉到手再一起写库：任何一类拉取失败，库里保持上次的数据。
+     * 每一类单独拉取、单独写库：某一类拉取失败（比如好生意没开这一类接口的权限），只有这一类保持上次的数据，
+     * 其他类照常更新；提示里写明哪一类没同步、原因是什么（附录 E P8-5）。
      */
     public Status sync() {
-        List<ChanjetClient.Product> ps;
-        List<ChanjetClient.Vendor> vs;
-        List<ChanjetClient.Customer> cs;
-        List<ChanjetClient.Warehouse> ws;
-        try {
-            ps = chanjet.listProducts();
-            vs = chanjet.listVendors();
-            cs = chanjet.listCustomers();
-            ws = chanjet.listWarehouses();
-        } catch (ChanjetException e) {
-            throw ApiException.invalid("同步失败，保留了上次的数据：" + e.getMessage());
-        }
         LocalDateTime now = LocalDateTime.now();
-        tx.executeWithoutResult(s -> {
-            ps.forEach(p -> products.upsert(p.code(), p.name(), p.unitName() == null ? "箱" : p.unitName(), now));
-            cs.forEach(c -> customers.upsert(c.code(), c.name(), now));
-            ws.forEach(w -> warehouses.upsert(w.code(), w.name(), now));
-            saveVendors(vs, now);
-        });
-        return status();
+        List<String> done = new ArrayList<>();
+        Map<String, String> failed = new LinkedHashMap<>();
+        syncOne("商品", chanjet::listProducts,
+                ps -> ps.forEach(p -> products.upsert(p.code(), p.name(), p.unitName() == null ? "箱" : p.unitName(), now)),
+                done, failed);
+        syncOne("农户", chanjet::listVendors, vs -> saveVendors(vs, now), done, failed);
+        syncOne("客户", chanjet::listCustomers, cs -> cs.forEach(c -> customers.upsert(c.code(), c.name(), now)), done, failed);
+        syncOne("仓库", chanjet::listWarehouses, ws -> ws.forEach(w -> warehouses.upsert(w.code(), w.name(), now)), done, failed);
+        if (failed.isEmpty()) {
+            return status();
+        }
+        String reasons = failed.entrySet().stream().map(f -> f.getKey() + "档案没有同步：" + f.getValue())
+                .collect(Collectors.joining("；"));
+        if (done.isEmpty()) {
+            // 四类原因相同（比如配置没填）时只说一遍
+            boolean same = failed.values().stream().distinct().count() == 1;
+            throw ApiException.invalid("同步失败，保留了上次的数据：" + (same ? failed.values().iterator().next() : reasons));
+        }
+        throw ApiException.invalid(String.join("、", done) + "已更新；" + reasons + "。没同步的这几类保留了上次的数据");
+    }
+
+    private <T> void syncOne(String label, Supplier<List<T>> fetch, Consumer<List<T>> save, List<String> done,
+            Map<String, String> failed) {
+        List<T> list;
+        try {
+            list = fetch.get();
+        } catch (ChanjetException e) {
+            failed.put(label, e.getMessage());
+            return;
+        }
+        tx.executeWithoutResult(s -> save.accept(list));
+        done.add(label);
     }
 
     private void saveVendors(List<ChanjetClient.Vendor> list, LocalDateTime now) {

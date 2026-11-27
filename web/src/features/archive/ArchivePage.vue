@@ -84,8 +84,9 @@ async function sync() {
     await load()
     toast('已同步')
   } catch (e) {
-    // 后端的失败提示本身就写明“保留了上次的数据”和好生意给的原因
+    // 后端的提示写明哪一类没同步、好生意给的原因；其他类已经写进去了，所以照样刷新
     syncError.value = errorText(e)
+    await Promise.all([loadStatus(), load()]).catch(() => {})
   } finally {
     syncing.value = false
   }
@@ -115,7 +116,7 @@ const cols = computed(() => 2 + (isVendors.value || isProducts.value ? 1 : 0))
     </div>
   </div>
 
-  <div v-if="syncError" class="result err" role="alert"><b>同步失败</b>{{ syncError }}</div>
+  <div v-if="syncError" class="result err" role="alert"><b>同步未完成</b>{{ syncError }}</div>
   <div v-if="loadError" class="result err" role="alert">{{ loadError }}</div>
 
   <div class="tabs">
