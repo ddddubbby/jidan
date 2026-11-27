@@ -324,6 +324,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chanjet/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/batches": {
         parameters: {
             query?: never;
@@ -524,6 +540,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["recent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chanjet/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["chanjetStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1081,6 +1113,15 @@ export interface components {
             hsCode?: string;
             phones?: string[];
             matchedPhones?: string[];
+        };
+        ChanjetStatus: {
+            tokenMode?: string;
+            /** Format: date-time */
+            ticketAt?: string;
+            ticketFresh?: boolean;
+            /** Format: date-time */
+            tokenUntil?: string;
+            ready?: boolean;
         };
         BoxLookup: {
             code?: string;
@@ -1836,6 +1877,30 @@ export interface operations {
             };
         };
     };
+    receiveTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     batch: {
         parameters: {
             query?: never;
@@ -2134,6 +2199,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Farmer"][];
+                };
+            };
+        };
+    };
+    chanjetStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ChanjetStatus"];
                 };
             };
         };

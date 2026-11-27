@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { ApiError, errorText } from '../../api/http'
+import { agoText, getChanjetStatus, type ChanjetStatus } from '../../api/chanjet'
 import { getMeta } from '../../api/nav'
 import { failNext, getOptions, putOptions, type FailMode, type OptionView, type Values } from '../../api/options'
 import type { Meta } from '../../api/types'
@@ -12,6 +13,7 @@ import '../../styles/settings.css'
 // 改一项立即保存（下一次建单生效，不用重启）；与默认值不同的项标出来，可逐项或一次全部还原。
 const items = ref<OptionView[]>([])
 const meta = ref<Meta>()
+const chanjet = ref<ChanjetStatus>()
 const loaded = ref(false)
 const error = ref('')
 const onlyChanged = ref(false)
@@ -46,11 +48,17 @@ async function load() {
     const [list, m] = await Promise.all([getOptions(), getMeta().catch(() => undefined)])
     apply(list)
     meta.value = m
+    chanjet.value = m?.chanjetMode === 'real' ? await getChanjetStatus().catch(() => undefined) : undefined
     error.value = ''
   } catch (e) {
     error.value = errorText(e)
   } finally {
     loaded.value = true
+  }
+  // 从档案页“等待开放平台推送 appTicket”点过来时，直接看到那一行
+  if (location.hash === '#chanjet-ticket') {
+    await nextTick()
+    document.getElementById('chanjet-ticket')?.scrollIntoView({ block: 'center' })
   }
 }
 onMounted(load)
@@ -148,6 +156,17 @@ async function fail(mode: FailMode) {
         <template v-else>对接真实好生意。</template>
         账套：{{ meta.bookName }}
       </p>
+      <div v-if="chanjet?.tokenMode === 'ticket'" id="chanjet-ticket" data-testid="chanjet-ticket" style="margin-top: 10px">
+        <p v-if="chanjet.ticketFresh" class="muted" style="margin: 0">
+          Token 安全级别“高”：appTicket 最近收到 {{ agoText(chanjet.ticketAt) }}
+        </p>
+        <div v-else class="result err" role="alert" style="margin: 0">
+          <b>{{ chanjet.ticketAt ? 'appTicket 已过期（最近收到 ' + agoText(chanjet.ticketAt) + '）' : '还没收到开放平台推送的 appTicket' }}</b>
+          开放平台里自建应用的消息接收地址要指向 <code>https://本站域名/api/chanjet/ticket</code>，消息加解密密钥要与 CHANJET_ENCRYPT_KEY 一致。
+          <template v-if="chanjet.ready">库里的 token 还能用，暂时不影响同步与回传。</template>
+          <button class="btn sm" style="margin-left: 8px" @click="load">刷新</button>
+        </div>
+      </div>
       <div v-if="isDemo" style="margin-top: 14px">
         <div class="setrow">
           <button class="btn" :aria-pressed="armed === 'reject'" @click="fail('reject')">让下一次回传被拒绝</button>

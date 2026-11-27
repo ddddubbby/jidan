@@ -2,6 +2,7 @@ package com.egg.chanjet;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
@@ -67,11 +68,16 @@ import org.slf4j.LoggerFactory;
  * <h2>openToken 怎么取（选项 CHANJET_TOKEN_MODE）</h2>
  * 开发方无法验证、选错了回传不了，所以做成选项（开发规格第 4 章的做法），环境变量 {@code CHANJET_TOKEN_MODE}：
  * <ul>
- * <li>{@code auto}（默认）：填了 {@code CHANJET_CERTIFICATE} 就按 {@code certificate}，否则按 {@code static}。</li>
+ * <li>{@code auto}（默认）：{@code CHANJET_ENCRYPT_KEY} 与 {@code CHANJET_CERTIFICATE} 都填了按 {@code ticket}；
+ * 只填了软证书按 {@code certificate}；否则按 {@code static}。</li>
+ * <li>{@code ticket}：Token 安全级别“高”（附录 E P8-5）。开放平台约每 10 分钟把 appTicket 推到
+ * {@code /api/chanjet/ticket}（{@link TicketController}），按 appKey 覆盖存进 {@link AuthStore}。换 token 时请求体带
+ * {@code appTicket} 与 {@code certificate}；换到的 access/refresh token 也落库，重启后接着用。access 到期先用 refreshToken 续，
+ * 续不上再用没过期的 appTicket 换；没有或过期的 appTicket 不发请求；答复 4041（appTicket 已失效）时丢掉它。
+ * 推送报文、解密、refresh 接口的写法是推测的，集中在 {@link TicketProtocol}，未经实物验证。</li>
  * <li>{@code certificate}：自建应用的文档做法。用软证书换 token，存在内存里，剩余有效期不到十分之一（最多提前 1 小时）时重新换；
  * 调用时遇到 token 失效，重新换一次并把这次调用重发一次（只重发一次，失效答复说明请求没进业务处理，不会重复生成单据）。
- * 不落库、不排队，服务重启后重新换。Token 安全级别要设为“中”（软证书 + 服务器公网 IP 白名单）或“低”（只要软证书）；
- * “高”还要 appTicket，appTicket 由开放平台每 10 分钟推到一个公网回调地址，本系统没有做这个回调，所以不支持。</li>
+ * 不落库、不排队，服务重启后重新换。对应 Token 安全级别“中”（软证书 + 服务器公网 IP 白名单）或“低”（只要软证书）。</li>
  * <li>{@code static}：直接用 {@code CHANJET_OPEN_TOKEN}，不换也不刷新，过期后换新值重启。</li>
  * </ul>
  *
@@ -116,40 +122,58 @@ public class RealChanjetClient implements ChanjetClient {
 
     /** openToken 怎么取，见类注释。 */
     public enum TokenMode {
-        AUTO, CERTIFICATE, STATIC;
+        AUTO, TICKET, CERTIFICATE, STATIC;
 
         public static TokenMode parse(String s) {
             String v = s == null || s.isBlank() ? "auto" : s.trim().toLowerCase(Locale.ROOT);
             return switch (v) {
                 case "auto" -> AUTO;
+                case "ticket" -> TICKET;
                 case "certificate" -> CERTIFICATE;
                 case "static" -> STATIC;
-                default -> throw new IllegalStateException("CHANJET_TOKEN_MODE=" + s + " 不认识，只能是 auto、certificate 或 static");
+                default -> throw new IllegalStateException("CHANJET_TOKEN_MODE=" + s + " 不认识，只能是 auto、ticket、certificate 或 static");
             };
         }
     }
 
     /** 连接配置，全部来自环境变量（开发规格 3.5）；任何一项都允许为空。 */
     public record Settings(String baseUrl, String appKey, String appSecret, String bookId, String openToken,
-            String certificate, TokenMode tokenMode, Duration timeout) {
+            String certificate, String encryptKey, TokenMode tokenMode, Duration timeout) {
+
+        /** 不用 Token 安全级别“高”时（没有消息加解密密钥）。 */
+        public Settings(String baseUrl, String appKey, String appSecret, String bookId, String openToken,
+                String certificate, TokenMode tokenMode, Duration timeout) {
+            this(baseUrl, appKey, appSecret, bookId, openToken, certificate, null, tokenMode, timeout);
+        }
     }
 
     private final Settings cfg;
     private final ObjectMapper json;
     private final HttpClient http;
     private final Clock clock;
+    /** ticket 方式下的 appTicket 与 token，落库（{@link JdbcAuthStore}）。 */
+    private final AuthStore store;
 
-    /** 内存里的 openToken（只在 certificate 方式下用）；重启即丢，重新换。 */
+    /** 内存里的 openToken（只在 certificate 方式下用）；重启即丢，重新换。ticket 方式的存在 {@link #store}。 */
     private String cachedToken;
     private Instant renewAt = Instant.MIN;
 
     public RealChanjetClient(Settings cfg, ObjectMapper json) {
-        this(cfg, json, Clock.systemUTC());
+        this(cfg, json, AuthStore.memory(), Clock.systemUTC());
+    }
+
+    public RealChanjetClient(Settings cfg, ObjectMapper json, AuthStore store) {
+        this(cfg, json, store, Clock.systemUTC());
     }
 
     RealChanjetClient(Settings cfg, ObjectMapper json, Clock clock) {
+        this(cfg, json, AuthStore.memory(), clock);
+    }
+
+    RealChanjetClient(Settings cfg, ObjectMapper json, AuthStore store, Clock clock) {
         this.cfg = cfg;
         this.json = json;
+        this.store = store;
         this.clock = clock;
         this.http = HttpClient.newBuilder().connectTimeout(cfg.timeout()).build();
     }
@@ -302,49 +326,155 @@ public class RealChanjetClient implements ChanjetClient {
 
     // ---------------------------------------------------------------- openToken
 
-    /** 这一次按软证书换 token，还是用静态 token。 */
-    boolean usesCertificate() {
+    /** 这一次实际用哪种取法（auto 按配置推定）。 */
+    TokenMode mode() {
         return switch (cfg.tokenMode() == null ? TokenMode.AUTO : cfg.tokenMode()) {
-            case CERTIFICATE -> true;
-            case STATIC -> false;
-            case AUTO -> !blank(cfg.certificate());
+            case TICKET -> TokenMode.TICKET;
+            case CERTIFICATE -> TokenMode.CERTIFICATE;
+            case STATIC -> TokenMode.STATIC;
+            case AUTO -> blank(cfg.certificate()) ? (blank(cfg.encryptKey()) ? TokenMode.STATIC : TokenMode.TICKET)
+                    : (blank(cfg.encryptKey()) ? TokenMode.CERTIFICATE : TokenMode.TICKET);
         };
     }
 
-    /** 换 token 失败：这一次还没有向业务接口发出任何请求。 */
+    /** 这一次是换 token（软证书或 appTicket + 软证书），还是用静态 token。 */
+    boolean usesCertificate() {
+        return mode() != TokenMode.STATIC;
+    }
+
+    /** 换 token 失败：这一次还没有向业务接口发出任何请求。code 是开放平台给的错误码（可能没有）。 */
     private static final class TokenFailure extends RuntimeException {
+        final String code;
+
         TokenFailure(String message) {
+            this(message, null);
+        }
+
+        TokenFailure(String message, String code) {
             super(message);
+            this.code = code;
         }
     }
 
-    /** 当前可用的 openToken；certificate 方式下快过期或被作废时重新换。 */
+    /** 当前可用的 openToken；换来的 token 快过期或被作废时重新换。 */
     private synchronized String openToken() {
-        if (!usesCertificate()) {
-            return cfg.openToken();
-        }
+        return switch (mode()) {
+            case STATIC -> cfg.openToken();
+            case TICKET -> ticketToken();
+            default -> certificateToken();
+        };
+    }
+
+    /** certificate 方式（安全级别“中/低”）：只用软证书换，存在内存里。 */
+    private String certificateToken() {
         Instant now = clock.instant();
         if (cachedToken != null && now.isBefore(renewAt)) {
             return cachedToken;
         }
         cachedToken = null;
-        String url = base() + PATH_TOKEN;
-        String body = write(Map.of("certificate", cfg.certificate()));
-        HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(cfg.timeout())
+        JsonNode value = exchange("换取 openToken", tokenRequest(Map.of("certificate", cfg.certificate())),
+                "。核对 CHANJET_APP_KEY、CHANJET_APP_SECRET、CHANJET_CERTIFICATE，以及开放平台里自建应用的 Token 安全级别与 IP 白名单");
+        Duration life = life(value.path("expiresIn").asLong(0));
+        cachedToken = value.get("accessToken").asText();
+        renewAt = now.plus(life).minus(early(life));
+        return cachedToken;
+    }
+
+    /**
+     * ticket 方式（安全级别“高”）：库里的 accessToken 没到期就用；到期了先用 refreshToken 续；
+     * 续不上（或 refreshToken 也到期）再用开放平台最近推来的 appTicket + 软证书换。
+     * 没有 appTicket 或它已过期时不发请求，直接失败。
+     */
+    private String ticketToken() {
+        Instant now = clock.instant();
+        AuthStore.State s = store.load(cfg.appKey());
+        if (s.accessToken() != null && s.accessUntil() != null && now.isBefore(s.accessUntil())) {
+            return s.accessToken();
+        }
+        if (s.refreshToken() != null && s.refreshUntil() != null && now.isBefore(s.refreshUntil())) {
+            try {
+                return keep(now, exchange("刷新 openToken", refreshRequest(s.refreshToken()), ""), s.refreshToken(),
+                        s.refreshUntil());
+            } catch (TokenFailure e) {
+                log.warn("好生意 刷新 openToken 失败，改用 appTicket 重新换：{}", e.getMessage());
+            }
+        }
+        if (s.appTicket() == null || s.ticketAt() == null) {
+            throw new TokenFailure("还没有收到开放平台推送的 appTicket（Token 安全级别“高”要它）。检查开放平台里自建应用的消息接收地址"
+                    + "是否指向本系统的 /api/chanjet/ticket、CHANJET_ENCRYPT_KEY 是否填对；开放平台约每 10 分钟推一次");
+        }
+        if (!now.isBefore(s.ticketAt().plus(TicketProtocol.TICKET_TTL))) {
+            throw new TokenFailure("最近一次收到 appTicket 是 " + Duration.between(s.ticketAt(), now).toMinutes()
+                    + " 分钟前，已经过期。开放平台约每 10 分钟推一次，检查消息接收地址是否还能从公网访问");
+        }
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("appTicket", s.appTicket());
+        body.put("certificate", cfg.certificate());
+        try {
+            return keep(now, exchange("换取 openToken", tokenRequest(body),
+                    "。核对 CHANJET_APP_KEY、CHANJET_APP_SECRET、CHANJET_CERTIFICATE 与开放平台推来的 appTicket"), null, null);
+        } catch (TokenFailure e) {
+            if (TicketProtocol.CODE_TICKET_EXPIRED.equals(e.code)) {
+                store.clearTicket(cfg.appKey());
+                throw new TokenFailure(e.getMessage() + "；这张 appTicket 已作废，等开放平台下一次推送（约 10 分钟）后再试", e.code);
+            }
+            throw e;
+        }
+    }
+
+    /** 把换到的 token 落库；答复里没给新的 refreshToken 时沿用旧的。 */
+    private String keep(Instant now, JsonNode value, String oldRefresh, Instant oldRefreshUntil) {
+        Duration life = life(value.path("expiresIn").asLong(0));
+        String access = value.get("accessToken").asText();
+        String refresh = text(value, "refreshToken");
+        Instant refreshUntil;
+        if (refresh == null) {
+            refresh = oldRefresh;
+            refreshUntil = oldRefreshUntil;
+        } else {
+            long r = value.path("refreshExpiresIn").asLong(0);
+            Duration rl = r > 0 ? Duration.ofSeconds(r) : life;
+            refreshUntil = now.plus(rl).minus(early(rl));
+        }
+        store.saveToken(cfg.appKey(), access, now.plus(life).minus(early(life)), refresh, refreshUntil);
+        return access;
+    }
+
+    private static Duration life(long seconds) {
+        return seconds > 0 ? Duration.ofSeconds(seconds) : DEFAULT_TOKEN_TTL;
+    }
+
+    /** 提前换的余量：有效期的十分之一，最多 1 小时。 */
+    private static Duration early(Duration life) {
+        return life.dividedBy(10).compareTo(RENEW_BEFORE) < 0 ? life.dividedBy(10) : RENEW_BEFORE;
+    }
+
+    private HttpRequest tokenRequest(Map<String, String> body) {
+        return HttpRequest.newBuilder(URI.create(base() + PATH_TOKEN)).timeout(cfg.timeout())
                 .header("Content-Type", "application/json").header("appKey", cfg.appKey())
-                .header("appSecret", cfg.appSecret()).POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-                .build();
-        log.info("好生意请求 换取openToken POST {} appKey={} appSecret={} certificate={}", url, mask(cfg.appKey()),
-                mask(cfg.appSecret()), mask(cfg.certificate()));
+                .header("appSecret", cfg.appSecret())
+                .POST(HttpRequest.BodyPublishers.ofString(write(body), StandardCharsets.UTF_8)).build();
+    }
+
+    private HttpRequest refreshRequest(String refreshToken) {
+        String q = "?grantType=refresh_token&refreshToken=" + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
+        return HttpRequest.newBuilder(URI.create(base() + TicketProtocol.PATH_REFRESH + q)).timeout(cfg.timeout())
+                .header("appKey", cfg.appKey()).header("appSecret", cfg.appSecret()).GET().build();
+    }
+
+    /** 发一次换 token / 刷新 token 的请求，返回答复里的 value；失败抛 {@link TokenFailure}。 */
+    private JsonNode exchange(String what, HttpRequest req, String hint) {
+        log.info("好生意请求 {} {} {} appKey={} appSecret={} certificate={}", what, req.method(), req.uri().getPath(),
+                mask(cfg.appKey()), mask(cfg.appSecret()), mask(cfg.certificate()));
         HttpResponse<String> res;
         try {
             res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new TokenFailure("换取 openToken 时被中断");
+            throw new TokenFailure(what + " 时被中断");
         } catch (IOException | IllegalArgumentException e) {
-            log.warn("好生意请求 换取openToken 没有得到答复：{}", e.toString());
-            throw new TokenFailure("换取 openToken 时没有收到好生意的答复（" + describe(e) + "）");
+            log.warn("好生意请求 {} 没有得到答复：{}", what, e.toString());
+            throw new TokenFailure(what + " 时没有收到好生意的答复（" + describe(e) + "）");
         }
         JsonNode root = null;
         try {
@@ -355,19 +485,17 @@ public class RealChanjetClient implements ChanjetClient {
         JsonNode token = root == null ? null : root.path("value").get("accessToken");
         if (res.statusCode() / 100 != 2 || root == null || !root.path("result").asBoolean(false) || token == null
                 || token.asText().isBlank()) {
-            log.info("好生意响应 换取openToken HTTP {} body={}", res.statusCode(), res.body());
+            log.info("好生意响应 {} HTTP {} body={}", what, res.statusCode(), res.body());
             String why = root == null ? "HTTP " + res.statusCode() + " " + abbreviate(res.body()) : tokenError(root, res);
-            throw new TokenFailure("用软证书换取 openToken 失败：" + why
-                    + "。核对 CHANJET_APP_KEY、CHANJET_APP_SECRET、CHANJET_CERTIFICATE，以及开放平台里自建应用的 Token 安全级别与 IP 白名单");
+            String code = root == null ? null : text(root.path("error"), "code");
+            if (code == null && root != null) {
+                code = text(root, "code");
+            }
+            throw new TokenFailure(what + " 失败：" + why + hint, code);
         }
-        long ttl = root.path("value").path("expiresIn").asLong(0);
-        Duration life = ttl > 0 ? Duration.ofSeconds(ttl) : DEFAULT_TOKEN_TTL;
-        Duration early = life.dividedBy(10).compareTo(RENEW_BEFORE) < 0 ? life.dividedBy(10) : RENEW_BEFORE;
-        cachedToken = token.asText();
-        renewAt = now.plus(life).minus(early);
-        log.info("好生意响应 换取openToken HTTP {} 取得 openToken={}，有效 {} 秒", res.statusCode(), mask(cachedToken),
-                life.toSeconds());
-        return cachedToken;
+        log.info("好生意响应 {} HTTP {} 取得 openToken={}，有效 {} 秒", what, res.statusCode(), mask(token.asText()),
+                root.path("value").path("expiresIn").asLong(0));
+        return root.path("value");
     }
 
     private String tokenError(JsonNode root, HttpResponse<String> res) {
@@ -386,8 +514,14 @@ public class RealChanjetClient implements ChanjetClient {
 
     /** 业务接口说 token 不能用了：丢掉缓存，下一次重新换（只丢这一次用的那个）。 */
     private synchronized void forget(String used) {
-        if (used != null && used.equals(cachedToken)) {
+        if (used == null) {
+            return;
+        }
+        if (used.equals(cachedToken)) {
             cachedToken = null;
+        }
+        if (mode() == TokenMode.TICKET && used.equals(store.load(cfg.appKey()).accessToken())) {
+            store.clearAccess(cfg.appKey());
         }
     }
 
@@ -443,7 +577,14 @@ public class RealChanjetClient implements ChanjetClient {
             missing.add("CHANJET_BOOK_ID");
         }
         TokenMode mode = cfg.tokenMode() == null ? TokenMode.AUTO : cfg.tokenMode();
-        if (mode == TokenMode.CERTIFICATE && blank(cfg.certificate())) {
+        if (mode() == TokenMode.TICKET) {
+            if (blank(cfg.certificate())) {
+                missing.add("CHANJET_CERTIFICATE");
+            }
+            if (blank(cfg.encryptKey())) {
+                missing.add("CHANJET_ENCRYPT_KEY");
+            }
+        } else if (mode == TokenMode.CERTIFICATE && blank(cfg.certificate())) {
             missing.add("CHANJET_CERTIFICATE");
         } else if (mode == TokenMode.STATIC && blank(cfg.openToken())) {
             missing.add("CHANJET_OPEN_TOKEN");
@@ -466,7 +607,7 @@ public class RealChanjetClient implements ChanjetClient {
         throw new ChanjetException(msg);
     }
 
-    /** 发一次业务请求；certificate 方式下遇到 token 失效，重新换 token 再发一次。 */
+    /** 发一次业务请求；换来的 token（certificate、ticket 方式）遇到失效，重新换 token 再发一次。 */
     private Reply call(String what, String path, String body, boolean write) {
         requireConfigured(write);
         String token = token(write);
