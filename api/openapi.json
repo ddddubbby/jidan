@@ -848,6 +848,33 @@
         }
       }
     },
+    "/api/chanjet/ticket" : {
+      "post" : {
+        "tags" : [ "ticket-controller" ],
+        "operationId" : "receiveTicket",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batches" : {
       "post" : {
         "tags" : [ "order-controller" ],
@@ -1176,6 +1203,24 @@
                   "items" : {
                     "$ref" : "#/components/schemas/Farmer"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chanjet/status" : {
+      "get" : {
+        "tags" : [ "ticket-controller" ],
+        "operationId" : "chanjetStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChanjetStatus"
                 }
               }
             }
@@ -2569,6 +2614,28 @@
             "items" : {
               "type" : "string"
             }
+          }
+        }
+      },
+      "ChanjetStatus" : {
+        "type" : "object",
+        "properties" : {
+          "tokenMode" : {
+            "type" : "string"
+          },
+          "ticketAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ticketFresh" : {
+            "type" : "boolean"
+          },
+          "tokenUntil" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ready" : {
+            "type" : "boolean"
           }
         }
       },

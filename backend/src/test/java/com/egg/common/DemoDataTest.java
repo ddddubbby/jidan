@@ -38,7 +38,7 @@ class DemoDataTest {
     /** 开发规格 5.1 的 15 张表。 */
     private static final Set<String> TABLES = Set.of("account", "product", "vendor", "vendor_phone", "customer",
             "warehouse", "spec", "tare_box", "base_price", "pricing_rule", "pricing_rule_bind", "option", "batch_seq",
-            "purchase_order", "weigh_record");
+            "purchase_order", "weigh_record", "chanjet_auth");
 
     /** 本机 MySQL 上为本测试新建的空库，测完删掉。 */
     static final String DB = LocalMySql.createDatabase();
@@ -87,7 +87,7 @@ class DemoDataTest {
         try (var ctx = start()) {
             JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
             assertThat(counts(jdbc)).isEqualTo(first);
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1", Integer.class)).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1", Integer.class)).isEqualTo(2);
         }
     }
 

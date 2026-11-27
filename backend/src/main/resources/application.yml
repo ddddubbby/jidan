@@ -33,6 +33,8 @@ egg:
     book-id: ${CHANJET_BOOK_ID:}
     open-token: ${CHANJET_OPEN_TOKEN:}
     certificate: ${CHANJET_CERTIFICATE:}
+    # 开放平台给自建应用的“消息加解密密钥”：Token 安全级别“高”时解开推来的 appTicket
+    encrypt-key: ${CHANJET_ENCRYPT_KEY:}
     token-mode: ${CHANJET_TOKEN_MODE:auto}
 
   # 初始管理员（开发规格 7.2）：启动时库里没有任何管理员才建；已有管理员时这三项不起作用。
