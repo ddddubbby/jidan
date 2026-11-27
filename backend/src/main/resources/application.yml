@@ -4,8 +4,8 @@ spring:
     name: egg-backend
   datasource:
     url: ${EGG_DB_URL:jdbc:mysql://localhost:3306/egg?characterEncoding=utf8&connectionTimeZone=Asia/Shanghai}
-    username: ${EGG_DB_USER:egg}
-    password: ${EGG_DB_PASSWORD:egg}
+    username: ${EGG_DB_USER:root}
+    password: ${EGG_DB_PASSWORD:123456}
   jackson:
     time-zone: Asia/Shanghai
 
@@ -21,21 +21,22 @@ mybatis-plus:
 egg:
   # 库里没有业务数据时写入一套演示数据（开发规格 7.3）。开发与模拟模式默认开；
   # 正式部署设 EGG_SEED_DEMO=false。
-  seed-demo: ${EGG_SEED_DEMO:true}
+  seed-demo: ${EGG_SEED_DEMO:false}
 
   # 好生意对接（开发规格 3.5）。mode 为 fake（默认，模拟好生意）或 real；
   # real 下面四项密钥可以不填，服务照常启动，同步与回传时会提示缺哪几项。
   chanjet:
-    mode: ${CHANJET_MODE:fake}
+#    mode: ${CHANJET_MODE:fake}
+    mode: ${CHANJET_MODE:real}
     base-url: ${CHANJET_BASE_URL:https://openapi.chanjet.com}
-    app-key: ${CHANJET_APP_KEY:}
-    app-secret: ${CHANJET_APP_SECRET:}
-    book-id: ${CHANJET_BOOK_ID:}
-    open-token: ${CHANJET_OPEN_TOKEN:}
-    certificate: ${CHANJET_CERTIFICATE:}
+    app-key: ${CHANJET_APP_KEY:mkVGsS3Q}
+    app-secret: ${CHANJET_APP_SECRET:3BFFAA922CECB3A69E72CBD0D29610CE}
+    book-id: ${CHANJET_BOOK_ID:3642068771802548}
+    open-token: ${CHANJET_OPEN_TOKEN:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpc3YiLCJncmFudElkIjoiODM3NDU0MiIsImlzcyI6ImNoYW5qZXQiLCJ1c2VySWQiOiIzOTgzMDU5OTgwNTA4MzMiLCJvcmdJZCI6IjEyNDI3MzA5MjgzNDkzOTMiLCJhY2Nlc3NfdG9rZW4iOiJiYy1hMWY4M2ExMC01NzE0LTRkNmItYTAxNy0wNGVhODhkMDQ1NmQiLCJhdWQiOiJpc3YiLCJuYmYiOjE3OTU2MTIwMDYsImFwcElkIjoiMzA5NjYiLCJzY29wZSI6ImF1dGhfYWxsIiwiYXBwS2V5IjoibWtWR3NTM1EiLCJpZCI6IjkwMjQ3NGU3LWQwMjAtNGRiNi05OTBjLTUyYzA0ZDYxZjY1NiIsImV4cCI6MTc5NjEzMDQwNiwiaWF0IjoxNzk1NjEyMDA2LCJvcmdBY2NvdW50IjoidWlmbjl4cW8ydmp6In0.XEA2agbMAAmzhF_cuzC1OuBZJSgUVnGCq_4-xUMmA9o}
+    certificate: ${CHANJET_CERTIFICATE:Jf+LmYUqM4F0mCc3pvFY8nAgsvqljTGd6kgrzZoeHnMZ2xB13w7pSEo6oNT9om1zUwnPnWQNvG9++eps8/D7o4IhHuVA2gPpSqW9Pwqecx61/6GQJUl7RvjkYtCFRsErilcjb0Fle2ktGUUmuyNtGJcpHTo+o1WXSxbce4s6JSRRLEwRH9hX+JfkSzRsBces}
     # 开放平台给自建应用的“消息加解密密钥”：Token 安全级别“高”时解开推来的 appTicket
     encrypt-key: ${CHANJET_ENCRYPT_KEY:}
-    token-mode: ${CHANJET_TOKEN_MODE:auto}
+    token-mode: ${CHANJET_TOKEN_MODE:static}
 
   # 初始管理员（开发规格 7.2）：启动时库里没有任何管理员才建；已有管理员时这三项不起作用。
   admin:
