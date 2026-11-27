@@ -49,6 +49,7 @@ services:
       CHANJET_BOOK_ID: ${CHANJET_BOOK_ID:-}
       CHANJET_OPEN_TOKEN: ${CHANJET_OPEN_TOKEN:-}
       CHANJET_CERTIFICATE: ${CHANJET_CERTIFICATE:-}
+      CHANJET_ENCRYPT_KEY: ${CHANJET_ENCRYPT_KEY:-}
       CHANJET_TOKEN_MODE: ${CHANJET_TOKEN_MODE:-auto}
     healthcheck:
       # 镜像里没有 curl，用 bash 自带的 /dev/tcp 探端口
@@ -72,6 +73,8 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # 最新 APK 与 version.json，由 deploy/publish-apk.sh 写入，不用重启
       - ./apk:/usr/share/nginx/apk:ro
+      # 开放平台消息接收地址的校验文件 CHANJET_CHECK*.txt（Token 安全级别“高”，指南 5.3），联调方放进来，不入库
+      - ./chanjet-check:/usr/share/nginx/chanjet-check:ro
 
 volumes:
   mysql-data:
