@@ -368,11 +368,23 @@ class RealChanjetClientTest {
         RealChanjetClient c = withCertificate();
 
         assertThatThrownBy(() -> c.addPurchaseStockIn("{}")).isExactlyInstanceOf(ChanjetException.Rejected.class)
-                .hasMessageContaining("请求来源IP不在白名单（4047）").hasMessageContaining("CHANJET_CERTIFICATE")
+                .hasMessageContaining("请求来源IP不在白名单（4047）").hasMessageContaining("白名单")
                 .hasMessageContaining("没有受理");
         assertThatThrownBy(c::listProducts).isExactlyInstanceOf(ChanjetException.class)
                 .hasMessageContaining("请求来源IP不在白名单");
         assertThat(to("/accounting/")).isEmpty();
+    }
+
+    @Test
+    void appTicketRequiredFailureTellsOperatorToLowerTokenSecurity() {
+        handler = s -> new Object[] { 200, "{\"result\":false,\"error\":{\"code\":4041,\"msg\":\"appTicket已失效\",\"hint\":\"\"}}" };
+        RealChanjetClient c = withCertificate();
+
+        assertThatThrownBy(c::listProducts).isExactlyInstanceOf(ChanjetException.class)
+                .hasMessageContaining("appTicket已失效（4041）").hasMessageContaining("Token 安全级别")
+                .hasMessageContaining("中").hasMessageContaining("低");
+        assertThat(to("/accounting/")).isEmpty();
+        assertThat(RealChanjetClient.tokenHint("appTicket已失效（4041）")).contains("高").contains("低");
     }
 
     @Test
