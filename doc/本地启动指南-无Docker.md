@@ -21,7 +21,7 @@
 
 - **Ubuntu / Debian**：MySQL 8.4 用 MySQL 官方 APT 源（发行版自带的 `mysql-server` 多半是 8.0，不要用），装时选 “mysql-8.4-lts”；`sudo apt install openjdk-17-jdk nginx`；Node 22 用 NodeSource 或 nvm。
 - **macOS**：`brew install mysql@8.4 openjdk@17 node@22 nginx`，按 brew 的提示把 `openjdk@17`、`mysql@8.4` 加进 PATH；`brew services start mysql@8.4`。
-- **Windows**：MySQL 官网的 8.4 MSI 安装包（装成服务、端口 3306）；JDK 17 用 Eclipse Temurin 17 安装包；Node 22 安装包。命令在 Git Bash 里执行（`deploy/*.sh` 是 bash 脚本）。部署模式下的 nginx 可用 Windows 版 nginx。
+- **Windows**：MySQL 官网的 8.4 MSI 安装包（装成服务、端口 3306）；JDK 17 用 Eclipse Temurin 17 安装包；Node 22 安装包。后端的安装、建库、启动步骤见 [`Windows启动后端.md`](Windows启动后端.md)（用 PowerShell 与 `deploy/run-backend.ps1`，不需要 Git Bash）；`deploy/backup.sh`、`deploy/publish-apk.sh` 仍是 bash 脚本，要在 Git Bash 里执行。部署模式下的 nginx 可用 Windows 版 nginx。
 
 装好后确认：
 
