@@ -357,8 +357,7 @@ public class RealChanjetClient implements ChanjetClient {
                 || token.asText().isBlank()) {
             log.info("好生意响应 换取openToken HTTP {} body={}", res.statusCode(), res.body());
             String why = root == null ? "HTTP " + res.statusCode() + " " + abbreviate(res.body()) : tokenError(root, res);
-            throw new TokenFailure("用软证书换取 openToken 失败：" + why
-                    + "。核对 CHANJET_APP_KEY、CHANJET_APP_SECRET、CHANJET_CERTIFICATE，以及开放平台里自建应用的 Token 安全级别与 IP 白名单");
+            throw new TokenFailure("用软证书换取 openToken 失败：" + why + "。" + tokenHint(why));
         }
         long ttl = root.path("value").path("expiresIn").asLong(0);
         Duration life = ttl > 0 ? Duration.ofSeconds(ttl) : DEFAULT_TOKEN_TTL;
@@ -382,6 +381,25 @@ public class RealChanjetClient implements ChanjetClient {
             return "HTTP " + res.statusCode() + " " + abbreviate(res.body());
         }
         return code == null ? msg : msg + "（" + code + "）";
+    }
+
+    /**
+     * 换 token 失败时给人看的下一步。4041 = Token 安全级别是“高”（要 appTicket，本系统不做回调）；
+     * 4047 = 安全级别“中”但出口 IP 不在白名单。其余仍列通用核对项。
+     */
+    static String tokenHint(String why) {
+        String s = why == null ? "" : why.toLowerCase(Locale.ROOT);
+        if (s.contains("4041") || s.contains("appticket")) {
+            return "这是开放平台 Token 安全级别设为“高”时的答复：本系统不接收 appTicket。"
+                    + "到开放平台把该自建应用的 Token 安全级别改成“中”（再把本服务器公网出口 IP 加进白名单）或“低”，"
+                    + "保存后重新同步；不要填 CHANJET_OPEN_TOKEN，有软证书时 CHANJET_TOKEN_MODE=auto 会自己换";
+        }
+        if (s.contains("4047") || s.contains("白名单") || s.contains("ip")) {
+            return "把本服务器的公网出口 IP 加进开放平台该自建应用的 IP 白名单，"
+                    + "或把 Token 安全级别改成“低”；也可改 CHANJET_TOKEN_MODE=static 并填 CHANJET_OPEN_TOKEN";
+        }
+        return "核对 CHANJET_APP_KEY、CHANJET_APP_SECRET、CHANJET_CERTIFICATE，"
+                + "以及开放平台里自建应用的 Token 安全级别与 IP 白名单";
     }
 
     /** 业务接口说 token 不能用了：丢掉缓存，下一次重新换（只丢这一次用的那个）。 */
