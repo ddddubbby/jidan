@@ -25,9 +25,10 @@ export EGG_DB_URL
 export LANG=${LANG:-C.UTF-8} TZ=Asia/Shanghai
 
 jar=$(ls "$root"/backend/target/egg-backend-*.jar 2>/dev/null | grep -v '\.original$' | head -n 1 || true)
-if [ -z "$jar" ]; then
-  echo "还没有打包好的后端，先打包一次（./mvnw -DskipTests package）…"
-  (cd "$root/backend" && ./mvnw -B -q -DskipTests package)
+# 没打包过，或 backend/src、pom.xml 比 jar 新（拉了新代码）时，重新打包（跳过测试）
+if [ -z "$jar" ] || [ -n "$(find "$root/backend/src" "$root/backend/pom.xml" -newer "$jar" -type f -print -quit)" ]; then
+  echo "没有打包好的后端或代码比它新，重新打包（./mvnw -DskipTests clean package）…"
+  (cd "$root/backend" && ./mvnw -B -q -DskipTests clean package)
   jar=$(ls "$root"/backend/target/egg-backend-*.jar | grep -v '\.original$' | head -n 1)
 fi
 
