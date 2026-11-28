@@ -10,15 +10,15 @@ public class WeighRecord {
     public Long id;
     public Long orderId;
     public Integer seq;
-    public BigDecimal netKg;
+    public BigDecimal netJin;
     /** 手录的箱没有毛重 */
-    public BigDecimal grossKg;
-    public BigDecimal tareKg;
+    public BigDecimal grossJin;
+    public BigDecimal tareJin;
     public String tareName;
     public Integer groupNo;
     public Integer groupK;
     public Boolean manual;
     /** 手录前秤给出的净重；手工加的箱与 Web 自建单为空 */
-    public BigDecimal rawKg;
+    public BigDecimal rawJin;
     public Boolean printed;
 }

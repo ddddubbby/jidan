@@ -8,7 +8,7 @@ public class Spec {
     public Long id;
     public String name;
     public Integer eggCount;
-    public BigDecimal stdNetKg;
+    public BigDecimal stdNetJin;
     public Boolean enabled;
     public Long updatedBy;
     public LocalDateTime updatedAt;

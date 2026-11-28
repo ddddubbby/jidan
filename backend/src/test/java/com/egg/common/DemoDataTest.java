@@ -35,9 +35,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class DemoDataTest {
 
-    /** 开发规格 5.1 的 15 张表。 */
+    /** 开发规格 5.1 的 14 张表与好生意换票状态表（规则绑定表已在 V3 删掉，附录 E R-1 行）。 */
     private static final Set<String> TABLES = Set.of("account", "product", "vendor", "vendor_phone", "customer",
-            "warehouse", "spec", "tare_box", "base_price", "pricing_rule", "pricing_rule_bind", "option", "batch_seq",
+            "warehouse", "spec", "tare_box", "base_price", "pricing_rule", "option", "batch_seq",
             "purchase_order", "weigh_record", "chanjet_auth");
 
     /** 本机 MySQL 上为本测试新建的空库，测完删掉。 */
@@ -79,7 +79,7 @@ class DemoDataTest {
             assertThat(first).containsEntry("account", 3).containsEntry("product", 2).containsEntry("vendor", 4)
                     .containsEntry("vendor_phone", 5).containsEntry("customer", 2).containsEntry("warehouse", 2)
                     .containsEntry("spec", 3).containsEntry("tare_box", 4).containsEntry("base_price", 5)
-                    .containsEntry("pricing_rule", 7).containsEntry("pricing_rule_bind", 6)
+                    .containsEntry("pricing_rule", 7)
                     .containsEntry("batch_seq", 2).containsEntry("purchase_order", 9).containsEntry("weigh_record", 67)
                     // 业务设置与高级选项不预置，没存过的取默认值（P1-3）
                     .containsEntry("option", 0);
@@ -87,7 +87,7 @@ class DemoDataTest {
         try (var ctx = start()) {
             JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
             assertThat(counts(jdbc)).isEqualTo(first);
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1", Integer.class)).isEqualTo(2);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1", Integer.class)).isEqualTo(3);
         }
     }
 
@@ -122,26 +122,29 @@ class DemoDataTest {
             assertThat(jdbc.queryForList("SELECT DISTINCT status FROM purchase_order", String.class))
                     .containsExactlyInAnyOrder("PENDING", "APPROVED", "PUSHED", "VOID");
             String day = today.toString().replace("-", "");
-            Map<String, Object> li = jdbc.queryForMap("SELECT code, batch_no, status, box_count, total_net_kg, submitted_price, submitted_amount "
+            Map<String, Object> li = jdbc.queryForMap("SELECT code, batch_no, status, box_count, total_net_jin, submitted_price, submitted_amount "
                     + "FROM purchase_order WHERE batch_no = ?", "SG" + day + "-1");
             assertThat(li.get("code")).isEqualTo("CGRK" + day + "001");
             assertThat(jdbc.queryForObject("SELECT last_seq FROM batch_seq WHERE biz_date = ?", Integer.class, today)).isEqualTo(6);
             assertThat(jdbc.queryForObject("SELECT last_seq FROM batch_seq WHERE biz_date = ?", Integer.class, today.minusDays(1))).isEqualTo(3);
 
-            // v7 第 6 章李四算例：10 箱共 460.5kg，提交时 181 元/箱、1810 元
-            assertThat(jdbc.queryForObject("SELECT SUM(net_kg) FROM weigh_record w JOIN purchase_order o ON o.id = w.order_id "
-                    + "WHERE o.batch_no = ?", BigDecimal.class, "SG" + day + "-1")).isEqualByComparingTo("460.5");
+            // v7 第 6 章李四算例：10 箱共 921 斤，提交时 181 元/箱、1810 元
+            assertThat(jdbc.queryForObject("SELECT SUM(net_jin) FROM weigh_record w JOIN purchase_order o ON o.id = w.order_id "
+                    + "WHERE o.batch_no = ?", BigDecimal.class, "SG" + day + "-1")).isEqualByComparingTo("921");
+            // 规则建单时就选好了，记在单据表头
+            assertThat(jdbc.queryForObject("SELECT r.name FROM purchase_order o JOIN pricing_rule r ON r.id = o.rule_id "
+                    + "WHERE o.batch_no = ?", String.class, "SG" + day + "-1")).isEqualTo("粉蛋李四收购定价方案");
             assertThat((BigDecimal) li.get("submitted_price")).isEqualByComparingTo("181");
             assertThat((BigDecimal) li.get("submitted_amount")).isEqualByComparingTo("1810");
 
             // 回传失败的那张：已审核且有 push_error；手录的那箱留着原始读数
             assertThat(jdbc.queryForObject("SELECT push_error FROM purchase_order WHERE batch_no = ?", String.class, "SG" + day + "-4"))
                     .contains("openToken");
-            Map<String, Object> manual = jdbc.queryForMap("SELECT net_kg, raw_kg, gross_kg FROM weigh_record w "
+            Map<String, Object> manual = jdbc.queryForMap("SELECT net_jin, raw_jin, gross_jin FROM weigh_record w "
                     + "JOIN purchase_order o ON o.id = w.order_id WHERE o.batch_no = ? AND w.manual = 1", "SG" + day + "-2");
-            assertThat((BigDecimal) manual.get("net_kg")).isEqualByComparingTo("29.2");
-            assertThat((BigDecimal) manual.get("raw_kg")).isEqualByComparingTo("30.4");
-            assertThat(manual.get("gross_kg")).isNull();
+            assertThat((BigDecimal) manual.get("net_jin")).isEqualByComparingTo("58.4");
+            assertThat((BigDecimal) manual.get("raw_jin")).isEqualByComparingTo("60.8");
+            assertThat(manual.get("gross_jin")).isNull();
         }
     }
 
@@ -153,24 +156,24 @@ class DemoDataTest {
             JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
             var json = new ObjectMapper();
             List<Map<String, Object>> orders = jdbc.queryForList(
-                    "SELECT id, batch_no, status, box_count, total_net_kg, avg_kg, std_net_kg, base_price, rule_coef, price, amount, "
+                    "SELECT id, batch_no, status, box_count, total_net_jin, avg_jin, std_net_jin, base_price, rule_coef, price, amount, "
                             + "round_mode, push_payload, hs_id FROM purchase_order WHERE status IN ('APPROVED','PUSHED')");
             assertThat(orders).hasSize(4);
             for (Map<String, Object> o : orders) {
-                List<BigDecimal> nets = jdbc.queryForList("SELECT net_kg FROM weigh_record WHERE order_id = ? ORDER BY seq",
+                List<BigDecimal> nets = jdbc.queryForList("SELECT net_jin FROM weigh_record WHERE order_id = ? ORDER BY seq",
                         BigDecimal.class, o.get("id"));
                 BigDecimal total = nets.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
                 BigDecimal avg = total.divide(BigDecimal.valueOf(nets.size()), 10, RoundingMode.HALF_UP).setScale(0, RoundingMode.HALF_UP);
                 BigDecimal price = ((BigDecimal) o.get("base_price"))
-                        .add(((BigDecimal) o.get("rule_coef")).multiply(avg.subtract((BigDecimal) o.get("std_net_kg"))))
+                        .add(((BigDecimal) o.get("rule_coef")).multiply(avg.subtract((BigDecimal) o.get("std_net_jin"))))
                         .setScale(2, RoundingMode.HALF_UP);
                 BigDecimal amount = price.multiply(BigDecimal.valueOf(nets.size())).setScale(2, RoundingMode.HALF_UP);
                 String who = o.get("batch_no").toString();
 
                 assertThat(o.get("round_mode")).as(who).isEqualTo("HALF");
                 assertThat(o.get("box_count")).as(who).isEqualTo(nets.size());
-                assertThat((BigDecimal) o.get("total_net_kg")).as(who).isEqualByComparingTo(total);
-                assertThat((BigDecimal) o.get("avg_kg")).as(who).isEqualByComparingTo(avg);
+                assertThat((BigDecimal) o.get("total_net_jin")).as(who).isEqualByComparingTo(total);
+                assertThat((BigDecimal) o.get("avg_jin")).as(who).isEqualByComparingTo(avg);
                 assertThat((BigDecimal) o.get("price")).as(who).isEqualByComparingTo(price);
                 assertThat((BigDecimal) o.get("amount")).as(who).isEqualByComparingTo(amount);
                 // 已回传有好生意单据 ID，回传失败的没有
@@ -188,7 +191,7 @@ class DemoDataTest {
                 assertThat(remark).as(who).startsWith("共" + nets.size() + "箱；逐箱：" + String.join(",", each) + "；归类：");
                 int grouped = 0;
                 for (String part : remark.substring(remark.indexOf("归类：") + 3).split(",")) {
-                    grouped += Integer.parseInt(part.substring(part.indexOf("kg-") + 3, part.length() - 1));
+                    grouped += Integer.parseInt(part.substring(part.indexOf("斤-") + 2, part.length() - 1));
                 }
                 assertThat(grouped).as(who).isEqualTo(nets.size());
             }

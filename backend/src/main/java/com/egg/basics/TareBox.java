@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public class TareBox {
     public Long id;
     public String name;
-    public BigDecimal tareKg;
+    public BigDecimal tareJin;
     public Boolean hotkey;
     public Boolean enabled;
     public Long updatedBy;

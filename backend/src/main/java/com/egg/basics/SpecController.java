@@ -28,7 +28,7 @@ public class SpecController {
             @NotBlank(message = "规格名称不能为空") @Size(max = 50, message = "规格名称不能超过 50 个字") String name,
             @NotNull(message = "每箱枚数不能为空") @Positive(message = "每箱枚数必须大于 0") Integer eggCount,
             @NotNull(message = "标准净含量不能为空") @DecimalMin(value = "0", inclusive = false, message = "标准净含量必须大于 0")
-            @Digits(integer = 6, fraction = 2, message = "标准净含量最多两位小数") BigDecimal stdNetKg) {
+            @Digits(integer = 6, fraction = 2, message = "标准净含量最多两位小数") BigDecimal stdNetJin) {
     }
 
     /** 只改传了的字段：就地改一个数、点一下启用开关，都走这一个接口。 */
@@ -36,7 +36,7 @@ public class SpecController {
             @Pattern(regexp = ".*\\S.*", message = "规格名称不能为空") @Size(max = 50, message = "规格名称不能超过 50 个字") String name,
             @Positive(message = "每箱枚数必须大于 0") Integer eggCount,
             @DecimalMin(value = "0", inclusive = false, message = "标准净含量必须大于 0")
-            @Digits(integer = 6, fraction = 2, message = "标准净含量最多两位小数") BigDecimal stdNetKg,
+            @Digits(integer = 6, fraction = 2, message = "标准净含量最多两位小数") BigDecimal stdNetJin,
             Boolean enabled) {
     }
 
@@ -53,11 +53,11 @@ public class SpecController {
 
     @PostMapping("/api/specs")
     public Spec create(@Valid @RequestBody SpecCreate form, CurrentUser me) {
-        return service.create(form.name(), form.eggCount(), form.stdNetKg(), me.id());
+        return service.create(form.name(), form.eggCount(), form.stdNetJin(), me.id());
     }
 
     @PutMapping("/api/specs/{id}")
     public Spec update(@PathVariable long id, @Valid @RequestBody SpecPatch form, CurrentUser me) {
-        return service.update(id, form.name(), form.eggCount(), form.stdNetKg(), form.enabled(), me.id());
+        return service.update(id, form.name(), form.eggCount(), form.stdNetJin(), form.enabled(), me.id());
     }
 }

@@ -38,36 +38,34 @@ public class OrderController {
     }
 
     public record QuoteForm(
-            @NotNull(message = "农户不能为空") Long vendorId,
-            @NotNull(message = "商品不能为空") Long productId,
-            @NotNull(message = "规格不能为空") Long specId,
+            @NotNull(message = "定价规则不能为空") Long ruleId,
             /** 缺省取当日 */
             LocalDate date,
-            /** 各箱净重，可以为空：没有箱子时只返回规则与基准价的情况 */
-            List<@NotNull(message = "净重不能为空") @DecimalMin(value = "0", inclusive = false, message = "净重必须大于 0") BigDecimal> boxNetKg,
-            /** 试算：换一条规则 */
-            Long trialRuleId,
-            /** 试算：换一个换算系数，与 trialRuleId 同时给时以它为准 */
-            BigDecimal trialCoef) {
+            /** 各箱净重（斤），可以为空：没有箱子时只返回规则与基准价的情况 */
+            List<@NotNull(message = "净重不能为空") @DecimalMin(value = "0", inclusive = false, message = "净重必须大于 0") BigDecimal> boxNetJin,
+            /** 试算：换一个换算系数 */
+            BigDecimal trialCoef,
+            /** 试算：换一个每箱损耗调整（斤） */
+            BigDecimal trialLossJin) {
     }
 
     public record BoxForm(
             @NotNull(message = "批次序号不能为空") @Positive(message = "批次序号必须大于 0") Integer seq,
             @NotNull(message = "净重不能为空") @DecimalMin(value = "0", inclusive = false, message = "净重必须大于 0")
-            @Digits(integer = 6, fraction = 2, message = "净重最多两位小数") BigDecimal netKg,
-            BigDecimal grossKg, BigDecimal tareKg, String tareName, Integer groupNo, Integer groupK,
-            boolean manual, BigDecimal rawKg, boolean printed) {
+            @Digits(integer = 6, fraction = 2, message = "净重最多两位小数") BigDecimal netJin,
+            BigDecimal grossJin, BigDecimal tareJin, String tareName, Integer groupNo, Integer groupK,
+            boolean manual, BigDecimal rawJin, boolean printed) {
 
         BoxInput toInput() {
-            return new BoxInput(seq, netKg, grossKg, tareKg, tareName, groupNo, groupK, manual, rawKg, printed);
+            return new BoxInput(seq, netJin, grossJin, tareJin, tareName, groupNo, groupK, manual, rawJin, printed);
         }
     }
 
     public record SubmitForm(
             @NotBlank(message = "批次号不能为空") @Pattern(regexp = BatchNo.PATTERN, message = "批次号格式不对") String batchNo,
             @NotNull(message = "农户不能为空") Long vendorId,
-            @NotNull(message = "商品不能为空") Long productId,
-            @NotNull(message = "规格不能为空") Long specId,
+            /** 商品、规格取自这条规则 */
+            @NotNull(message = "定价规则不能为空") Long ruleId,
             @NotNull(message = "仓库不能为空") Long warehouseId,
             @NotEmpty(message = "至少要有一箱") List<@Valid BoxForm> boxes) {
     }
@@ -90,15 +88,15 @@ public class OrderController {
     @Access(Who.ADMIN_OR_SCALE)
     @PostMapping("/api/orders/quote")
     public Result quote(@Valid @RequestBody QuoteForm f) {
-        return service.quote(f.vendorId(), f.productId(), f.specId(), f.date() == null ? LocalDate.now() : f.date(),
-                f.boxNetKg() == null ? List.of() : f.boxNetKg(), f.trialRuleId(), f.trialCoef());
+        return service.quote(f.ruleId(), f.date() == null ? LocalDate.now() : f.date(),
+                f.boxNetJin() == null ? List.of() : f.boxNetJin(), f.trialCoef(), f.trialLossJin());
     }
 
     /** 磅秤员提交记为 APP 来源，管理员提交记为 WEB 来源。同一批次号再次提交返回原来那张单。 */
     @Access(Who.ADMIN_OR_SCALE)
     @PostMapping("/api/orders")
     public Submitted submit(@Valid @RequestBody SubmitForm f, CurrentUser me) {
-        return service.submit(new Submission(f.batchNo(), f.vendorId(), f.productId(), f.specId(), f.warehouseId(),
+        return service.submit(new Submission(f.batchNo(), f.vendorId(), f.ruleId(), f.warehouseId(),
                 f.boxes().stream().map(BoxForm::toInput).toList()), me);
     }
 }

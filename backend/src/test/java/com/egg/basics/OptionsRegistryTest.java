@@ -32,8 +32,8 @@ class OptionsRegistryTest {
 
     @Test
     void advancedOptionsMatchSpecChapter4() {
-        assertThat(keys(Group.ADAPTER)).containsExactlyInAnyOrder("scale.tare-by", "scale.reading-is-net",
-                "scale.stable-by", "scale.stable-window-ms", "scale.stable-tolerance-kg", "weigh.empty-below-kg",
+        assertThat(keys(Group.ADAPTER)).containsExactlyInAnyOrder("scale.unit", "scale.tare-by", "scale.reading-is-net",
+                "scale.stable-by", "scale.stable-window-ms", "scale.stable-tolerance-jin", "weigh.empty-below-jin",
                 "weigh.merge-tolerance-pct", "weigh.merge-max-k", "print.render", "print.dpi", "print.offset-x-mm",
                 "print.offset-y-mm", "push.remark", "push.remark-max-length");
         assertThat(keys(Group.POLICY)).containsExactlyInAnyOrder("weigh.record-by", "weigh.merge-detect",
@@ -48,7 +48,10 @@ class OptionsRegistryTest {
         assertThat(def("device.printer-model").choices()).extracting(Options.Choice::value)
                 .containsExactly("gainscha-gp-m32b");
         assertThat(def("scale.stable-window-ms").defaultValue()).isEqualTo("800");
-        assertThat(def("scale.stable-tolerance-kg").defaultValue()).isEqualTo("0.05");
+        // 全系统用斤（附录 E R-1 行）：容差、空秤阈值按斤给，秤的读数默认按公斤换算
+        assertThat(def("scale.stable-tolerance-jin").defaultValue()).isEqualTo("0.1");
+        assertThat(def("weigh.empty-below-jin").defaultValue()).isEqualTo("10");
+        assertThat(def("scale.unit").defaultValue()).isEqualTo("kg");
         assertThat(def("weigh.merge-tolerance-pct").defaultValue()).isEqualTo("10");
         assertThat(def("weigh.merge-max-k").defaultValue()).isEqualTo("8");
         assertThat(def("print.dpi").defaultValue()).isEqualTo("203");
@@ -69,7 +72,7 @@ class OptionsRegistryTest {
     @Test
     void normalizeTidiesNumbers() {
         assertThat(def("print.dpi").normalize(" 300 ")).isEqualTo("300");
-        assertThat(def("scale.stable-tolerance-kg").normalize("0.050")).isEqualTo("0.05");
+        assertThat(def("scale.stable-tolerance-jin").normalize("0.050")).isEqualTo("0.05");
         assertThat(def("print.offset-x-mm").normalize("0.0")).isEqualTo("0");
         assertThat(def("print.offset-x-mm").normalize("-1.50")).isEqualTo("-1.5");
     }

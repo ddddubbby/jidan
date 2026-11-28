@@ -35,8 +35,8 @@ public class OrderAdminController {
     public record UpdateForm(
             @NotNull(message = "收购日期不能为空") LocalDate bizDate,
             @NotNull(message = "农户不能为空") Long vendorId,
-            @NotNull(message = "商品不能为空") Long productId,
-            @NotNull(message = "规格不能为空") Long specId,
+            /** 换规则就是换商品、规格（取自规则）与计价 */
+            @NotNull(message = "定价规则不能为空") Long ruleId,
             @NotNull(message = "仓库不能为空") Long warehouseId,
             @NotEmpty(message = "至少要有一箱") List<@Valid BoxForm> boxes) {
     }
@@ -80,7 +80,7 @@ public class OrderAdminController {
     /** 仅待审核可调，否则 ORDER_LOCKED。后保存的覆盖先保存的。 */
     @PutMapping("/api/orders/{id}")
     public OrderDetail update(@PathVariable long id, @Valid @RequestBody UpdateForm f, CurrentUser me) {
-        return edit.replace(id, new Replacement(f.bizDate(), f.vendorId(), f.productId(), f.specId(), f.warehouseId(),
+        return edit.replace(id, new Replacement(f.bizDate(), f.vendorId(), f.ruleId(), f.warehouseId(),
                 f.boxes().stream().map(BoxForm::toInput).toList()), me);
     }
 

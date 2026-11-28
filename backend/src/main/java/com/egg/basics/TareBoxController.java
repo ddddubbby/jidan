@@ -26,7 +26,7 @@ public class TareBoxController {
     public record TareCreate(
             @NotBlank(message = "包装箱名称不能为空") @Size(max = 50, message = "包装箱名称不能超过 50 个字") String name,
             @NotNull(message = "皮重不能为空") @DecimalMin(value = "0", inclusive = false, message = "皮重必须大于 0")
-            @Digits(integer = 6, fraction = 2, message = "皮重最多两位小数") BigDecimal tareKg,
+            @Digits(integer = 6, fraction = 2, message = "皮重最多两位小数") BigDecimal tareJin,
             /** 不传按“是”，新增的包装箱默认出现在 APP 皮重选项里 */
             Boolean hotkey) {
     }
@@ -35,7 +35,7 @@ public class TareBoxController {
     public record TarePatch(
             @Pattern(regexp = ".*\\S.*", message = "包装箱名称不能为空") @Size(max = 50, message = "包装箱名称不能超过 50 个字") String name,
             @DecimalMin(value = "0", inclusive = false, message = "皮重必须大于 0")
-            @Digits(integer = 6, fraction = 2, message = "皮重最多两位小数") BigDecimal tareKg,
+            @Digits(integer = 6, fraction = 2, message = "皮重最多两位小数") BigDecimal tareJin,
             Boolean hotkey,
             Boolean enabled) {
     }
@@ -53,11 +53,11 @@ public class TareBoxController {
 
     @PostMapping("/api/tares")
     public TareBox create(@Valid @RequestBody TareCreate form, CurrentUser me) {
-        return service.create(form.name(), form.tareKg(), form.hotkey(), me.id());
+        return service.create(form.name(), form.tareJin(), form.hotkey(), me.id());
     }
 
     @PutMapping("/api/tares/{id}")
     public TareBox update(@PathVariable long id, @Valid @RequestBody TarePatch form, CurrentUser me) {
-        return service.update(id, form.name(), form.tareKg(), form.hotkey(), form.enabled(), me.id());
+        return service.update(id, form.name(), form.tareJin(), form.hotkey(), form.enabled(), me.id());
     }
 }

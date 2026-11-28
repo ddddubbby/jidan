@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class BasePriceService {
 
     /** @param price 当天的基准价，没录为 null；prevPrice 是前一天的，供页面“沿用前一天” */
-    public record Item(long specId, String specName, BigDecimal stdNetKg, BigDecimal price, BigDecimal prevPrice) {
+    public record Item(long specId, String specName, BigDecimal stdNetJin, BigDecimal price, BigDecimal prevPrice) {
     }
 
     public record Day(LocalDate date, List<Item> items) {
@@ -35,7 +35,7 @@ public class BasePriceService {
         for (BasePrice p : mapper.selectList(new QueryWrapper<BasePrice>().in("price_date", date, date.minusDays(1)))) {
             prices.put(p.priceDate + "#" + p.specId, p.basePrice);
         }
-        List<Item> items = specs.listEnabled().stream().map(s -> new Item(s.id, s.name, s.stdNetKg,
+        List<Item> items = specs.listEnabled().stream().map(s -> new Item(s.id, s.name, s.stdNetJin,
                 prices.get(date + "#" + s.id), prices.get(date.minusDays(1) + "#" + s.id))).toList();
         return new Day(date, items);
     }
@@ -48,7 +48,7 @@ public class BasePriceService {
                 // 停用的规格也能录价，只是不在页面列表里
                 .orElseGet(() -> {
                     Spec s = specs.get(specId);
-                    return new Item(specId, s.name, s.stdNetKg, price, null);
+                    return new Item(specId, s.name, s.stdNetJin, price, null);
                 });
     }
 }

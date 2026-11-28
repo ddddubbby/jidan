@@ -12,21 +12,21 @@ import java.util.Map;
  */
 public final class SameWeight {
 
-    /** @param kg 每箱净重，去掉末尾的 0（46.00 与 46 是同一个值） */
-    public record Group(BigDecimal kg, int boxes) {
+    /** @param jin 每箱净重，去掉末尾的 0（46.00 与 46 是同一个值） */
+    public record Group(BigDecimal jin, int boxes) {
     }
 
     private SameWeight() {
     }
 
-    /** @param netKg 按批次序号排好的各箱净重 */
-    public static List<Group> of(List<BigDecimal> netKg) {
+    /** @param netJin 按批次序号排好的各箱净重 */
+    public static List<Group> of(List<BigDecimal> netJin) {
         Map<BigDecimal, Integer> counts = new LinkedHashMap<>();
-        for (BigDecimal n : netKg) {
+        for (BigDecimal n : netJin) {
             counts.merge(plain(n), 1, Integer::sum);
         }
         List<Group> out = new ArrayList<>();
-        counts.forEach((kg, n) -> out.add(new Group(kg, n)));
+        counts.forEach((jin, n) -> out.add(new Group(jin, n)));
         // List.sort 是稳定排序，并列的保持首次出现的顺序
         out.sort((a, b) -> Integer.compare(b.boxes(), a.boxes()));
         return out;
