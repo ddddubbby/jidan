@@ -23,6 +23,9 @@
     <string name="create_no_match">没有尾号 %1$s 的农户</string>
     <string name="create_last_warehouse">上一单用的</string>
     <string name="create_no_rules">没有可用的收购规则</string>
+    <string name="create_rules_old_backend">服务器还是旧版本，没有下发收购规则，需要更新后端</string>
+    <string name="create_rules_reload">重新获取规则</string>
+    <string name="create_rules_loading">正在获取…</string>
     <string name="create_no_base_price">无基准价</string>
     <string name="create_missing">还差 %1$d 步</string>
     <string name="create_start">开始收蛋</string>

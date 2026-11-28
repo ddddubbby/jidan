@@ -38,6 +38,8 @@ data class CreateUiState(
     val warehouses: List<NamedDto> = emptyList(),
     /** 启用的收购规则（bootstrap 下发），按名称选 */
     val rules: List<RuleViewDto> = emptyList(),
+    /** 服务器不下发规则（旧后端），规则一步提示更新后端 */
+    val oldBackend: Boolean = false,
     val prices: Map<Long, Double?> = emptyMap(),
     val farmerId: Long? = null,
     val farmerName: String? = null,
@@ -101,6 +103,7 @@ class CreateViewModel(
                     it.copy(
                         loading = false,
                         rules = rules,
+                        oldBackend = cat.oldBackend,
                         // 选过的规则若已停用或删掉，就当没选
                         ruleId = it.ruleId?.takeIf { id -> rules.any { r -> r.id == id } },
                         specs = specs,

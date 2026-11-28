@@ -70,4 +70,31 @@ class BootstrapCatalogTest {
         assertEquals(emptyList(), c.warehouses)
         assertEquals(emptyList(), c.tares)
     }
+
+    /** 新后端 bootstrap 的 rules 原样（本机起后端、磅秤员登录取到的形状），停用的不进建单。 */
+    @Test
+    fun parsesRulesFromNewBackend() {
+        val c = parse(
+            """
+            {"date": "2026-11-28", "rules": [
+              {"id": 1, "name": "粉蛋李四收购定价方案", "kind": "BUY", "productId": 1, "productName": "粉蛋",
+               "specId": 2, "specName": "360枚/箱", "stdNetJin": 90.0, "tareBoxId": 2, "tareName": "2号包装箱",
+               "tareJin": 4.0, "lossJin": 0.0, "coef": 0.5, "enabled": true},
+              {"id": 3, "name": "粉蛋360通用收购方案", "kind": "BUY", "productId": 1, "specId": 2,
+               "lossJin": -1.0, "coef": 0.4, "enabled": true},
+              {"id": 4, "name": "停用的方案", "kind": "BUY", "productId": 1, "specId": 2, "enabled": false}
+            ]}
+            """.trimIndent(),
+        ).toCatalog()
+        assertEquals(listOf("粉蛋李四收购定价方案", "粉蛋360通用收购方案"), c.rules.map { it.name })
+        assertEquals(-1.0, c.rules[1].lossJin)
+        assertEquals(false, c.oldBackend)
+    }
+
+    /** 旧后端不下发 rules：标出来，规则一步提示更新后端，而不是只说“没有规则”。 */
+    @Test
+    fun missingRulesMeansOldBackend() {
+        assertTrue(parse("""{"date": "2026-11-16"}""").toCatalog().oldBackend)
+        assertEquals(false, parse("""{"date": "2026-11-16", "rules": []}""").toCatalog().oldBackend)
+    }
 }
