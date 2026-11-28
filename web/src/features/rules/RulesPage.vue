@@ -88,9 +88,9 @@ function edit(r: RuleView | null) {
           <td class="name" :title="r.name"><span class="nm">{{ r.name }}</span></td>
           <td><span class="pill plain">{{ kindText(r.kind) }}</span></td>
           <td class="nb">{{ r.productName }} {{ r.specName }}</td>
-          <td class="r nb">{{ r.coef }} 元</td>
           <td class="nb"><template v-if="r.tareName">{{ r.tareName }} <span class="muted num">{{ r.tareJin }} 斤</span></template><span v-else class="tag warn">未设包装箱</span></td>
           <td class="r nb">{{ lossText(r.lossJin) }}</td>
+          <td class="r nb">{{ r.coef }} 元</td>
           <td class="nb"><span v-if="!r.enabled" class="tag">已停用</span><span v-else class="muted">启用</span></td>
         </tr>
       </tbody>
