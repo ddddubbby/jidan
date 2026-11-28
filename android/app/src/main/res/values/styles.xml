@@ -60,7 +60,7 @@
     </style>
 
     <!-- ============ 数字（Inter，等宽数字 tnum；与 Web 同一套规则，附录 E F4-2 / F4-3） ============
-         随包的 Inter 只含 0-9 , . % + - × −，汉字、字母（kg）自动落到系统字体。
+         随包的 Inter 只含 0-9 , . % + - × −，汉字（如“斤”）、字母自动落到系统字体。
          字重：Medium 500、SemiBold 600（行内数值）、Bold 700（大数字）。
          数字与单位成对出现时用 ui/widgets/NumText.kt 拼：单位缩小、ink-3、500 字重、一条细缝、不留空格。 -->
     <style name="Text.Num">
@@ -352,7 +352,7 @@
         <item name="android:textColor">@color/ok_ink</item>
     </style>
 
-    <!-- 小标签（原型 .tag）：方一点的小块，装“45.6kg-4箱”这类归类 -->
+    <!-- 小标签（原型 .tag）：方一点的小块，装“45.6斤-4箱”这类归类 -->
     <style name="Tag" parent="Text">
         <item name="android:background">@drawable/bg_tag</item>
         <item name="android:textSize">@dimen/text_14</item>

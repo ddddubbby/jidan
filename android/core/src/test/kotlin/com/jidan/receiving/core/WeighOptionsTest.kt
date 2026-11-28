@@ -12,8 +12,8 @@ class WeighOptionsTest {
         assertEquals(true, d.readingIsNet)
         assertEquals(StableBy.SDK, d.stableBy)
         assertEquals(800L, d.stableWindowMs)
-        assertEquals(Kg.of(0.05), d.stableTolerance)
-        assertEquals(Kg.of(5.0), d.emptyBelow)
+        assertEquals(Jin.of(0.1), d.stableTolerance)
+        assertEquals(Jin.of(10.0), d.emptyBelow)
         assertEquals(10, d.mergeTolerancePct)
         assertEquals(8, d.mergeMaxK)
         assertEquals(RecordBy.AUTO, d.recordBy)
@@ -27,8 +27,8 @@ class WeighOptionsTest {
             "scale.reading-is-net" to "false",
             "scale.stable-by" to "app",
             "scale.stable-window-ms" to "1200",
-            "scale.stable-tolerance-kg" to "0.1",
-            "weigh.empty-below-kg" to "3",
+            "scale.stable-tolerance-jin" to "0.1",
+            "weigh.empty-below-jin" to "3",
             "weigh.merge-tolerance-pct" to "15",
             "weigh.merge-max-k" to "6",
             "weigh.record-by" to "button",
@@ -38,7 +38,7 @@ class WeighOptionsTest {
         assertEquals(
             WeighOptions(
                 tareBy = TareBy.APP, readingIsNet = false, stableBy = StableBy.APP, stableWindowMs = 1200,
-                stableTolerance = Kg.of(0.1), emptyBelow = Kg.of(3.0), mergeTolerancePct = 15, mergeMaxK = 6,
+                stableTolerance = Jin.of(0.1), emptyBelow = Jin.of(3.0), mergeTolerancePct = 15, mergeMaxK = 6,
                 recordBy = RecordBy.BUTTON, mergeDetect = MergeDetect.OFF,
             ),
             o,

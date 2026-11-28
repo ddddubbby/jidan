@@ -1,6 +1,6 @@
 package com.jidan.receiving.device.label
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 
 /**
  * 一张箱贴要印的字段（v7 5.4）。二维码内容固定为 `批次号#批次序号`。
@@ -9,7 +9,7 @@ import com.jidan.receiving.core.Kg
 data class LabelData(
     val productName: String,
     val specName: String,
-    val net: Kg,
+    val net: Jin,
     val farmerName: String,
     val buyDate: String,
     val warehouseName: String,

@@ -4,13 +4,13 @@ package com.jidan.receiving.core
  * `scale.stable-by = app` 时由 APP 判断读数是否稳定：最近 [windowMs] 毫秒内读数的最大值与最小值
  * 相差不超过 [tolerance]，就算稳定。不看秤给的稳定标志。
  */
-class Stability(private val windowMs: Long, private val tolerance: Kg) {
+class Stability(private val windowMs: Long, private val tolerance: Jin) {
     private class Sample(val at: Long, val cents: Int)
 
     private val samples = ArrayDeque<Sample>()
 
     /** 收到一个新读数，返回此刻是否稳定。[nowMs] 用单调递增的毫秒数。 */
-    fun update(raw: Kg, nowMs: Long): Boolean {
+    fun update(raw: Jin, nowMs: Long): Boolean {
         samples.addLast(Sample(nowMs, raw.cents))
         // 读数一动超出容差，就从最老的丢起，直到剩下的又都在容差内
         while (samples.maxOf { it.cents } - samples.minOf { it.cents } > tolerance.cents) samples.removeFirst()

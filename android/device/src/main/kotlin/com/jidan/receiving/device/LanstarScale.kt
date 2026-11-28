@@ -10,7 +10,7 @@ import com.ble.mylibrary.LansManager
 import com.ble.mylibrary.interfaces.PeelMode
 import com.ble.mylibrary.interfaces.WeightUpdateCallback
 import com.ble.mylibrary.outdevice.LScaleHelper
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +71,8 @@ class LanstarScale(
     private val application: Application,
     companyKey: String,
     initialPairedId: String? = null,
+    /** 选项 `scale.unit`：秤按公斤还是按斤计；每次读数、下发皮重时取当前值 */
+    private val unit: () -> ScaleUnit = { ScaleUnit.KG },
 ) : Scale {
     private val _link = MutableStateFlow(LinkStatus.DISCONNECTED)
     private val _readings = MutableStateFlow<DeviceScaleReading?>(null)
@@ -178,12 +180,12 @@ class LanstarScale(
         _readings.value = null
     }
 
-    override suspend fun setDigitalTare(kg: Kg) {
+    override suspend fun setDigitalTare(jin: Jin) {
         callBlocking {
             // 称重皮与数字皮互斥：先清皮。返回值不看——没有皮时清皮的返回码示例没写
             helper.clearTare()
-            if (kg.cents <= 0) return@callBlocking
-            LanstarMapping.setPeelFailure(helper.setPeel(LanstarMapping.peelText(kg)))?.let { error(it) }
+            if (jin.cents <= 0) return@callBlocking
+            LanstarMapping.setPeelFailure(helper.setPeel(LanstarMapping.peelText(jin, unit())))?.let { error(it) }
         }
     }
 
@@ -234,7 +236,7 @@ class LanstarScale(
                 return
             }
             if (weight == null || _link.value != LinkStatus.CONNECTED) return
-            _readings.value = DeviceScaleReading(LanstarMapping.toKg(weight), isStable)
+            _readings.value = DeviceScaleReading(LanstarMapping.toJin(weight, unit()), isStable)
         }
 
         override fun onrssi(rssi: Int) = Unit

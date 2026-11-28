@@ -5,7 +5,7 @@ data class EmptyBoxState(
     /** 秤已连接。 */
     val connected: Boolean,
     /** 此刻台面总重（未扣皮）；还没有读数时为 null。 */
-    val platform: Kg?,
+    val platform: Jin?,
     val stable: Boolean,
 ) {
     val available: Boolean get() = EmptyBoxTare.isEmptyBox(connected, platform, stable)
@@ -13,27 +13,27 @@ data class EmptyBoxState(
 
 /**
  * 称重皮判定（v7 `APP-04`：秤上确实是一只空箱时才可操作，按该读数去皮）。
- * 判定条件照原型 `lab/app-sim.html` 的 `live()`：秤已连接、读数稳定、台面在 0.2kg 以上、不到 10kg。
- * 更轻的是空秤或杂物，10kg 及以上的是装了蛋的箱子或不止一只箱子。
+ * 判定条件照原型 `lab/app-sim.html` 的 `live()`：秤已连接、读数稳定、台面在 0.4 斤（0.2kg）以上、不到 20 斤（10kg）。
+ * 更轻的是空秤或杂物，20 斤及以上的是装了蛋的箱子或不止一只箱子。
  */
 object EmptyBoxTare {
-    val MIN = Kg.of(0.2)
-    val MAX = Kg.of(10.0)
+    val MIN = Jin.of(0.4)
+    val MAX = Jin.of(20.0)
     const val NAME = "空箱"
 
-    fun isEmptyBox(connected: Boolean, platform: Kg?, stable: Boolean): Boolean =
+    fun isEmptyBox(connected: Boolean, platform: Jin?, stable: Boolean): Boolean =
         connected && stable && platform != null && platform >= MIN && platform < MAX
 
     /** 按下后每箱皮重取当时台面读数。 */
-    fun tareOf(platform: Kg): Tare = Tare(platform, NAME)
+    fun tareOf(platform: Jin): Tare = Tare(platform, NAME)
 
     /** 按钮文案：能按时写按哪个读数去皮，不能按时写秤上现在是多少（没连上或没读数写 `--.-`）。 */
     fun label(s: EmptyBoxState): String {
         val shown = if (s.connected) s.platform?.format1() else null
         return if (s.available) {
-            "称空箱 · 按 $shown kg 去皮"
+            "称空箱 · 按 $shown 斤 去皮"
         } else {
-            "称空箱 · 秤上 ${shown ?: "--.-"} kg"
+            "称空箱 · 秤上 ${shown ?: "--.-"} 斤"
         }
     }
 }

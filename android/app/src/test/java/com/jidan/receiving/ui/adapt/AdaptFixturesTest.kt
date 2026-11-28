@@ -1,6 +1,6 @@
 package com.jidan.receiving.ui.adapt
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.Session
 import org.junit.Assert.assertEquals
@@ -24,12 +24,12 @@ class AdaptFixturesTest {
             warehouse = Pick(4, "太谷 A&B 冷链周转仓（东区 2 号库）"),
         )
         repeat(AdaptFixtures.STRESS_BOX_COUNT) { i ->
-            s = s.addManual(Kg.of(AdaptFixtures.netKgForIndex(i)))
+            s = s.addManual(Jin.of(AdaptFixtures.netJinForIndex(i)))
         }
         assertEquals(100, s.boxes.size)
         assertEquals(AdaptFixtures.WORST_FARMER_NAME, s.farmer.name)
         // 累计净重应与样例循环一致（10 箱一组）
-        val ten = AdaptFixtures.SAMPLE_NETS_KG.sum()
+        val ten = AdaptFixtures.SAMPLE_NETS_JIN.sum()
         assertEquals(ten * 10, s.totalNet.toDouble(), 0.01)
     }
 }

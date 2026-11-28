@@ -1,6 +1,6 @@
 package com.jidan.receiving.ui.weigh
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.ScaleReading
 import com.jidan.receiving.core.Session
@@ -27,10 +27,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** 一次 bootstrap 取回的东西：已生效的选项，和各规格的标准净含量 W0（kg）。 */
+/** 一次 bootstrap 取回的东西：已生效的选项，和各规格的标准净含量 W0（斤）。 */
 data class BootstrapSnapshot(
     val options: AppOptions,
-    val stdNetKgBySpec: Map<Long, Double> = emptyMap(),
+    val stdNetJinBySpec: Map<Long, Double> = emptyMap(),
 )
 
 /** 称重控制器要用的外部能力；`:app` 用 [com.jidan.receiving.AppContainer] 实现，单测用假的。 */
@@ -123,7 +123,7 @@ class WeighController(
                 if (farmer == null || product == null || spec == null || warehouse == null) {
                     throw StartFailure("建单信息不全")
                 }
-                val w0 = header.stdNetCents?.let(::Kg) ?: boot.stdNetOf(spec)
+                val w0 = header.stdNetCents?.let(::Jin) ?: boot.stdNetOf(spec)
                 Session(
                     batchNo = host.nextBatchNo(),
                     farmer = farmer,
@@ -131,8 +131,10 @@ class WeighController(
                     spec = spec,
                     warehouse = warehouse,
                     stdNet = w0,
+                    rule = header.rule,
+                    tare = header.tare,
                 )
-                // 新开一单不自动套用上一单皮重：换了包装箱而没注意，整批皮重都错（v7 APP-04）；磅秤员点了才设
+                // 不套用上一单的皮重（v7 APP-04）；皮重取自这一单选的规则打包的包装箱，规则没设包装箱时磅秤员点了才设（附录 E R-1 行）
             }
             unbind()
             session = s
@@ -143,6 +145,7 @@ class WeighController(
             clearSynced = false
             scaleLost = false
             wantedTare = s.tare
+            if (restore == null && header.tareId != null) host.lastTareId = header.tareId
             val m = WeighingMachine(opts, s.stdNet!!)
             machine = m
             // 秤已连上且要下发皮重时，等 bind 里看到“已连接”再下发；否则先放着，连上时会再发
@@ -192,10 +195,10 @@ class WeighController(
         scaleLost = false
     }
 
-    private fun BootstrapSnapshot.stdNetOf(spec: Pick): Kg {
-        val kg = stdNetKgBySpec[spec.id]
+    private fun BootstrapSnapshot.stdNetOf(spec: Pick): Jin {
+        val jin = stdNetJinBySpec[spec.id]
             ?: throw StartFailure("取不到规格「${spec.name}」的标准净含量，没法识别箱数")
-        return Kg.of(kg)
+        return Jin.of(jin)
     }
 
     /** 这一单还没有皮重、皮重由秤负责：秤里可能留着上一单的数字皮，要先清掉。 */

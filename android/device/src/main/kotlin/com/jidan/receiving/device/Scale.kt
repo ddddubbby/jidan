@@ -1,6 +1,6 @@
 package com.jidan.receiving.device
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -18,7 +18,7 @@ interface Scale {
     suspend fun connect(id: String)
     suspend fun disconnect()
 
-    suspend fun setDigitalTare(kg: Kg)
+    suspend fun setDigitalTare(jin: Jin)
     suspend fun tareWeigh()
     suspend fun clearTare()
 }

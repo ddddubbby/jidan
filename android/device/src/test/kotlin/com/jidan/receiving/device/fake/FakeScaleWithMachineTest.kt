@@ -1,7 +1,7 @@
 package com.jidan.receiving.device.fake
 
 import com.jidan.receiving.core.Box
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.ScaleReading
 import com.jidan.receiving.core.SplitBoxes
 import com.jidan.receiving.core.StableBy
@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class FakeScaleWithMachineTest {
 
-    private val tare2 = Tare(Kg.of(2.0), "2号箱")
+    private val tare2 = Tare(Jin.of(2.0), "2号箱")
 
     private class Rig(
         val scope: TestScope,
@@ -81,7 +81,7 @@ class FakeScaleWithMachineTest {
         scale: FakeScale.() -> Unit = {},
     ): Rig {
         val fake = FakeScale(backgroundScope, FakeScale.MINE_ID).apply(scale)
-        val machine = WeighingMachine(options, Kg.of(45.0))
+        val machine = WeighingMachine(options, Jin.of(45.0))
         val r = Rig(this, options, fake, machine)
         backgroundScope.launch {
             fake.readings.collect { rd ->
@@ -112,15 +112,15 @@ class FakeScaleWithMachineTest {
         val nets = r.boxes.map { it.net.cents }
         // 46.5, 45.8, 46, 46, 46, 45.6, 45.6, 45.6, 45.6, 47.8
         assertEquals(FakeScale.CASE_NETS_C.toList(), nets)
-        assertEquals(46050, nets.sum()) // 460.5kg（单位 0.01kg）
+        assertEquals(46050, nets.sum()) // 460.5斤（单位 0.01斤）
     }
 
     @Test
     fun emptyScaleAfterTareShowsMinusTare() = runTest {
         val r = rig()
         r.selectTare(tare2)
-        assertEquals(Kg(-200), r.scale.readings.value!!.raw)
-        assertEquals(Kg(-200), r.machine.displayNet)
+        assertEquals(Jin(-200), r.scale.readings.value!!.raw)
+        assertEquals(Jin(-200), r.machine.displayNet)
         assertEquals("-2", r.machine.displayNet!!.format())
     }
 
@@ -143,10 +143,10 @@ class FakeScaleWithMachineTest {
         runCurrent()
         r.scale.tareWeigh()
         runCurrent()
-        assertEquals(Kg(0), r.scale.readings.value!!.raw)
+        assertEquals(Jin(0), r.scale.readings.value!!.raw)
         r.scale.setLoadCenti(180 + 4650)
         advanceTimeBy(SETTLE_MS)
-        assertEquals(Kg(4650), r.scale.readings.value!!.raw)
+        assertEquals(Jin(4650), r.scale.readings.value!!.raw)
     }
 
     @Test

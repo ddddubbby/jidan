@@ -9,13 +9,13 @@ package com.jidan.receiving.core
 data class Box(
     val seq: Int,
     val group: Int,
-    val net: Kg,
-    val tare: Kg,
+    val net: Jin,
+    val tare: Jin,
     val tareName: String,
-    val gross: Kg? = null,
-    val unit: Kg? = null,
+    val gross: Jin? = null,
+    val unit: Jin? = null,
     val manual: Boolean = false,
-    val raw: Kg? = null,
+    val raw: Jin? = null,
     val printed: Boolean = false,
 )
 
@@ -24,16 +24,16 @@ object SplitBoxes {
 
     /**
      * 把 [net]（k 箱净重合计）与 [tare]（k 箱皮重合计）均摊成 [k] 条流水，序号先填 0，加进列表时由 [append] 编号。
-     * 每箱按 0.01kg 四舍五入，零头记入最后一箱。
+     * 每箱按 0.01斤 四舍五入，零头记入最后一箱。
      */
     fun split(
-        net: Kg,
+        net: Jin,
         k: Int,
-        tare: Kg,
+        tare: Jin,
         tareName: String,
         group: Int,
-        gross: Kg? = null,
-        unit: Kg? = null,
+        gross: Jin? = null,
+        unit: Jin? = null,
         manual: Boolean = false,
     ): List<Box> {
         val perNet = halfUp(net.cents, k)
@@ -42,8 +42,8 @@ object SplitBoxes {
             val last = i == k - 1
             Box(
                 seq = 0, group = group,
-                net = Kg(if (last) net.cents - perNet * (k - 1) else perNet),
-                tare = Kg(if (last) tare.cents - perTare * (k - 1) else perTare),
+                net = Jin(if (last) net.cents - perNet * (k - 1) else perNet),
+                tare = Jin(if (last) tare.cents - perTare * (k - 1) else perTare),
                 tareName = tareName, gross = gross, unit = unit, manual = manual,
             )
         }
@@ -77,7 +77,7 @@ object SplitBoxes {
         if (k == old.size) return boxes
         val first = old.first()
         val gross = first.gross!!
-        val tare = Kg(first.unit!!.cents * k)
+        val tare = Jin(first.unit!!.cents * k)
         val fresh = split(
             net = gross - tare, k = k, tare = tare, tareName = first.tareName,
             group = group, gross = gross, unit = first.unit,

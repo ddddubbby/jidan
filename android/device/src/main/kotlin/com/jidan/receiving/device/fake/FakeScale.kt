@@ -1,6 +1,6 @@
 package com.jidan.receiving.device.fake
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.device.DeviceScaleReading
 import com.jidan.receiving.device.DiscoveredDevice
 import com.jidan.receiving.device.LinkStatus
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
  * 断开、丢失、重新连接都会清掉内部数字皮，APP 须重新下发（真秤重启后同样没有皮重）。
  *
  * 读数口径（对照真秤“设皮后回调的是已扣皮读数”，v7 7.2）：正常情况下回报 台面总重 − 数字皮，
- * 空秤时为负数（设 2kg 皮后空秤读 −2kg）；“读数未扣皮”打开时回报台面总重。
+ * 空秤时为负数（设 2斤 皮后空秤读 −2斤）；“读数未扣皮”打开时回报台面总重。
  */
 class FakeScale(
     private val scope: CoroutineScope,
@@ -61,12 +61,12 @@ class FakeScale(
     /** 去皮指令无效：忽略 SDK 去皮调用。 */
     var anomalyTareIgnored: Boolean = false
 
-    /** 内部台面目标重量（0.01kg），模拟放箱。 */
+    /** 内部台面目标重量（0.01斤），模拟放箱。 */
     private var targetCenti: Int = 0
     private var settleJob: Job? = null
     private var connectJob: Job? = null
 
-    /** 当前数字皮（0.01kg）；仅 Fake 内部记，真正换算在 :core。 */
+    /** 当前数字皮（0.01斤）；仅 Fake 内部记，真正换算在 :core。 */
     private var digitalTareCenti: Int = 0
     private var lastStable: Boolean = true
 
@@ -111,9 +111,9 @@ class FakeScale(
         digitalTareCenti = 0
     }
 
-    override suspend fun setDigitalTare(kg: Kg) {
+    override suspend fun setDigitalTare(jin: Jin) {
         if (anomalyTareIgnored) return
-        digitalTareCenti = kg.cents
+        digitalTareCenti = jin.cents
         reemit()
     }
 
@@ -130,7 +130,7 @@ class FakeScale(
         reemit()
     }
 
-    /** 模拟台：设置台面重量（0.01kg）。先不稳定再稳定。 */
+    /** 模拟台：设置台面重量（0.01斤）。先不稳定再稳定。 */
     fun setLoadCenti(centi: Int) {
         targetCenti = centi.coerceAtLeast(0)
         settleJob?.cancel()
@@ -172,16 +172,23 @@ class FakeScale(
         // 正常：已扣皮（空秤为负）；读数未扣皮异常：台面总重
         val raw = if (anomalyReadingNotNet) targetCenti else targetCenti - digitalTareCenti
         val s = if (anomalyStableBroken) false else stable
-        _readings.value = DeviceScaleReading(Kg(raw), s)
+        _readings.value = DeviceScaleReading(Jin(raw), s)
     }
 
     companion object {
         const val MINE_ID = "A3F1"
         const val CONNECT_MS = 1000L
         const val UNSTABLE_MS = 900L
-        const val BOX_TARE_C = 200 // 2.00kg
+        /** 单测用的每箱皮重（0.01 斤）。单测的数沿用改单位前的算例，按斤读，只验逻辑。 */
+        const val BOX_TARE_C = 200
 
-        /** 李四 10 箱净重算例（0.01kg），fixtures / 原型 CASE_NETS_C。 */
+        /** 单测用的 10 箱净重（0.01 斤），沿用原型 CASE_NETS_C 的数。 */
         val CASE_NETS_C = intArrayOf(4650, 4580, 4600, 4600, 4600, 4560, 4560, 4560, 4560, 4780)
+
+        /** 模拟台与演示版的包装箱皮重：2号包装箱 4 斤（同演示数据）。 */
+        const val DEMO_BOX_TARE_C = 400
+
+        /** 模拟台与演示版的李四 10 箱净重（0.01 斤），与 fixtures/pricing.json 的李四算例一致（合计 921 斤）。 */
+        val LISI_NETS_C = intArrayOf(9300, 9160, 9200, 9200, 9200, 9120, 9120, 9120, 9120, 9560)
     }
 }

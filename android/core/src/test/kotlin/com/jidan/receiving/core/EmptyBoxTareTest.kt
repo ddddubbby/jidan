@@ -14,54 +14,54 @@ import kotlin.test.assertTrue
 class EmptyBoxTareTest {
 
     private fun state(platform: Double?, stable: Boolean = true, connected: Boolean = true) =
-        EmptyBoxState(connected, platform?.let { Kg.of(it) }, stable)
+        EmptyBoxState(connected, platform?.let { Jin.of(it) }, stable)
 
     @Test
-    fun twoKgEmptyBoxStableIsAvailable() {
+    fun twoJinEmptyBoxStableIsAvailable() {
         assertTrue(state(2.0).available)
-        assertEquals("称空箱 · 按 2.0 kg 去皮", EmptyBoxTare.label(state(2.0)))
+        assertEquals("称空箱 · 按 2.0 斤 去皮", EmptyBoxTare.label(state(2.0)))
     }
 
     @Test
     fun emptyScaleOrFullBoxOrUnstableOrOfflineIsNotAvailable() {
         // 空秤
         assertFalse(state(0.0).available)
-        assertEquals("称空箱 · 秤上 0.0 kg", EmptyBoxTare.label(state(0.0)))
-        // 整箱蛋（48.5kg 含箱）
+        assertEquals("称空箱 · 秤上 0.0 斤", EmptyBoxTare.label(state(0.0)))
+        // 整箱蛋（48.5斤 含箱）
         assertFalse(state(48.5).available)
-        assertEquals("称空箱 · 秤上 48.5 kg", EmptyBoxTare.label(state(48.5)))
+        assertEquals("称空箱 · 秤上 48.5 斤", EmptyBoxTare.label(state(48.5)))
         // 读数还在跳
         assertFalse(state(2.0, stable = false).available)
         // 秤没连上：不写读数
         assertFalse(state(2.0, connected = false).available)
-        assertEquals("称空箱 · 秤上 --.- kg", EmptyBoxTare.label(state(2.0, connected = false)))
+        assertEquals("称空箱 · 秤上 --.- 斤", EmptyBoxTare.label(state(2.0, connected = false)))
         // 刚换皮重，还没有新读数
         assertFalse(state(null).available)
-        assertEquals("称空箱 · 秤上 --.- kg", EmptyBoxTare.label(state(null)))
+        assertEquals("称空箱 · 秤上 --.- 斤", EmptyBoxTare.label(state(null)))
     }
 
     @Test
     fun boundariesFollowPrototype() {
-        assertFalse(state(0.19).available)
-        assertTrue(state(0.2).available)
-        assertTrue(state(9.99).available)
-        assertFalse(state(10.0).available)
+        assertFalse(state(0.39).available)
+        assertTrue(state(0.4).available)
+        assertTrue(state(19.99).available)
+        assertFalse(state(20.0).available)
     }
 
     /** 模拟秤：台面重量由测试给；`tare-by = scale` 且读数已扣皮时，秤上去过皮后读数是台面减皮。 */
     private class SimScale(val options: WeighOptions) {
-        var platform = Kg.ZERO
-        var scaleTare = Kg.ZERO
+        var platform = Jin.ZERO
+        var scaleTare = Jin.ZERO
         val raw get() = if (options.tareBy == TareBy.SCALE && options.readingIsNet) platform - scaleTare else platform
         fun tareWeigh() { scaleTare = platform }
     }
 
     private fun run(options: WeighOptions) {
-        val machine = WeighingMachine(options, Kg.of(45.0))
+        val machine = WeighingMachine(options, Jin.of(45.0))
         val scale = SimScale(options)
         var t = 0L
-        fun feed(kg: Double): WeighOutcome? {
-            scale.platform = Kg.of(kg)
+        fun feed(jin: Double): WeighOutcome? {
+            scale.platform = Jin.of(jin)
             t += 100
             return machine.onReading(ScaleReading(scale.raw, true), t)
         }
@@ -75,15 +75,15 @@ class EmptyBoxTareTest {
         // 按下称空箱：先让秤去皮（tare-by = scale），再把台面读数记作每箱皮重
         if (options.tareBy == TareBy.SCALE) scale.tareWeigh()
         val tare = EmptyBoxTare.tareOf(st.platform!!)
-        assertEquals(Kg.of(2.0), tare.unit)
+        assertEquals(Jin.of(2.0), tare.unit)
         assertEquals("空箱", tare.name)
         machine.setTare(tare)
 
-        // 空箱还在秤上：不记；之后放 48.5kg（含箱）记出 46.5
+        // 空箱还在秤上：不记；之后放 48.5斤（含箱）记出 46.5
         assertNull(feed(2.0))
         val out = feed(48.5)
         assertNotNull(out)
-        assertEquals(Kg.of(46.5), out.weighing.net)
+        assertEquals(Jin.of(46.5), out.weighing.net)
         assertEquals(1, out.weighing.k)
     }
 
@@ -102,16 +102,16 @@ class EmptyBoxTareTest {
     @Test
     fun mergedWeighingMultipliesWeighTare() {
         val o = WeighOptions(tareBy = TareBy.APP)
-        val m = WeighingMachine(o, Kg.of(45.0))
-        m.onReading(ScaleReading(Kg.of(2.0), true), 100)
+        val m = WeighingMachine(o, Jin.of(45.0))
+        m.onReading(ScaleReading(Jin.of(2.0), true), 100)
         m.setTare(EmptyBoxTare.tareOf(m.platformNow!!))
-        m.onReading(ScaleReading(Kg.ZERO, true), 200)
+        m.onReading(ScaleReading(Jin.ZERO, true), 200)
         // 3 箱各 46.5 净 + 各 2 皮
-        val out = m.onReading(ScaleReading(Kg.of(3 * 48.5), true), 300)
+        val out = m.onReading(ScaleReading(Jin.of(3 * 48.5), true), 300)
         assertNotNull(out)
         assertEquals(3, out.weighing.k)
-        assertEquals(Kg.of(6.0), out.weighing.tareTotal)
-        assertEquals(Kg.of(3 * 46.5), out.weighing.net)
+        assertEquals(Jin.of(6.0), out.weighing.tareTotal)
+        assertEquals(Jin.of(3 * 46.5), out.weighing.net)
     }
 
     @Test

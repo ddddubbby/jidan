@@ -23,7 +23,7 @@ fun ledgerGroupsView(groups: List<WeightGroup>, expanded: Boolean): LedgerGroups
 }
 
 /**
- * 流水弹层里一个归类的显示文字：“45.6kg-4箱”整个不许从中间断开（否则会把“箱”单独挤到下一行）。
+ * 流水弹层里一个归类的显示文字：“45.6斤-4箱”整个不许从中间断开（否则会把“箱”单独挤到下一行）。
  * 去掉零宽连接符后与 [WeightGroup.label] 一致；回传备注仍用 [WeightGroup.label] 原文，不带这些字符。
  */
 fun WeightGroup.displayLabel(): String = TextGlue.noBreak(label())

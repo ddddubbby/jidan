@@ -88,17 +88,20 @@ class ScreensTest(private val widthDp: Int, private val fontScale: Float) {
         }
         h.step("05-create-lisi") {
             h.click("李四")
-            h.waitFor("李四的规则带出商品与规格") { h.hasText("粉蛋李四收购定价方案") }
+            // 规则不绑农户：按名称选，选了就带出商品、规格与包装箱
+            h.waitFor("列出收购规则") { h.hasText("粉蛋李四收购定价方案") }
+            h.click("粉蛋李四收购定价方案")
         }
         h.step("06-create-ready") {
             h.click("1号仓库")
-            h.waitFor("四步齐了") { h.hasText("开始收蛋") }
+            h.waitFor("三步齐了") { h.hasText("开始收蛋") }
         }
 
         // 称重
         h.run("开始收蛋") {
             h.click("开始收蛋")
-            h.waitFor("进入称重页") { h.hasText("请选择皮重") }
+            // 皮重已取自规则打包的 2号包装箱
+            h.waitFor("进入称重页") { h.hasText("2号包装箱") }
             h.advance(1500)
         }
         h.step("07-weigh-tare") { }

@@ -1,6 +1,6 @@
 package com.jidan.receiving.device.gainscha
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.device.label.LabelContent
 import com.jidan.receiving.device.label.LabelData
 import com.jidan.receiving.device.label.LabelRenderer
@@ -15,7 +15,7 @@ class TsplBytesTest {
     private val data = LabelData(
         productName = "粉蛋",
         specName = "360枚/箱",
-        net = Kg.of(46.5),
+        net = Jin.of(46.5),
         farmerName = "李四",
         buyDate = "2026.11.16",
         warehouseName = "一号库",

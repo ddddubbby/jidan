@@ -14,7 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.jidan.receiving.R
 import kotlin.math.roundToInt
 
-/** 一排选项里的一个（原型 `.seg button`）：名称，名称下一行小字（如“1.5 kg · 上一单”），选中为墨底白字。 */
+/** 一排选项里的一个（原型 `.seg button`）：名称，名称下一行小字（如“1.5 斤 · 上一单”），选中为墨底白字。 */
 class ChoiceItem(
     val label: String,
     val badge: String? = null,

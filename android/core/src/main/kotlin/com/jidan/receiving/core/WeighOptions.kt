@@ -21,10 +21,10 @@ data class WeighOptions(
     val stableBy: StableBy = StableBy.SDK,
     /** `scale.stable-window-ms`，只在 [stableBy] 为 APP 时用。 */
     val stableWindowMs: Long = 800,
-    /** `scale.stable-tolerance-kg`，只在 [stableBy] 为 APP 时用。 */
-    val stableTolerance: Kg = Kg(5),
-    /** `weigh.empty-below-kg`：净重低于它视为空秤。 */
-    val emptyBelow: Kg = Kg(500),
+    /** `scale.stable-tolerance-jin`，只在 [stableBy] 为 APP 时用。 */
+    val stableTolerance: Jin = Jin(10),
+    /** `weigh.empty-below-jin`：净重低于它视为空秤。 */
+    val emptyBelow: Jin = Jin(1000),
     /** `weigh.merge-tolerance-pct` */
     val mergeTolerancePct: Int = 10,
     /** `weigh.merge-max-k` */
@@ -45,8 +45,8 @@ data class WeighOptions(
                 readingIsNet = pick("scale.reading-is-net", d.readingIsNet) { it.lowercase().toBooleanStrictOrNull() },
                 stableBy = pick("scale.stable-by", d.stableBy) { enumOf<StableBy>(it) },
                 stableWindowMs = pick("scale.stable-window-ms", d.stableWindowMs) { it.toLong() },
-                stableTolerance = pick("scale.stable-tolerance-kg", d.stableTolerance) { Kg.parse(it) },
-                emptyBelow = pick("weigh.empty-below-kg", d.emptyBelow) { Kg.parse(it) },
+                stableTolerance = pick("scale.stable-tolerance-jin", d.stableTolerance) { Jin.parse(it) },
+                emptyBelow = pick("weigh.empty-below-jin", d.emptyBelow) { Jin.parse(it) },
                 mergeTolerancePct = pick("weigh.merge-tolerance-pct", d.mergeTolerancePct) { it.toInt() },
                 mergeMaxK = pick("weigh.merge-max-k", d.mergeMaxK) { it.toInt() },
                 recordBy = pick("weigh.record-by", d.recordBy) { enumOf<RecordBy>(it) },

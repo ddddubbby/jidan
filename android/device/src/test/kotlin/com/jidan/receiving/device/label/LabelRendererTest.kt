@@ -4,7 +4,7 @@ import com.google.zxing.BinaryBitmap
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -14,7 +14,7 @@ class LabelRendererTest {
     private val data = LabelData(
         productName = "粉蛋",
         specName = "360枚/箱",
-        net = Kg.of(46.5),
+        net = Jin.of(46.5),
         farmerName = "李四",
         buyDate = "2026.11.16",
         warehouseName = "一号库",

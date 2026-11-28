@@ -21,19 +21,19 @@ class SimConsoleController(
         val scale = DeviceFactory.fakeScale
         val printer = DeviceFactory.fakePrinter
         binding.placeOne.setOnClickListener {
-            val net = FakeScale.CASE_NETS_C[caseIdx % FakeScale.CASE_NETS_C.size]
+            val net = FakeScale.LISI_NETS_C[caseIdx % FakeScale.LISI_NETS_C.size]
             caseIdx++
-            scale.placeOneBox(net)
+            scale.placeOneBox(net, FakeScale.DEMO_BOX_TARE_C)
         }
         binding.placeThree.setOnClickListener {
             val nets = (0 until 3).map {
-                val n = FakeScale.CASE_NETS_C[caseIdx % FakeScale.CASE_NETS_C.size]
+                val n = FakeScale.LISI_NETS_C[caseIdx % FakeScale.LISI_NETS_C.size]
                 caseIdx++
                 n
             }
-            scale.placeBoxes(nets)
+            scale.placeBoxes(nets, FakeScale.DEMO_BOX_TARE_C)
         }
-        binding.placeEmpty.setOnClickListener { scale.placeEmptyBox() }
+        binding.placeEmpty.setOnClickListener { scale.placeEmptyBox(FakeScale.DEMO_BOX_TARE_C) }
         binding.remove.setOnClickListener { scale.removeLoad() }
         binding.toggleReach.setOnClickListener {
             scale.reachable = !scale.reachable

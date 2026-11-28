@@ -7,8 +7,8 @@ package com.jidan.receiving.core
  */
 data class DetectResult(
     val k: Int,
-    val tareTotal: Kg,
-    val netTotal: Kg,
+    val tareTotal: Jin,
+    val netTotal: Jin,
     val candidates: Pair<Int, Int>?,
 ) {
     val ambiguous get() = candidates != null
@@ -21,10 +21,10 @@ object DetectK {
      *
      * [gross] 是秤上总重，含每箱皮重、未扣皮；[tareUnit] 是每箱皮重。读数是否已被秤扣过皮（`Q-03`）
      * 由 `NetWeight` 先换算，这里不管。
-     * 秤面是否有箱子（净重不足 5kg 视为空秤）也不在这里判断，由称重状态机处理；空秤时调用方不会来识别。
+     * 秤面是否有箱子（净重不足 5斤 视为空秤）也不在这里判断，由称重状态机处理；空秤时调用方不会来识别。
      * [tolerancePct]、[maxK] 对应选项 `weigh.merge-tolerance-pct`、`weigh.merge-max-k`。
      */
-    fun detect(gross: Kg, tareUnit: Kg, standardNet: Kg, tolerancePct: Int, maxK: Int): DetectResult {
+    fun detect(gross: Jin, tareUnit: Jin, standardNet: Jin, tolerancePct: Int, maxK: Int): DetectResult {
         // 第 k 箱的每箱净重偏差 = |gross − k·(tare + W0)| ÷ k。全用整数：比较时交叉相乘，避免除不尽
         val g = gross.cents.toLong()
         val step = (tareUnit.cents + standardNet.cents).toLong()
@@ -38,7 +38,7 @@ object DetectK {
         val neighbor = listOf(best - 1, best + 1).firstOrNull { within(it) }
         val candidates = neighbor?.let { Pair(minOf(best, it), maxOf(best, it)) }
 
-        val tareTotal = Kg(tareUnit.cents * best)
+        val tareTotal = Jin(tareUnit.cents * best)
         return DetectResult(best, tareTotal, gross - tareTotal, candidates)
     }
 }

@@ -30,7 +30,7 @@ class DemoBackendTest {
     private val gson = Gson()
     private val contract = OpenApiContract(File("../../api/openapi.json").also { check(it.exists()) })
 
-    private val lisiNets = listOf(46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8)
+    private val lisiNets = listOf(93.0, 91.6, 92.0, 92.0, 92.0, 91.2, 91.2, 91.2, 91.2, 95.6)
 
     private fun call(method: String, path: String, query: Map<String, String?> = emptyMap(), body: Any? = null): DemoBackend.Reply {
         val json = body?.let { gson.toJson(it) }.orEmpty()
@@ -52,16 +52,21 @@ class DemoBackendTest {
         assertEquals(listOf("粉蛋", "红蛋"), b.getAsJsonArray("products").map { it.asJsonObject.get("name").asString })
         val specs = b.getAsJsonArray("specs").map { it.asJsonObject }
         assertEquals(listOf("240枚/箱", "360枚/箱", "480枚/箱"), specs.map { it.get("name").asString })
-        assertEquals(listOf(30.0, 45.0, 60.0), specs.map { it.get("stdNetKg").asDouble })
+        assertEquals(listOf(60.0, 90.0, 120.0), specs.map { it.get("stdNetJin").asDouble })
         // 演示版没有 Web 端补录，今天三种都有基准价
         assertEquals(listOf(120.0, 180.0, 240.0), specs.map { it.get("basePrice").asDouble })
         assertEquals(listOf("1号仓库", "2号仓库"), b.getAsJsonArray("warehouses").map { it.asJsonObject.get("name").asString })
         assertEquals(
-            listOf("1号包装箱" to 1.5, "2号包装箱" to 2.0, "3号包装箱" to 2.5),
-            b.getAsJsonArray("tares").map { it.asJsonObject.get("name").asString to it.asJsonObject.get("tareKg").asDouble },
+            listOf("1号包装箱" to 3.0, "2号包装箱" to 4.0, "3号包装箱" to 5.0),
+            b.getAsJsonArray("tares").map { it.asJsonObject.get("name").asString to it.asJsonObject.get("tareJin").asDouble },
         )
         assertEquals("half", b.getAsJsonObject("settings").get("round.mode").asString)
         assertEquals("block", b.getAsJsonObject("options").get("submit.without-price").asString)
+        // 启用的收购规则随 bootstrap 下发（建单按名称选），发货规则不在内
+        val rules = b.getAsJsonArray("rules").map { it.asJsonObject }
+        assertEquals(listOf(1L, 2L, 3L, 4L, 5L, 6L), rules.map { it.get("id").asLong })
+        assertEquals("2号包装箱", rules[0].get("tareName").asString)
+        assertEquals(-1.0, rules[2].get("lossJin").asDouble)
     }
 
     @Test
@@ -91,60 +96,50 @@ class DemoBackendTest {
 
     @Test
     fun lisiRuleAndQuoteMatchV7() {
-        val rules = arr(call("GET", "/api/farmers/1/rules")).map { it.asJsonObject }
-        assertEquals(1, rules.size)
-        assertEquals("粉蛋李四收购定价方案", rules[0].get("name").asString)
-        assertEquals(1.0, rules[0].get("coef").asDouble)
-        assertEquals(1, rules[0].get("bindCount").asInt)
-
-        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(1, 1, 2, "2026-11-17", lisiNets)))
+        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(1, "2026-11-17", lisiNets)))
         assertEquals(10, q.get("boxCount").asInt)
-        assertEquals(460.5, q.get("totalKg").asDouble)
-        assertEquals(46.05, q.get("rawAvgKg").asDouble)
-        assertEquals(46.0, q.get("avgKg").asDouble)
-        assertEquals(45.0, q.get("standardNetKg").asDouble)
+        assertEquals(921.0, q.get("totalJin").asDouble)
+        assertEquals(92.1, q.get("rawAvgJin").asDouble)
+        assertEquals(92.0, q.get("avgJin").asDouble)
+        assertEquals(90.0, q.get("standardNetJin").asDouble)
         assertEquals(180.0, q.get("basePrice").asDouble)
         assertEquals(181.0, q.get("unitPrice").asDouble)
         assertEquals(1810.0, q.get("amount").asDouble)
         assertEquals("HALF", q.get("roundMode").asString)
         assertEquals(0, q.getAsJsonArray("issues").size())
 
-        // 第 10 箱手录 52.8：均重 46.55 → 47，182 元/箱，1820 元（v7 6.6）
-        val edited = obj(call("POST", "/api/orders/quote", body = QuoteRequest(1, 1, 2, "2026-11-17", lisiNets.dropLast(1) + 52.8)))
-        assertEquals(182.0, edited.get("unitPrice").asDouble)
-        assertEquals(1820.0, edited.get("amount").asDouble)
+        // 第 10 箱手录 105.6：均重 93.1 → 93，181.5 元/箱，1815 元（v7 6.6，按斤）
+        val edited = obj(call("POST", "/api/orders/quote", body = QuoteRequest(1, "2026-11-17", lisiNets.dropLast(1) + 105.6)))
+        assertEquals(181.5, edited.get("unitPrice").asDouble)
+        assertEquals(1815.0, edited.get("amount").asDouble)
     }
 
     @Test
-    fun ruleSheetFlowTrialBindAndCoefEditUpdateMemory() {
-        fun unit(extra: QuoteRequest.() -> QuoteRequest = { this }) =
-            obj(call("POST", "/api/orders/quote", body = QuoteRequest(1, 1, 2, "2026-11-17", lisiNets).extra()))
+    fun ruleSheetFlowTrialAndEditUpdateMemory() {
+        fun unit(ruleId: Long = 1, extra: QuoteRequest.() -> QuoteRequest = { this }) =
+            obj(call("POST", "/api/orders/quote", body = QuoteRequest(ruleId, "2026-11-17", lisiNets).extra()))
 
-        // 试算：只换系数 1.5 → 180 + 1.5 × 1 = 181.5（不落库）
-        assertEquals(181.5, unit { copy(trialCoef = 1.5) }.get("unitPrice").asDouble)
+        // 试算：只换每斤尾差 0.75 → 180 + 0.75 × 2 = 181.5（不落库）
+        assertEquals(181.5, unit { copy(trialCoef = 0.75) }.get("unitPrice").asDouble)
+        // 试算每箱 +1 斤：均重 93.1 → 93，180 + 0.5 × 3 = 181.5
+        assertEquals(181.5, unit { copy(trialLossJin = 1.0) }.get("unitPrice").asDouble)
         assertEquals(181.0, unit().get("unitPrice").asDouble)
-        // 试算另一条规则（粉蛋 360 通用，系数 0.8）→ 180.8
-        assertEquals(180.8, unit { copy(trialRuleId = 3) }.get("unitPrice").asDouble)
+        // 另一条规则（粉蛋 360 通用，尾差 0.4，每箱 −1 斤）：均重 91.1 → 91，180.4
+        assertEquals(180.4, unit(3).get("unitPrice").asDouble)
 
         // 候选：粉蛋 360 的收购规则 3 条（李四、通用、王秀英），发货规则不在内
-        val candidates = arr(call("GET", "/api/rules", mapOf("kind" to "BUY", "productId" to "1", "specId" to "2"))).map { it.asJsonObject }
+        val candidates = arr(call("GET", "/api/rules", mapOf("kind" to "BUY", "productId" to "1", "specId" to "2", "enabled" to "true"))).map { it.asJsonObject }
         assertEquals(listOf(1L, 3L, 4L), candidates.map { it.get("id").asLong })
 
-        // 改系数落内存
-        val patched = obj(call("PUT", "/api/rules/1", body = com.jidan.receiving.data.RuleCoefPatch(2.0)))
-        assertEquals(2.0, patched.get("coef").asDouble)
+        // 改尾差、损耗落内存
+        val patched = obj(call("PUT", "/api/rules/1", body = com.jidan.receiving.data.RulePatch(coef = 1.0)))
+        assertEquals(1.0, patched.get("coef").asDouble)
         assertEquals(182.0, unit().get("unitPrice").asDouble)
+        val lossy = obj(call("PUT", "/api/rules/1", body = com.jidan.receiving.data.RulePatch(lossJin = -1.0)))
+        assertEquals(-1.0, lossy.get("lossJin").asDouble)
+        assertEquals(1.0, lossy.get("coef").asDouble)
+        assertEquals(181.0, unit().get("unitPrice").asDouble)
         assertEquals(400, backend.handle("PUT", "/api/rules/1", emptyMap(), """{"coef":-1}""").code)
-
-        // 改绑通用规则，再解绑
-        val bound = arr(call("PUT", "/api/farmers/1/rule-binding", body = com.jidan.receiving.data.RuleBindingRequest(1, 2, 3)))
-        assertEquals(listOf(3L), bound.map { it.asJsonObject.get("id").asLong })
-        assertEquals(180.8, unit().get("unitPrice").asDouble)
-        val unbound = arr(call("PUT", "/api/farmers/1/rule-binding", body = com.jidan.receiving.data.RuleBindingRequest(1, 2, null)))
-        assertEquals(0, unbound.size())
-        val none = unit()
-        assertTrue(none.getAsJsonArray("issues").any { it.asString == "NO_RULE" })
-        assertTrue(!none.has("unitPrice"))
 
         // 退出登录复位后回到初始
         backend.reset()
@@ -158,19 +153,19 @@ class DemoBackendTest {
         assertEquals("SG20261117-1", b1)
         assertEquals("SG20261117-2", b2)
 
-        fun boxes() = lisiNets.mapIndexed { i, kg -> SubmitBoxRequest(i + 1, kg, kg + 2, 2.0, "2号包装箱", i + 1, 1, false, null, true) }
-        val first = obj(call("POST", "/api/orders", body = SubmitRequest(b1, 1, 1, 2, 1, boxes())))
+        fun boxes() = lisiNets.mapIndexed { i, jin -> SubmitBoxRequest(i + 1, jin, jin + 4, 4.0, "2号包装箱", i + 1, 1, false, null, true) }
+        val first = obj(call("POST", "/api/orders", body = SubmitRequest(b1, 1, 1, 1, boxes())))
         assertEquals("PENDING", first.get("status").asString)
         assertEquals("APP", first.get("source").asString)
         assertEquals(10, first.get("boxCount").asInt)
-        assertEquals(460.5, first.get("totalNetKg").asDouble)
-        assertEquals(46.0, first.get("avgKg").asDouble)
+        assertEquals(921.0, first.get("totalNetJin").asDouble)
+        assertEquals(92.0, first.get("avgJin").asDouble)
         assertEquals(181.0, first.get("submittedPrice").asDouble)
         assertEquals(1810.0, first.get("submittedAmount").asDouble)
         assertEquals("CGRK20261117001", first.get("code").asString)
 
         // 同一批次号再来：原样返回同一张，即使这回带的箱不同
-        val again = obj(call("POST", "/api/orders", body = SubmitRequest(b1, 1, 1, 2, 1, boxes().take(3))))
+        val again = obj(call("POST", "/api/orders", body = SubmitRequest(b1, 1, 1, 1, boxes().take(3))))
         assertEquals(first.get("id").asLong, again.get("id").asLong)
         assertEquals(10, again.get("boxCount").asInt)
 
@@ -180,15 +175,16 @@ class DemoBackendTest {
 
     @Test
     fun submitWithoutPriceIsBlockedLikeTheRealBackend() {
-        val box = listOf(SubmitBoxRequest(1, 60.0, 62.0, 2.0, "2号包装箱"))
-        // 王秀英 480枚/箱（没有她的规则）
-        val r = backend.handle("POST", "/api/orders", emptyMap(), gson.toJson(SubmitRequest("SG20261117-1", 2, 1, 3, 1, box)))
+        val box = listOf(SubmitBoxRequest(1, 120.0, 125.0, 5.0, "3号包装箱"))
+        // 前天没有基准价：按批次号里的日期计价，缺价不能提交
+        val r = backend.handle("POST", "/api/orders", emptyMap(), gson.toJson(SubmitRequest("SG20261115-1", 2, 6, 1, box)))
         assertEquals(409, r.code)
         assertEquals("NOT_READY", obj(r).get("code").asString)
-        // 另一位李四 480 有规则；前天没有基准价
-        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(4, 1, 3, "2026-11-15", listOf(60.0))))
+        val q = obj(call("POST", "/api/orders/quote", body = QuoteRequest(6, "2026-11-15", listOf(120.0))))
         assertTrue(q.getAsJsonArray("issues").any { it.asString == "NO_BASE_PRICE" })
         assertTrue(!q.has("amount"))
+        // 发货规则不能用于采购入库单
+        assertEquals(400, backend.handle("POST", "/api/orders/quote", emptyMap(), gson.toJson(QuoteRequest(7, "2026-11-17", listOf(92.0)))).code)
     }
 
     @Test
@@ -210,7 +206,7 @@ class DemoBackendTest {
         assertEquals(3, cat.catalog().specs.size)
         assertEquals("李四", cat.farmersByTail("1234").first().name)
         assertEquals("SG20261117-1", cat.nextBatchNo())
-        val quote = OrderRepository(client).quote(QuoteRequest(1, 1, 2, "2026-11-17", lisiNets))
+        val quote = OrderRepository(client).quote(QuoteRequest(1, "2026-11-17", lisiNets))
         assertEquals(181.0, quote.unitPrice)
         assertEquals(1810.0, quote.amount)
         val err = assertFailsWith<ApiError> { AuthRepository(client).appVersion() }

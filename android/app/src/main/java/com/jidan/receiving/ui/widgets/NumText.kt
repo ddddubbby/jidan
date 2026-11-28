@@ -32,18 +32,18 @@ object NumText {
     private const val HAIR = '\u200A'   // 约 0.09em：大数字旁
     private const val THIN = '\u2009'   // 约 0.17em：行内
 
-    /** 称重、金额那种大数字，如 `NumText.big(ctx, "46.5", "kg")`。 */
+    /** 称重、金额那种大数字，如 `NumText.big(ctx, "46.5", "斤")`。 */
     fun big(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
         format(context, number, unit, RelativeSizeSpan(UNIT_SCALE_BIG), HAIR)
 
     /**
-     * 称重框里 96 号的净重：单位不跟着数字走 0.62 倍（那样 kg 会有 60 号），固定 26sp（原型 `.weight small`），
+     * 称重框里 96 号的净重：单位不跟着数字走 0.62 倍（那样 斤 会有 60 号），固定 26sp（原型 `.weight small`），
      * 灰色、500 字重、细缝、不拆行照旧。
      */
     fun weight(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
         format(context, number, unit, AbsoluteSizeSpan(UNIT_SP_WEIGHT.toInt(), true), HAIR)
 
-    /** 行内数值，如 `NumText.row(ctx, "46", "kg")`。 */
+    /** 行内数值，如 `NumText.row(ctx, "46", "斤")`。 */
     fun row(context: Context, number: CharSequence, unit: CharSequence): CharSequence =
         format(context, number, unit, RelativeSizeSpan(UNIT_SCALE_ROW), THIN)
 

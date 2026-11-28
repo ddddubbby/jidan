@@ -21,6 +21,8 @@ import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.databinding.SheetRuleBinding
 import com.jidan.receiving.databinding.ViewListRowBinding
+import com.jidan.receiving.ui.create.lossText
+import com.jidan.receiving.ui.create.packText
 import com.jidan.receiving.ui.summary.formatNum
 import com.jidan.receiving.ui.weigh.ReceivingViewModel
 import com.jidan.receiving.ui.weigh.RuleCandidate
@@ -29,7 +31,7 @@ import com.jidan.receiving.ui.widgets.NumText
 import com.jidan.receiving.ui.widgets.TextGlue
 import kotlinx.coroutines.launch
 
-/** 定价规则弹层：调阅、改系数预览与保存、解绑、更换（APP-09）。 */
+/** 定价规则弹层：调阅、改每斤尾差与每箱损耗（预览后保存到规则）、换成同商品规格的另一条（APP-09，附录 E R-1 行）。 */
 class RuleSheet : JidanSheet() {
     private var binding: SheetRuleBinding? = null
     private val vm: ReceivingViewModel by activityViewModels {
@@ -48,8 +50,9 @@ class RuleSheet : JidanSheet() {
         b.coefPlus.setOnClickListener { vm.adjustDraftCoef(0.1) }
         b.revert.setOnClickListener { vm.revertDraftCoef() }
         b.save.setOnClickListener { vm.saveDraftCoef() }
+        b.lossMinus.setOnClickListener { vm.adjustDraftLoss(-0.5) }
+        b.lossPlus.setOnClickListener { vm.adjustDraftLoss(0.5) }
         b.change.setOnClickListener { vm.toggleChangeRule() }
-        b.unbind.setOnClickListener { vm.unbindRule() }
 
         vm.loadRuleSheet()
 
@@ -71,18 +74,19 @@ class RuleSheet : JidanSheet() {
         b.boundBlock.isVisible = !state.loading && !state.unbound
         val showCandidates = !state.loading && (state.unbound || state.changing)
         b.candidateBlock.isVisible = showCandidates
-        // 已绑定时“适用”是表里的一行；选规则时它是列表上方的一句说明
+        // 有规则时“适用”是表里的一行；选规则时它是列表上方的一句说明
         b.scope.isVisible = state.unbound
 
         if (!state.unbound) {
             bindHead(b.head, getString(R.string.rule_sheet_title))
             b.ruleName.text = state.boundRuleName.orEmpty()
-            b.stdNet.text = state.standardNetKg?.let { TextGlue.withUnit(formatNum(it), "kg/箱") } ?: "—"
+            b.stdNet.text = state.standardNetJin?.let { TextGlue.withUnit(formatNum(it), "斤/箱") } ?: "—"
             b.basePrice.text = when {
                 state.basePrice == null -> getString(R.string.summary_no_base)
                 else -> TextGlue.withUnit(formatNum(state.basePrice), "元/箱")
             }
             b.coefValue.text = TextGlue.withUnit(formatNum(state.displayCoef), "元")
+            b.lossValue.text = lossLabel(state.displayLoss)
             val preview = state.trialUnitPrice
             b.previewRow.isVisible = preview != null
             if (preview != null) {
@@ -92,15 +96,12 @@ class RuleSheet : JidanSheet() {
             b.dirtyActions.isVisible = state.dirty
             b.boundActions.isVisible = !state.dirty
             b.save.isEnabled = !state.busy
-            b.save.text = when {
-                state.busy -> getString(R.string.rule_sheet_saving)
-                state.bindCount > 1 -> getString(R.string.rule_sheet_save_shared, state.bindCount)
-                else -> getString(R.string.rule_sheet_save)
-            }
+            b.save.text = getString(if (state.busy) R.string.rule_sheet_saving else R.string.rule_sheet_save)
             b.change.isEnabled = !state.busy
-            b.unbind.isEnabled = !state.busy
             b.coefMinus.isEnabled = !state.busy
             b.coefPlus.isEnabled = !state.busy
+            b.lossMinus.isEnabled = !state.busy
+            b.lossPlus.isEnabled = !state.busy
         } else {
             bindHead(b.head, getString(R.string.rule_sheet_pick))
         }
@@ -133,16 +134,18 @@ class RuleSheet : JidanSheet() {
         return out.append(NumText.row(ctx, after, "元/箱"))
     }
 
-    /** 候选规则一行（原型 .row-btn）：名称与“每 kg 尾差”，共用的写“N 户共用”；右边是套用后的本单收购价。点了就绑定。 */
+    /** 每箱损耗：0 写“不调整”，其余带正负号，如 +0.5 斤、−1 斤。 */
+    private fun lossLabel(loss: Double): CharSequence =
+        lossText(loss)?.let { TextGlue.withUnit(it.removeSuffix(" 斤"), "斤") } ?: getString(R.string.rule_sheet_no_loss)
+
+    /** 候选规则一行（原型 .row-btn）：名称、打包内容与“每斤尾差”；右边是换上后的本单收购价。点了这张单就换成它。 */
     private fun candidateRow(c: RuleCandidate, busy: Boolean, parent: ViewGroup): View {
         val row = ViewListRowBinding.inflate(layoutInflater, parent, false)
         val name = c.rule.name
         val sub = buildString {
+            append(packText(c.rule))
+            append("\n")
             append(getString(R.string.rule_sheet_candidate_coef, formatNum(c.rule.coef)))
-            if (c.rule.bindCount > 1) {
-                append("\n")
-                append(getString(R.string.rule_sheet_shared_n, c.rule.bindCount))
-            }
         }
         row.rowMain.text = SpannableStringBuilder(name).append("\n").append(sub).also {
             val flags = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -157,7 +160,7 @@ class RuleSheet : JidanSheet() {
             row.rowSide.setTypeface(row.rowSide.typeface, Typeface.BOLD)
         }
         row.rowRoot.isEnabled = !busy
-        row.rowRoot.setOnClickListener { vm.bindRule(c.rule.id) }
+        row.rowRoot.setOnClickListener { vm.chooseRule(c.rule.id) }
         return row.root
     }
 

@@ -28,7 +28,7 @@ import com.jidan.receiving.SimConsoleHook
 import com.jidan.receiving.appContainer
 import com.jidan.receiving.core.Box
 import com.jidan.receiving.core.EmptyBoxTare
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.databinding.FragmentWeighBinding
 import com.jidan.receiving.databinding.ViewBoxRowBinding
@@ -236,7 +236,7 @@ class WeighFragment : Fragment() {
                 CardTone.IDLE -> R.drawable.bg_scale
             },
         )
-        b.weight.text = NumText.weight(ctx, state.displayNet?.format1() ?: "0.0", "kg")
+        b.weight.text = NumText.weight(ctx, state.displayNet?.format1() ?: "0.0", "斤")
         b.weight.setTextColor(
             ContextCompat.getColor(ctx, if (state.phase.numberTone() == NumberTone.PALE) R.color.idle else R.color.ink),
         )
@@ -285,7 +285,7 @@ class WeighFragment : Fragment() {
             val old = state.boxes.firstOrNull { it.seq == state.reweighSeq }
             b.reweighText.text = buildString {
                 append(getString(R.string.weigh_box, state.reweighSeq))
-                if (old != null) append(" · 原 ").append(TextGlue.withUnit(old.net.format(), "kg"))
+                if (old != null) append(" · 原 ").append(TextGlue.withUnit(old.net.format(), "斤"))
             }
         }
 
@@ -328,11 +328,11 @@ class WeighFragment : Fragment() {
     /** 请选择皮重：三个选项排成一行的小块（选中的墨底），下面是“称空箱”。 */
     private fun renderTarePicker(b: FragmentWeighBinding, state: WeighUiState) {
         val items = state.tares.map { t ->
-            val tare = Kg.of(t.tareKg)
+            val tare = Jin.of(t.tareJin)
             val tag = if (t.id == state.lastTareId) " · 上一单" else ""
             ChoiceItem(
                 label = t.name,
-                badge = "${tare.format()}${TextGlue.NBSP}kg$tag",
+                badge = "${tare.format()}${TextGlue.NBSP}斤$tag",
                 selected = state.tare?.let { it.name == t.name && it.unit == tare } == true,
             ) { vm.selectTare(t) }
         }
@@ -346,14 +346,14 @@ class WeighFragment : Fragment() {
         b.tareWeighBtn.text = EmptyBoxTare.label(state.emptyBox)
     }
 
-    /** 皮重这一行：“2号包装箱 2kg”；一次放 k 箱时写“× k = 合计”（原型 live()）。没选时留白（皮重卡片在上面）。 */
+    /** 皮重这一行：“2号包装箱 2斤”；一次放 k 箱时写“× k = 合计”（原型 live()）。没选时留白（皮重卡片在上面）。 */
     private fun tareText(ctx: android.content.Context, state: WeighUiState): CharSequence {
         val t = state.tare ?: return "—"
         val out = SpannableStringBuilder(t.name).append(' ')
-        out.append(NumText.row(ctx, t.unit.format(), "kg"))
+        out.append(NumText.row(ctx, t.unit.format(), "斤"))
         if (state.k > 1) {
             out.append(" × ${state.k} = ")
-            out.append(NumText.row(ctx, Kg(t.unit.cents * state.k).format(), "kg"))
+            out.append(NumText.row(ctx, Jin(t.unit.cents * state.k).format(), "斤"))
         }
         return out
     }
@@ -387,7 +387,7 @@ class WeighFragment : Fragment() {
         val r = ViewBoxRowBinding.inflate(layoutInflater, parent, false)
         val ctx = requireContext()
         r.boxSeq.text = getString(R.string.weigh_box, box.seq)
-        r.boxNet.text = NumText.row(ctx, box.net.format(), "kg")
+        r.boxNet.text = NumText.row(ctx, box.net.format(), "斤")
         r.boxManual.isVisible = box.manual
         when (printMark(state.printEnabled, warnable, box)) {
             PrintMark.NONE -> r.boxMark.isVisible = false
@@ -409,7 +409,7 @@ class WeighFragment : Fragment() {
         return r.root
     }
 
-    /** 均重一行：“均重 47 kg 46.50”——名称 15 号灰、取整后的均重 19 号粗、未取整的两位小数 13 号灰（原型 .avg）。 */
+    /** 均重一行：“均重 47 斤 46.50”——名称 15 号灰、取整后的均重 19 号粗、未取整的两位小数 13 号灰（原型 .avg）。 */
     private fun avgText(ctx: android.content.Context, avg: String?, raw: String?, empty: Boolean): CharSequence {
         val out = SpannableStringBuilder()
         out.append(getString(R.string.weigh_avg_key))
@@ -420,7 +420,7 @@ class WeighFragment : Fragment() {
         if (empty || avg == null) {
             out.append("—")
         } else {
-            out.append(NumText.row(ctx, avg, "kg"))
+            out.append(NumText.row(ctx, avg, "斤"))
         }
         out.setSpan(AbsoluteSizeSpan(19, true), start, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         out.setSpan(StyleSpan(Typeface.BOLD), start, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

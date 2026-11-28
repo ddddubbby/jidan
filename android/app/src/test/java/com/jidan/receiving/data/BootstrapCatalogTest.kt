@@ -17,11 +17,11 @@ class BootstrapCatalogTest {
           "date": "2026-11-16",
           "products": [{"id": 1, "name": "粉蛋"}, {"id": 2, "name": "红蛋"}],
           "specs": [
-            {"id": 11, "name": "360枚/箱", "eggCount": 360, "stdNetKg": 45.00, "basePrice": 180.00},
-            {"id": 12, "name": "480枚/箱", "eggCount": 480, "stdNetKg": 60.00, "basePrice": null}
+            {"id": 11, "name": "360枚/箱", "eggCount": 360, "stdNetJin": 45.00, "basePrice": 180.00},
+            {"id": 12, "name": "480枚/箱", "eggCount": 480, "stdNetJin": 60.00, "basePrice": null}
           ],
           "warehouses": [{"id": 21, "name": "一号库"}],
-          "tares": [{"id": 31, "name": "2号包装箱", "tareKg": 2.00}],
+          "tares": [{"id": 31, "name": "2号包装箱", "tareJin": 2.00}],
           "settings": {"round.mode": "half", "print.timing": "per-box"},
           "options": {"scale.tare-by": "scale", "weigh.merge-tolerance-pct": "10"}
         }
@@ -36,14 +36,14 @@ class BootstrapCatalogTest {
         assertEquals(listOf(21L), c.warehouses.map { it.id })
         assertEquals("一号库", c.warehouses.single().name)
         assertEquals("2号包装箱", c.tares.single().name)
-        assertEquals(2.0, c.tares.single().tareKg)
+        assertEquals(2.0, c.tares.single().tareJin)
 
         val s360 = c.specs.first { it.id == 11L }
-        assertEquals(45.0, s360.stdNetKg)
+        assertEquals(45.0, s360.stdNetJin)
         assertEquals(180.0, s360.basePrice)
         assertEquals(360, s360.eggCount)
         val s480 = c.specs.first { it.id == 12L }
-        assertEquals(60.0, s480.stdNetKg)
+        assertEquals(60.0, s480.stdNetJin)
         assertNull(s480.basePrice)
     }
 

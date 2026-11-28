@@ -14,7 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.databinding.FragmentDoneBinding
 import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.printing.reprintAction
@@ -88,14 +88,14 @@ class DoneFragment : Fragment() {
             b.amountValue.text = money
             b.amountValue.fitAmount(money.length + 1, insetDp = 2 * 20f + 8f)
         }
-        val total = state.totalNetKg?.let { Kg.of(it).format() } ?: "—"
+        val total = state.totalNetJin?.let { Jin.of(it).format() } ?: "—"
         b.ledgerLine.text = getString(
             R.string.done_ledger_line,
             "${state.productName} ${state.specName}".trim(),
             state.boxCount,
             total,
         )
-        val avg = state.avgKg?.let { formatNum(it) } ?: "—"
+        val avg = state.avgJin?.let { formatNum(it) } ?: "—"
         val unit = state.unitPrice?.let { formatNum(it) }
         b.sub.text = if (unit != null) {
             getString(R.string.done_sub, avg, unit)

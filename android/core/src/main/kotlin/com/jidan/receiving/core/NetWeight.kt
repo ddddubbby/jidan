@@ -3,11 +3,11 @@ package com.jidan.receiving.core
 /** 一次称重换算的结果。 */
 data class NetResult(
     /** 秤台上的总重：含 k 箱皮重，未扣皮。就是每箱毛重之和，也是 `DetectK` 的输入。 */
-    val platform: Kg,
+    val platform: Jin,
     /** k 箱合计皮重。 */
-    val tareTotal: Kg,
+    val tareTotal: Jin,
     /** k 箱净重合计。 */
-    val net: Kg,
+    val net: Jin,
 )
 
 /**
@@ -22,12 +22,12 @@ data class NetResult(
 object NetWeight {
 
     /** 台面总重。[tareUnit] 是 APP 当前设的每箱皮重，未设皮重时传 0。 */
-    fun platform(raw: Kg, tareUnit: Kg, o: WeighOptions): Kg =
+    fun platform(raw: Jin, tareUnit: Jin, o: WeighOptions): Jin =
         if (o.tareBy == TareBy.SCALE && o.readingIsNet) raw + tareUnit else raw
 
-    fun convert(raw: Kg, tareUnit: Kg, k: Int, o: WeighOptions): NetResult {
+    fun convert(raw: Jin, tareUnit: Jin, k: Int, o: WeighOptions): NetResult {
         val platform = platform(raw, tareUnit, o)
-        val tareTotal = Kg(tareUnit.cents * k)
+        val tareTotal = Jin(tareUnit.cents * k)
         return NetResult(platform, tareTotal, platform - tareTotal)
     }
 }

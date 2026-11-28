@@ -16,7 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.jidan.receiving.R
 import com.jidan.receiving.appContainer
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.databinding.FragmentSummaryBinding
 import com.jidan.receiving.platform.Feedback
 import com.jidan.receiving.printing.reprintAction
@@ -65,7 +65,7 @@ class SummaryFragment : Fragment() {
                 s.refreshing || s.loading || s.submitting -> Unit
                 q == null -> vm.reloadQuote()
                 blockMissing && q.noBasePrice -> vm.refreshBasePrice()
-                blockMissing && q.noRule -> openRule()
+                q.noRule -> openRule()
                 else -> vm.submitOrder()
             }
         }
@@ -97,19 +97,19 @@ class SummaryFragment : Fragment() {
         RuleSheet().show(parentFragmentManager, RuleSheet.TAG)
     }
 
-    /** 定价规则一行：没绑定时“未绑定”前放一个琥珀圆点，不用黄底。 */
+    /** 定价规则一行：没选时“未选”前放一个琥珀圆点，不用黄底。 */
     private fun setUnbound(b: FragmentSummaryBinding, unbound: Boolean) {
         b.factRuleValue.setCompoundDrawablesRelativeWithIntrinsicBounds(
             if (unbound) R.drawable.ic_dot else 0, 0, 0, 0,
         )
     }
 
-    /** “10 箱 · 460.5 kg”：kg 缩小变灰，与均重、称重页同一套（NumText）。 */
-    private fun ledgerValue(boxCount: Int, totalKg: Double?): CharSequence {
+    /** “10 箱 · 460.5 斤”：斤 缩小变灰，与均重、称重页同一套（NumText）。 */
+    private fun ledgerValue(boxCount: Int, totalJin: Double?): CharSequence {
         val head = getString(R.string.summary_ledger_count, boxCount)
-        if (totalKg == null) return "$head · —"
+        if (totalJin == null) return "$head · —"
         return SpannableStringBuilder(head).append(" · ")
-            .append(NumText.row(requireContext(), Kg.of(totalKg).format(), "kg"))
+            .append(NumText.row(requireContext(), Jin.of(totalJin).format(), "斤"))
     }
 
     private fun render(state: SummaryUiState) {
@@ -120,7 +120,8 @@ class SummaryFragment : Fragment() {
 
         val q = state.quote
         val missing = q != null && (q.noBasePrice || q.noRule)
-        val pendingAllowed = missing && state.allowWithoutPrice
+        // 没选规则时没法提交（提交要带规则），只有缺基准价能按“待定价”提交
+        val pendingAllowed = missing && state.allowWithoutPrice && !q!!.noRule
 
         if (q == null) {
             b.amountRow.isVisible = false
@@ -137,8 +138,8 @@ class SummaryFragment : Fragment() {
             val formula = formulaLine(q)
             b.factFormula.isVisible = formula.isNotBlank()
             b.factFormula.text = formula
-            b.factLedgerValue.text = ledgerValue(q.boxCount, q.totalKg)
-            b.factAvg.text = q.avgKg?.let { NumText.row(requireContext(), formatNum(it), "kg") } ?: "—"
+            b.factLedgerValue.text = ledgerValue(q.boxCount, q.totalJin)
+            b.factAvg.text = q.avgJin?.let { NumText.row(requireContext(), formatNum(it), "斤") } ?: "—"
 
             when {
                 pendingAllowed -> {
@@ -212,8 +213,8 @@ class SummaryFragment : Fragment() {
         }
 
         val blockMissing = !state.allowWithoutPrice
-        // 还缺一项（没有计价结果、缺基准价、缺规则）：主按钮写明缺什么并高亮，点了去补；齐了才是绿底的“提交单据”
-        b.primary.isActivated = q == null || (blockMissing && (q.noBasePrice || q.noRule))
+        // 还缺一项（没有计价结果、缺基准价、没选规则）：主按钮写明缺什么并高亮，点了去补；齐了才是绿底的“提交单据”
+        b.primary.isActivated = q == null || q.noRule || (blockMissing && q.noBasePrice)
         when {
             state.submitting -> {
                 b.primary.isEnabled = false
@@ -236,7 +237,7 @@ class SummaryFragment : Fragment() {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_refresh_base)
             }
-            blockMissing && q.noRule -> {
+            q.noRule -> {
                 b.primary.isEnabled = true
                 b.primary.text = getString(R.string.summary_bind_rule)
             }

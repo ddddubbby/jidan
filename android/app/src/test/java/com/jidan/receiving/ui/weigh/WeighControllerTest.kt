@@ -1,6 +1,6 @@
 package com.jidan.receiving.ui.weigh
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.Session
 import com.jidan.receiving.core.Tare
@@ -54,9 +54,9 @@ private class FakeHost(
 private class FailingTareScale(val inner: FakeScale) : Scale by inner {
     var failWith: Throwable? = IllegalStateException("秤上已有称重皮，设数字皮失败")
 
-    override suspend fun setDigitalTare(kg: Kg) {
+    override suspend fun setDigitalTare(jin: Jin) {
         failWith?.let { throw it }
-        inner.setDigitalTare(kg)
+        inner.setDigitalTare(jin)
     }
 }
 
@@ -74,9 +74,9 @@ private class CountingClearScale(val inner: FakeScale) : Scale by inner {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeighControllerTest {
-    private val tare2 = Tare(Kg.of(2.0), "2号箱")
+    private val tare2 = Tare(Jin.of(2.0), "2号箱")
 
-    private fun draft(tare: Tare? = tare2, stdNet: Kg? = Kg.of(45.0)) = Session(
+    private fun draft(tare: Tare? = tare2, stdNet: Jin? = Jin.of(45.0)) = Session(
         batchNo = "SG20261116-1",
         farmer = Pick(1, "李四"), product = Pick(2, "粉蛋"), spec = Pick(3, "360枚/箱"), warehouse = Pick(4, "一号库"),
         tare = tare,
@@ -123,14 +123,14 @@ class WeighControllerTest {
 
     @Test
     fun restoredDraftSendsTareToANewScaleBeforeRecording() = runTest {
-        // 草稿里有 2kg 皮重，进程被回收后换了一个新的秤实例（没有皮重）
+        // 草稿里有 2斤 皮重，进程被回收后换了一个新的秤实例（没有皮重）
         val scale = FakeScale(backgroundScope, FakeScale.MINE_ID)
         connect(scale)
         val ctl = controller(scale, FakeHost())
         assertTrue(ctl.start(draft(), OrderHeader()))
         runCurrent()
 
-        scale.placeOneBox(4650) // 台面 48.5kg = 46.5 净重 + 2kg 箱皮
+        scale.placeOneBox(4650) // 台面 48.5斤 = 46.5 净重 + 2斤 箱皮
         settle()
         assertEquals(listOf(4650), ctl.nets()) // 不是 4850
         assertEquals("", ctl.tareError)
@@ -274,13 +274,13 @@ class WeighControllerTest {
         connect(scale)
         val ctl = controller(scale, FakeHost(specW0 = mapOf(3L to 36.0)))
         // 草稿里的 W0 是 45：以它为准，bootstrap 里的 36 不用
-        assertTrue(ctl.start(draft(stdNet = Kg.of(45.0)), OrderHeader()))
+        assertTrue(ctl.start(draft(stdNet = Jin.of(45.0)), OrderHeader()))
         runCurrent()
 
-        scale.placeBoxes(listOf(4600, 4600, 4600)) // 台面 144kg，每箱皮 2kg
+        scale.placeBoxes(listOf(4600, 4600, 4600)) // 台面 144斤，每箱皮 2斤
         settle()
         assertEquals(listOf(4600, 4600, 4600), ctl.nets())
-        assertEquals(Kg.of(45.0), ctl.session!!.stdNet)
+        assertEquals(Jin.of(45.0), ctl.session!!.stdNet)
     }
 
     @Test
@@ -290,7 +290,7 @@ class WeighControllerTest {
         val ctl = controller(scale, FakeHost(specW0 = mapOf(3L to 45.0)))
         assertTrue(ctl.start(draft(stdNet = null), OrderHeader()))
         runCurrent()
-        assertEquals(Kg.of(45.0), ctl.session!!.stdNet) // 补上，下次存草稿就有了
+        assertEquals(Jin.of(45.0), ctl.session!!.stdNet) // 补上，下次存草稿就有了
 
         scale.placeBoxes(listOf(4600, 4600, 4600))
         settle()
@@ -316,8 +316,8 @@ class WeighControllerTest {
         val ctl = controller(scale, host)
         assertTrue(ctl.start(null, header()))
         runCurrent()
-        assertEquals(Kg.of(45.0), ctl.session!!.stdNet)
-        assertEquals(Kg.of(45.0), Session.fromJson(ctl.session!!.toJson()).stdNet)
+        assertEquals(Jin.of(45.0), ctl.session!!.stdNet)
+        assertEquals(Jin.of(45.0), Session.fromJson(ctl.session!!.toJson()).stdNet)
         assertEquals("SG20261116-1", ctl.session!!.batchNo)
     }
 
@@ -327,7 +327,7 @@ class WeighControllerTest {
         connect(scale)
         val ctl = controller(scale, FakeHost(specW0 = mapOf(3L to 42.0)))
         assertTrue(ctl.start(null, header().copy(stdNetCents = null)))
-        assertEquals(Kg.of(42.0), ctl.session!!.stdNet)
+        assertEquals(Jin.of(42.0), ctl.session!!.stdNet)
     }
 
     // ---- 4. bootstrap ----
@@ -419,7 +419,7 @@ class WeighControllerTest {
         val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
         val scale = CountingClearScale(fake)
         connect(fake)
-        fake.setDigitalTare(Kg.of(2.0)) // 上一单下发的 2kg 数字皮
+        fake.setDigitalTare(Jin.of(2.0)) // 上一单下发的 2斤 数字皮
         assertEquals(-200, fake.readings.value!!.raw.cents)
 
         val ctl = controller(scale, FakeHost())
@@ -429,7 +429,7 @@ class WeighControllerTest {
         assertEquals(1, scale.clears)
         assertEquals("", ctl.tareError)
         assertEquals(0, fake.readings.value!!.raw.cents)
-        assertEquals(Kg(0), ctl.machine!!.displayNet)
+        assertEquals(Jin(0), ctl.machine!!.displayNet)
 
         // 选了皮重之后不再清（setDigitalTare 会覆盖）
         ctl.chooseTare(tare2, 1)
@@ -458,7 +458,7 @@ class WeighControllerTest {
         val fake = FakeScale(backgroundScope, FakeScale.MINE_ID)
         val scale = CountingClearScale(fake)
         connect(fake)
-        fake.setDigitalTare(Kg.of(2.0))
+        fake.setDigitalTare(Jin.of(2.0))
         scale.failWith = IllegalStateException("秤没有响应清皮指令")
 
         val ctl = controller(scale, FakeHost())
@@ -472,20 +472,20 @@ class WeighControllerTest {
         assertEquals("秤没有响应清皮指令", ui.tareError)
         assertNull(ui.tare)
 
-        // 放一只 2.5kg 的空箱：读数不喂状态机，“称空箱”不可按
+        // 放一只 2.5斤 的空箱：读数不喂状态机，“称空箱”不可按
         fake.placeEmptyBox(250)
         settle()
         assertNull(ctl.machine!!.platformNow)
         assertFalse(ctl.emptyBox().available)
         assertEquals(WeighPhase.LOCKED, ctl.machine!!.phase)
 
-        // 原因排除后重试：清掉旧皮重，读数放行，空箱按台面 2.5kg 去皮
+        // 原因排除后重试：清掉旧皮重，读数放行，空箱按台面 2.5斤 去皮
         scale.failWith = null
         ctl.retryTare()
         runCurrent()
         assertEquals("", ctl.tareError)
         assertEquals(2, scale.clears)
-        assertEquals(Kg.of(2.5), ctl.machine!!.platformNow)
+        assertEquals(Jin.of(2.5), ctl.machine!!.platformNow)
         assertTrue(ctl.emptyBox().available)
     }
 

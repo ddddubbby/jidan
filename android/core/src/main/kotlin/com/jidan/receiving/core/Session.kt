@@ -1,6 +1,6 @@
 package com.jidan.receiving.core
 
-/** 建单四项里选中的一项：后端的 id 与给人看的名字。 */
+/** 建单时选中的一项（农户、规则、商品、规格、仓库）：后端的 id 与给人看的名字。 */
 data class Pick(val id: Long, val name: String)
 
 /**
@@ -16,6 +16,8 @@ data class Pick(val id: Long, val name: String)
  * @param groupSeq 已发出的称重组号。删掉一组后不回收，新组继续往后编；手工加的箱也占一个组号。
  * @param stdNet 规格的标准净含量 W0，建单时取到就写进草稿，进程被回收后恢复不用再猜。
  *   旧草稿没有这个字段，读回是 null，由 `:app` 从 bootstrap 的规格里补；取不到就不让称重，不用默认值顶替。
+ * @param rule 建单时按名称选的定价规则；[product]、[spec] 取自它（附录 E R-1 行）。
+ *   改版前的草稿没有这个字段，读回是 null，汇总页让磅秤员在同商品规格的规则里选一条。
  */
 data class Session(
     val batchNo: String,
@@ -26,12 +28,13 @@ data class Session(
     val tare: Tare? = null,
     val boxes: List<Box> = emptyList(),
     val groupSeq: Int = 0,
-    val stdNet: Kg? = null,
+    val stdNet: Jin? = null,
+    val rule: Pick? = null,
 ) {
     val count: Int get() = boxes.size
 
     /** 累计净重（手录值按录入值算）。 */
-    val totalNet: Kg get() = boxes.map { it.net }.sum()
+    val totalNet: Jin get() = boxes.map { it.net }.sum()
 
     /** 还没打出标签的箱，补打用。 */
     val unprinted: List<Box> get() = boxes.filter { !it.printed }
@@ -61,11 +64,11 @@ data class Session(
      * 秤不可用时手工加一箱：箱数恒为 1，带手录记号，原读数为空（`APP-11`）。
      * 皮重取当前选的那只箱，没选就是 0。
      */
-    fun addManual(net: Kg): Session {
+    fun addManual(net: Jin): Session {
         requirePositive(net)
         val g = groupSeq + 1
         val added = SplitBoxes.split(
-            net = net, k = 1, tare = tare?.unit ?: Kg.ZERO, tareName = tare?.name ?: "",
+            net = net, k = 1, tare = tare?.unit ?: Jin.ZERO, tareName = tare?.name ?: "",
             group = g, manual = true,
         )
         return copy(boxes = SplitBoxes.append(boxes, added), groupSeq = g)
@@ -75,7 +78,7 @@ data class Session(
      * 对第 [seq] 箱手工录入净重：带手录记号，原读数记成改之前秤给的净重，打印标记清掉（原标签作废）。
      * 已经手录过的箱再改，原读数不变，仍是秤最初的读数；手工加的箱原读数本来就空，改多少次都是空（附录 C 第 16 条）。
      */
-    fun editManual(seq: Int, net: Kg): Session {
+    fun editManual(seq: Int, net: Jin): Session {
         requirePositive(net)
         return mapBox(seq) { b ->
             b.copy(net = net, manual = true, raw = if (b.manual) b.raw else b.net, printed = false)
@@ -112,10 +115,10 @@ data class Session(
         return copy(boxes = boxes.map { if (it.seq == seq) f(it) else it })
     }
 
-    private fun requirePositive(net: Kg) = require(net > Kg.ZERO) { "净重必须大于 0" }
+    private fun requirePositive(net: Jin) = require(net > Jin.ZERO) { "净重必须大于 0" }
 
     /**
-     * 草稿 JSON。重量一律写 0.01kg 的整数（同 [Kg.cents]），这是本地文件，不是接口，不转 kg 小数。
+     * 草稿 JSON。重量一律写 0.01 斤的整数（同 [Jin.cents]），这是本地文件，不是接口，不转斤小数。
      */
     fun toJson(): String = MiniJson.write(
         mapOf(
@@ -127,6 +130,7 @@ data class Session(
             "tare" to tare?.let { mapOf("unit" to it.unit.cents, "name" to it.name) },
             "groupSeq" to groupSeq,
             "stdNet" to stdNet?.cents,
+            "rule" to rule?.toMap(),
             "boxes" to boxes.map { it.toMap() },
         ),
     )
@@ -141,11 +145,12 @@ data class Session(
                 product = m.map("product").toPick(),
                 spec = m.map("spec").toPick(),
                 warehouse = m.map("warehouse").toPick(),
-                tare = m.mapOrNull("tare")?.let { Tare(Kg(it.int("unit")), it.str("name")) },
+                tare = m.mapOrNull("tare")?.let { Tare(Jin(it.int("unit")), it.str("name")) },
                 boxes = m.list("boxes").map { it.asMap().toBox() },
                 groupSeq = m.int("groupSeq"),
                 // 旧草稿没有 stdNet：缺字段读成 null，不算草稿损坏
-                stdNet = if (m.containsKey("stdNet")) m.intOrNull("stdNet")?.let(::Kg) else null,
+                stdNet = if (m.containsKey("stdNet")) m.intOrNull("stdNet")?.let(::Jin) else null,
+                rule = if (m.containsKey("rule")) m.mapOrNull("rule")?.toPick() else null,
             )
         }
 
@@ -160,9 +165,9 @@ data class Session(
         private fun Map<String, Any?>.toPick() = Pick(long("id"), str("name"))
 
         private fun Map<String, Any?>.toBox() = Box(
-            seq = int("seq"), group = int("group"), net = Kg(int("net")), tare = Kg(int("tare")),
-            tareName = str("tareName"), gross = intOrNull("gross")?.let(::Kg), unit = intOrNull("unit")?.let(::Kg),
-            manual = bool("manual"), raw = intOrNull("raw")?.let(::Kg), printed = bool("printed"),
+            seq = int("seq"), group = int("group"), net = Jin(int("net")), tare = Jin(int("tare")),
+            tareName = str("tareName"), gross = intOrNull("gross")?.let(::Jin), unit = intOrNull("unit")?.let(::Jin),
+            manual = bool("manual"), raw = intOrNull("raw")?.let(::Jin), printed = bool("printed"),
         )
 
         @Suppress("UNCHECKED_CAST")

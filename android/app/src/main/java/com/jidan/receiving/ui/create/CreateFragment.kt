@@ -196,8 +196,7 @@ class CreateFragment : Fragment() {
         val steps = stepViews(b)
         val states = listOf(
             stepState(state.farmerId != null, active == CreateStep.FARMER),
-            stepState(state.productId != null, active == CreateStep.PRODUCT),
-            stepState(state.specId != null, active == CreateStep.SPEC),
+            stepState(state.ruleId != null, active == CreateStep.RULE),
             stepState(state.warehouseId != null, active == CreateStep.WAREHOUSE),
         )
         states.forEachIndexed { i, st ->
@@ -208,8 +207,7 @@ class CreateFragment : Fragment() {
             )
         }
         renderFarmerStep(b, state, active)
-        renderProductStep(b, state, active)
-        renderSpecStep(b, state, active)
+        renderRuleStep(b, state, active)
         renderWarehouseStep(b, state, active)
 
         // 还差几步：白底绿边（仍可点，点了直达缺的那步）；齐了：绿底
@@ -328,84 +326,52 @@ class CreateFragment : Fragment() {
         }
     }
 
-    private fun renderProductStep(b: FragmentCreateBinding, state: CreateUiState, active: CreateStep?) {
-        val done = state.productId != null
-        val isActive = active == CreateStep.PRODUCT
-        b.productChoices.isVisible = isActive
-        b.productSummary.isVisible = done && !isActive
-        if (done && !isActive) {
-            b.productTitle.text = getString(R.string.create_step_product)
-            b.productSummary.text = state.productName
-            b.stepProduct.setOnClickListener { vm.edit(CreateStep.PRODUCT) }
-        } else {
-            b.productTitle.text = getString(if (isActive) R.string.create_ask_product else R.string.create_step_product)
-            b.stepProduct.setOnClickListener(null)
-        }
-        b.stepProduct.isClickable = done && !isActive
-        if (isActive) {
-            val ruled = state.rules.map { it.productId }.toSet()
-            fillChoices(
-                b.productChoices,
-                state.products.map { p ->
-                    Choice(
-                        label = p.name,
-                        badge = if (p.id in ruled) getString(R.string.create_has_rule) else null,
-                        warn = false,
-                        selected = p.id == state.productId,
-                    ) { vm.selectProduct(p) }
+    /** 定价规则：按名称选（规则不绑农户）；选好后一行写清它打包了什么，缺当日基准价时提醒（附录 E R-1 行）。 */
+    private fun renderRuleStep(b: FragmentCreateBinding, state: CreateUiState, active: CreateStep?) {
+        val rule = state.rule
+        val done = rule != null
+        val isActive = active == CreateStep.RULE
+        b.ruleChoices.isVisible = isActive
+        b.ruleSummary.isVisible = done && !isActive
+        b.ruleHints.isVisible = done && !isActive
+        if (rule != null && !isActive) {
+            b.ruleTitle.text = getString(R.string.create_step_rule)
+            b.ruleSummary.text = rule.name
+            b.ruleHints.removeAllViews()
+            b.ruleHints.addView(
+                TextView(requireContext()).apply {
+                    setTextAppearance(R.style.TextAppearance_Jidan_Hint)
+                    text = packText(rule)
                 },
             )
-        }
-    }
-
-    private fun renderSpecStep(b: FragmentCreateBinding, state: CreateUiState, active: CreateStep?) {
-        val done = state.specId != null
-        val isActive = active == CreateStep.SPEC
-        b.specChoices.isVisible = isActive
-        b.specSummary.isVisible = done && !isActive
-        b.specHints.isVisible = done && !isActive
-        if (done && !isActive) {
-            b.specTitle.text = getString(R.string.create_step_spec)
-            b.specSummary.text = state.specName
-            val rule = state.rules.firstOrNull {
-                it.productId == state.productId && it.specId == state.specId && it.enabled
+            if (rule.tareBoxId == null) {
+                b.ruleHints.addView(tagline(getString(R.string.create_no_tare)))
             }
-            b.specHints.removeAllViews()
-            if (rule != null) {
-                b.specHints.addView(
-                    TextView(requireContext()).apply {
-                        setTextAppearance(R.style.TextAppearance_Jidan_Hint)
-                        text = rule.name
-                    },
-                )
-            } else {
-                b.specHints.addView(tagline(getString(R.string.create_no_rule)))
+            if (state.prices[rule.specId] == null) {
+                b.ruleHints.addView(tagline(getString(R.string.create_no_base_price)))
             }
-            if (state.prices[state.specId] == null) {
-                b.specHints.addView(tagline(getString(R.string.create_no_base_price)))
-            }
-            b.stepSpec.setOnClickListener { vm.edit(CreateStep.SPEC) }
+            b.stepRule.setOnClickListener { vm.edit(CreateStep.RULE) }
         } else {
-            b.specTitle.text = getString(if (isActive) R.string.create_ask_spec else R.string.create_step_spec)
-            b.stepSpec.setOnClickListener(null)
+            b.ruleTitle.text = getString(if (isActive) R.string.create_ask_rule else R.string.create_step_rule)
+            b.stepRule.setOnClickListener(null)
         }
-        b.stepSpec.isClickable = done && !isActive
+        b.stepRule.isClickable = done && !isActive
         if (isActive) {
+            if (state.rules.isEmpty()) {
+                b.ruleChoices.removeAllViews()
+                b.ruleChoices.addView(tagline(getString(R.string.create_no_rules)))
+                return
+            }
             fillChoices(
-                b.specChoices,
-                state.specs.map { s ->
-                    val ruled = state.rules.any { it.productId == state.productId && it.specId == s.id }
-                    val noPrice = state.prices[s.id] == null
+                b.ruleChoices,
+                state.rules.map { r ->
+                    val noPrice = state.prices[r.specId] == null
                     Choice(
-                        label = s.name,
-                        badge = when {
-                            noPrice -> getString(R.string.create_no_base_price)
-                            ruled -> getString(R.string.create_has_rule)
-                            else -> null
-                        },
+                        label = r.name,
+                        badge = if (noPrice) getString(R.string.create_no_base_price) else r.specName,
                         warn = noPrice,
-                        selected = s.id == state.specId,
-                    ) { vm.selectSpec(s) }
+                        selected = r.id == state.ruleId,
+                    ) { vm.selectRule(r) }
                 },
             )
         }
@@ -457,8 +423,7 @@ class CreateFragment : Fragment() {
 
     private fun stepViews(b: FragmentCreateBinding) = listOf(
         StepViews(b.cardFarmer, b.railFarmer, b.farmerTitle, b.farmerChev),
-        StepViews(b.cardProduct, b.railProduct, b.productTitle, b.productChev),
-        StepViews(b.cardSpec, b.railSpec, b.specTitle, b.specChev),
+        StepViews(b.cardRule, b.railRule, b.ruleTitle, b.ruleChev),
         StepViews(b.cardWarehouse, b.railWarehouse, b.warehouseTitle, b.warehouseChev),
     )
 

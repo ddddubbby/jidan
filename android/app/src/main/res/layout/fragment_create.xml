@@ -287,21 +287,21 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 商品 -->
+            <!-- 定价规则：按名称选，选了就定了商品、规格、包装箱与每箱损耗（附录 E R-1 行） -->
             <LinearLayout
-                android:id="@+id/stepProduct"
+                android:id="@+id/stepRule"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
                 <include
-                    android:id="@+id/railProduct"
+                    android:id="@+id/railRule"
                     layout="@layout/view_step_rail"
                     android:layout_width="32dp"
                     android:layout_height="match_parent" />
 
                 <LinearLayout
-                    android:id="@+id/cardProduct"
+                    android:id="@+id/cardRule"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
@@ -323,13 +323,13 @@
                             android:orientation="vertical">
 
                             <TextView
-                                android:id="@+id/productTitle"
+                                android:id="@+id/ruleTitle"
                                 style="@style/Text.Section"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content" />
 
                             <TextView
-                                android:id="@+id/productSummary"
+                                android:id="@+id/ruleSummary"
                                 style="@style/Text.Value"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -337,7 +337,7 @@
                         </LinearLayout>
 
                         <ImageView
-                            android:id="@+id/productChev"
+                            android:id="@+id/ruleChev"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:importantForAccessibility="no"
@@ -345,77 +345,9 @@
                             android:visibility="gone" />
                     </LinearLayout>
 
+                    <!-- 选好后：规则打包的内容，以及缺基准价的提醒 -->
                     <LinearLayout
-                        android:id="@+id/productChoices"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone" />
-
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- 规格 -->
-            <LinearLayout
-                android:id="@+id/stepSpec"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <include
-                    android:id="@+id/railSpec"
-                    layout="@layout/view_step_rail"
-                    android:layout_width="32dp"
-                    android:layout_height="match_parent" />
-
-                <LinearLayout
-                    android:id="@+id/cardSpec"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginBottom="6dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingStart="12dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/specTitle"
-                                style="@style/Text.Section"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <TextView
-                                android:id="@+id/specSummary"
-                                style="@style/Text.Value"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:visibility="gone" />
-                        </LinearLayout>
-
-                        <ImageView
-                            android:id="@+id/specChev"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_chevron_right"
-                            android:visibility="gone" />
-                    </LinearLayout>
-
-                    <!-- 规则与基准价的提醒挂在规格这一步（两者都由“商品 + 规格”决定） -->
-                    <LinearLayout
-                        android:id="@+id/specHints"
+                        android:id="@+id/ruleHints"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
@@ -423,7 +355,7 @@
                         android:visibility="gone" />
 
                     <LinearLayout
-                        android:id="@+id/specChoices"
+                        android:id="@+id/ruleChoices"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"

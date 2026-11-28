@@ -4,17 +4,17 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 /**
- * 重量。内部是整数，单位 0.01kg，只在接口边界与 kg 小数互转（开发规格 9.2）。
+ * 重量。内部是整数，单位 0.01斤，只在接口边界与斤小数互转（开发规格 9.2）。
  * 用整数而不是 Double，是为了让 0.1 + 0.2 这类误差不会混进同重归类与均重取整。
  */
 @JvmInline
-value class Kg(val cents: Int) : Comparable<Kg> {
+value class Jin(val cents: Int) : Comparable<Jin> {
 
-    operator fun plus(o: Kg) = Kg(cents + o.cents)
-    operator fun minus(o: Kg) = Kg(cents - o.cents)
-    override fun compareTo(other: Kg) = cents.compareTo(other.cents)
+    operator fun plus(o: Jin) = Jin(cents + o.cents)
+    operator fun minus(o: Jin) = Jin(cents - o.cents)
+    override fun compareTo(other: Jin) = cents.compareTo(other.cents)
 
-    /** 接口边界用的 kg 小数。 */
+    /** 接口边界用的斤小数。 */
     fun toDouble(): Double = cents / 100.0
 
     /** 去掉末尾的 0：46、45.6、15.33（原型的 `kg`）。 */
@@ -42,14 +42,14 @@ value class Kg(val cents: Int) : Comparable<Kg> {
     override fun toString() = format()
 
     companion object {
-        val ZERO = Kg(0)
+        val ZERO = Jin(0)
 
-        /** kg 小数转内部整数，第 3 位起四舍五入；经十进制转换，45.6 不会变成 4559。 */
-        fun of(kg: Double) = Kg(BigDecimal.valueOf(kg).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
+        /**斤小数转内部整数，第 3 位起四舍五入；经十进制转换，45.6 不会变成 4559。 */
+        fun of(jin: Double) = Jin(BigDecimal.valueOf(jin).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
 
-        /** 接口里的 kg 文本（如 `"45.6"`）。 */
-        fun parse(kg: String) = Kg(BigDecimal(kg.trim()).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
+        /** 接口里的 斤 文本（如 `"45.6"`）。 */
+        fun parse(jin: String) = Jin(BigDecimal(jin.trim()).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
     }
 }
 
-fun Iterable<Kg>.sum(): Kg = fold(Kg.ZERO) { acc, k -> acc + k }
+fun Iterable<Jin>.sum(): Jin = fold(Jin.ZERO) { acc, k -> acc + k }

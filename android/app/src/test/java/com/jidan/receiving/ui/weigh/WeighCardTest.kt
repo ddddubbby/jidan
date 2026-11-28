@@ -1,7 +1,7 @@
 package com.jidan.receiving.ui.weigh
 
 import com.jidan.receiving.core.Box
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.WeighPhase
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 
 class WeighCardTest {
     private fun box(seq: Int, group: Int, printed: Boolean = false) =
-        Box(seq = seq, group = group, net = Kg.of(46.0), tare = Kg.of(2.0), tareName = "箱", printed = printed)
+        Box(seq = seq, group = group, net = Jin.of(46.0), tare = Jin.of(2.0), tareName = "箱", printed = printed)
 
     @Test
     fun cardToneFollowsPhase() {

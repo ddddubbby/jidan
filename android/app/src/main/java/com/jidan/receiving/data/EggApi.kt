@@ -34,9 +34,6 @@ interface EggApi {
     @GET("api/farmers/recent")
     suspend fun farmersRecent(): List<FarmerDto>
 
-    @GET("api/farmers/{id}/rules")
-    suspend fun farmerRules(@Path("id") id: Long): List<RuleViewDto>
-
     @POST("api/batches")
     suspend fun createBatch(@Body body: BatchRequest = BatchRequest()): BatchDto
 
@@ -51,12 +48,10 @@ interface EggApi {
         @Query("kind") kind: String? = null,
         @Query("productId") productId: Long? = null,
         @Query("specId") specId: Long? = null,
+        @Query("enabled") enabled: Boolean? = null,
         @Query("q") q: String? = null,
     ): List<RuleViewDto>
 
     @PUT("api/rules/{id}")
-    suspend fun updateRule(@Path("id") id: Long, @Body body: RuleCoefPatch): RuleViewDto
-
-    @PUT("api/farmers/{id}/rule-binding")
-    suspend fun bindFarmerRule(@Path("id") id: Long, @Body body: RuleBindingRequest): List<RuleViewDto>
+    suspend fun updateRule(@Path("id") id: Long, @Body body: RulePatch): RuleViewDto
 }

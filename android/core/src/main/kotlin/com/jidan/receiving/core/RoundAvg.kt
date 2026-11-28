@@ -20,11 +20,11 @@ enum class RoundRule(val wire: String) {
 
 object RoundAvg {
     /**
-     * 本批次累计净重 ÷ 箱数，按规则取整到整数 kg。
+     * 本批次累计净重 ÷ 箱数，按规则取整到整数 斤。
      * 只用于称重页的实时均重；计价以后端 `PricingService` 为准，两边由 `fixtures/pricing.json` 保证一致。
      * 全程整数运算，正好 .5 的情况不受浮点误差影响。
      */
-    fun of(total: Kg, boxCount: Int, rule: RoundRule = RoundRule.DEFAULT): Kg {
+    fun of(total: Jin, boxCount: Int, rule: RoundRule = RoundRule.DEFAULT): Jin {
         val t = total.cents
         val d = boxCount * 100
         val whole = when (rule) {
@@ -32,6 +32,6 @@ object RoundAvg {
             RoundRule.CEIL -> Math.floorDiv(t + d - 1, d)
             RoundRule.HALF -> Math.floorDiv(2 * t + d, 2 * d)
         }
-        return Kg(whole * 100)
+        return Jin(whole * 100)
     }
 }

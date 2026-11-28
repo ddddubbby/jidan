@@ -42,15 +42,15 @@ class QuoteFormatTest {
     fun acceptanceFormulaMatchesV7_6_4() {
         val q = QuoteResult(
             boxCount = 10,
-            totalKg = 460.5,
-            rawAvgKg = 46.05,
-            avgKg = 46.0,
-            standardNetKg = 45.0,
+            totalJin = 460.5,
+            rawAvgJin = 46.05,
+            avgJin = 46.0,
+            standardNetJin = 45.0,
             basePrice = 180.0,
             ruleId = 1,
             ruleName = "粉蛋收购",
             coefficient = 1.0,
-            tailKg = 1.0,
+            tailJin = 1.0,
             priceDiff = 1.0,
             unitPrice = 181.0,
             amount = 1810.0,
@@ -58,16 +58,27 @@ class QuoteFormatTest {
         )
         assertEquals("1,810", formatMoney(q.amount))
         assertEquals("181", formatNum(q.unitPrice))
-        assertEquals("46", formatNum(q.avgKg))
+        assertEquals("46", formatNum(q.avgJin))
         val line = formulaLine(q)
         // 显示用的文字里夹着不换行空格和零宽连接符；去掉后就是 v7 6.4 的写法
         val plain = line.replace("\u2060", "").replace('\u00A0', ' ')
-        assertTrue(plain.contains("基准 180 + 多 1kg × 1 元 = 181 元/箱"))
+        assertTrue(plain.contains("基准 180 + 多 1斤 × 1 元 = 181 元/箱"))
         assertTrue("181\u00A0元/\u2060箱" in line)   // 单位不拆开
         assertTrue(line.contains("46.05"))
-        assertTrue(line.contains("四舍五入为 46kg"))
+        assertTrue(line.contains("四舍五入为 46斤"))
         assertTrue(line.contains("基准 180"))
         assertTrue(plain.contains("181 元/箱"))
+    }
+
+    @Test
+    fun formulaShowsLossPerBox() {
+        val q = QuoteResult(
+            boxCount = 10, totalJin = 921.0, rawAvgJin = 92.1, lossJin = -1.0, avgJin = 91.0, standardNetJin = 90.0,
+            basePrice = 180.0, coefficient = 0.5, tailJin = 1.0, priceDiff = 0.5, unitPrice = 180.5, amount = 1805.0,
+            roundMode = "HALF",
+        )
+        val plain = formulaLine(q).replace("\u2060", "").replace('\u00A0', ' ')
+        assertTrue(plain, plain.contains("均重 92.10（每箱 −1 斤） 四舍五入为 91斤"))
     }
 
     @Test

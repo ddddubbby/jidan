@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 对照 lab/app-sim.html sheetRule：定价规则 / 规则名称、适用、标准净含量、今日基准价（发丝线隔开的表）、
-     每 kg 尾差 − 1 元 +、凹陷的“本单收购价”一行、更换规则 / 解绑（安静的两个按钮）。
-     没有绑定规则或点了“更换规则”时下面出候选列表。 -->
+     每斤尾差 − 1 元 +、每箱损耗 − 0 斤 +、凹陷的“本单收购价”一行、更换规则（安静的按钮）。
+     这张单还没有规则或点了“更换规则”时下面出同商品规格的候选列表。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -24,7 +24,7 @@
             android:paddingEnd="@dimen/page_padding"
             android:paddingBottom="20dp">
 
-            <!-- 未绑定 / 更换规则时的“适用”说明；已绑定时它在表里是一行 -->
+            <!-- 还没有规则 / 更换规则时的“适用”说明；有规则时它在表里是一行 -->
             <TextView
                 android:id="@+id/scope"
                 style="@style/Text.Body"
@@ -51,7 +51,7 @@
                 android:textColor="@color/ink_2"
                 android:visibility="gone" />
 
-            <!-- 已绑定：调阅表 -->
+            <!-- 有规则：调阅表 -->
             <LinearLayout
                 android:id="@+id/boundBlock"
                 android:layout_width="match_parent"
@@ -153,7 +153,7 @@
                     android:background="@color/line"
                     android:importantForAccessibility="no" />
 
-                <!-- 每 kg 尾差：− 1 元 +（原型 .stepper，按钮 48，数字 22 粗） -->
+                <!-- 每斤尾差：− 1 元 +（原型 .stepper，按钮 48，数字 22 粗） -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -197,6 +197,59 @@
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:contentDescription="@string/rule_sheet_coef_up"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="+"
+                        android:textSize="24sp"
+                        app:cornerRadius="@dimen/radius_control" />
+                </LinearLayout>
+
+                <!-- 每箱损耗：− 0 斤 +，正数加、负数减，打包在规则里（附录 E R-1 行） -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingBottom="10dp">
+
+                    <TextView
+                        style="@style/Text.Row"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/rule_sheet_loss"
+                        android:textColor="@color/ink_2" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lossMinus"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="@string/rule_sheet_loss_down"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="−"
+                        android:textSize="24sp"
+                        app:cornerRadius="@dimen/radius_control" />
+
+                    <TextView
+                        android:id="@+id/lossValue"
+                        style="@style/Text.Num.Stepper"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="10dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lossPlus"
+                        style="@style/Widget.Jidan.Button.Outlined.Small"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="@string/rule_sheet_loss_up"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
                         android:minWidth="0dp"
@@ -261,7 +314,7 @@
                         android:text="@string/rule_sheet_save" />
                 </LinearLayout>
 
-                <!-- 更换规则、解绑：安静的文字按钮，解绑是红字（原型 .ghost-link） -->
+                <!-- 更换规则：安静的文字按钮（原型 .ghost-link）；规则不绑农户，没有解绑 -->
                 <LinearLayout
                     android:id="@+id/boundActions"
                     android:layout_width="match_parent"
@@ -278,18 +331,10 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/rule_sheet_change" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/unbind"
-                        style="@style/Widget.Jidan.Button.Text.Danger"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/rule_sheet_unbind" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 候选列表：未绑定或「更换规则」 -->
+            <!-- 候选列表：这张单还没有规则，或点了「更换规则」 -->
             <LinearLayout
                 android:id="@+id/candidateBlock"
                 android:layout_width="match_parent"

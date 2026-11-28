@@ -1,7 +1,8 @@
 package com.jidan.receiving.demo
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
+import com.jidan.receiving.core.Tare
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.data.ApiClient
 import com.jidan.receiving.data.AppOptions
@@ -139,30 +140,32 @@ class DemoFullFlowTest {
         runCurrent()
     }
 
-    /** 建单页做的事：尾号 1234 → 李四，规则自动带出粉蛋 360枚/箱，仓库取第一个。 */
+    /** 建单页做的事：尾号 1234 → 李四，按名称选“粉蛋李四收购定价方案”（带出粉蛋 360枚/箱、2号包装箱），仓库取第一个。 */
     private suspend fun Deps.createOrderForLiSi() {
         val cat = catalog.catalog()
         val hits = catalog.farmersByTail("1234")
         assertEquals(listOf("李四", "王秀英"), hits.map { it.name })
         val farmer = hits.first()
-        val rule = catalog.farmerBuyRules(farmer.id).single()
-        assertEquals("粉蛋李四收购定价方案", rule.name)
+        val rule = cat.rules.first { it.name == "粉蛋李四收购定价方案" }
         val product = cat.products.first { it.id == rule.productId }
         val spec = cat.specs.first { it.id == rule.specId }
         val warehouse = cat.warehouses.first()
         orderDraft.update {
             it.copy(
                 farmer = Pick(farmer.id, farmer.name),
+                rule = Pick(rule.id, rule.name),
+                tare = Tare(Jin.of(rule.tareJin!!), rule.tareName!!),
+                tareId = rule.tareBoxId,
                 product = Pick(product.id, product.name),
                 spec = Pick(spec.id, spec.name),
-                stdNetCents = spec.stdNetKg?.let { kg -> Kg.of(kg).cents },
+                stdNetCents = spec.stdNetJin?.let { jin -> Jin.of(jin).cents },
                 warehouse = Pick(warehouse.id, warehouse.name),
             )
         }
         assertTrue(orderDraft.header.value.ready)
         assertEquals("粉蛋", product.name)
         assertEquals("360枚/箱", spec.name)
-        assertEquals(4500, orderDraft.header.value.stdNetCents)
+        assertEquals(9000, orderDraft.header.value.stdNetCents)
     }
 
     private suspend fun TestScope.weighTenBoxes(deps: Deps, vm: ReceivingViewModel, batchNo: String) {
@@ -171,11 +174,11 @@ class DemoFullFlowTest {
         vm.startFromDraft()
         until("进入称重") { vm.ui.value.ready }
         assertEquals(batchNo, vm.ui.value.batchNo)
-        assertEquals(WeighPhase.LOCKED, vm.ui.value.phase)
-        vm.selectTare(vm.ui.value.tares.first { it.name == "2号包装箱" })
+        // 皮重取自规则打包的 2号包装箱（4 斤），不用再选
+        assertEquals("2号包装箱", vm.ui.value.tare?.name)
         settle(500)
-        for (net in FakeScale.CASE_NETS_C) {
-            deps.scale.placeOneBox(net)
+        for (net in FakeScale.LISI_NETS_C) {
+            deps.scale.placeOneBox(net, FakeScale.DEMO_BOX_TARE_C)
             settle()
             deps.scale.removeLoad()
             settle()
@@ -195,21 +198,21 @@ class DemoFullFlowTest {
             weighTenBoxes(deps, vm, "SG20261117-1")
             val ui = vm.ui.value
             assertEquals(10, ui.count)
-            assertEquals("460.5", ui.totalNet.format())
+            assertEquals("921", ui.totalNet.format())
             assertEquals(0, ui.unprinted)
 
-            // 确认 → 汇总：均重 46，181 元/箱，1,810 元
+            // 确认 → 汇总：均重 92，181 元/箱，1,810 元
             vm.onConfirmWeighing()
             until("计价回来") { vm.summary.value.quote != null }
             assertEquals(ReceivingNav.ToSummary, navs.single())
             val q = assertNotNull(vm.summary.value.quote)
-            assertEquals("46", formatNum(q.avgKg))
+            assertEquals("92", formatNum(q.avgJin))
             assertEquals("181", formatNum(q.unitPrice))
             assertEquals("1,810", formatMoney(q.amount))
             assertEquals("粉蛋李四收购定价方案", q.ruleName)
             assertTrue(vm.summary.value.canSubmit)
 
-            // 规则弹层：候选里有通用规则（粉蛋 360）与王秀英的规则，改系数后汇总随之变化
+            // 规则弹层：候选是同商品规格的其他规则（粉蛋 360 通用、王秀英的）
             vm.loadRuleSheet()
             until("规则弹层") { !vm.ruleSheet.value.loading && vm.ruleSheet.value.candidates.isNotEmpty() }
             assertEquals("粉蛋李四收购定价方案", vm.ruleSheet.value.boundRuleName)
@@ -231,7 +234,7 @@ class DemoFullFlowTest {
             deps.createOrderForLiSi()
             vm.startFromDraft()
             until("第二单进入称重") { vm.ui.value.ready && vm.ui.value.batchNo == "SG20261117-2" }
-            assertNull(vm.ui.value.tare)
+            assertEquals("2号包装箱", vm.ui.value.tare?.name)
             assertEquals(0, vm.ui.value.boxes.size)
             assertEquals(emptyList(), contract.violations.toList())
         } finally {

@@ -1,9 +1,8 @@
 package com.jidan.receiving.device
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.util.Locale
 
 /**
  * 蓝石 SDK 回传值到契约值的换算与错误文案。不引用 SDK 的类，只收基本类型，
@@ -31,12 +30,13 @@ internal object LanstarMapping {
     /** 重量回调 `dataStatus`（`error = true` 时）：负重（开机后取掉秤盘） */
     const val DATA_NEGATIVE = 5
 
-    /** 秤盘读数（kg，BigDecimal）→ 0.01kg 整数；第 3 位起四舍五入。 */
-    fun toKg(weight: BigDecimal): Kg =
-        Kg(weight.movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
+    /** 秤盘读数（秤的单位 [unit]，BigDecimal）→ 0.01 斤整数；换算后第 3 位起四舍五入。 */
+    fun toJin(weight: BigDecimal, unit: ScaleUnit): Jin =
+        Jin(weight.multiply(BigDecimal(unit.jinPerUnit)).movePointRight(2).setScale(0, RoundingMode.HALF_UP).toInt())
 
-    /** `setPeel` 的参数是 kg 文本（示例传 `"2.16"`），固定两位小数。 */
-    fun peelText(kg: Kg): String = String.format(Locale.ROOT, "%.2f", kg.toDouble())
+    /** `setPeel` 的参数是秤的单位下的文本（示例传 `"2.16"`），固定两位小数；斤换成秤的单位。 */
+    fun peelText(jin: Jin, unit: ScaleUnit): String =
+        BigDecimal(jin.cents).movePointLeft(2).divide(BigDecimal(unit.jinPerUnit), 2, RoundingMode.HALF_UP).toPlainString()
 
     /**
      * 信号 1–3 格。扫描回调的 rssi 是负的 dBm（0 到 -100，越大越强）；
