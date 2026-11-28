@@ -16,8 +16,15 @@ class SubmitGateTest {
 
     @Test
     fun allowWithoutPriceCanSubmit() {
-        val q = QuoteResult(boxCount = 1, issues = listOf("NO_RULE", "NO_BASE_PRICE"))
+        val q = QuoteResult(boxCount = 1, issues = listOf("NO_BASE_PRICE"))
         assertTrue(SummaryUiState(quote = q, allowWithoutPrice = true).canSubmit)
+    }
+
+    @Test
+    fun noRuleCannotSubmitEvenWhenMissingPriceIsAllowed() {
+        // 单据必须带所选规则（附录 E R-1 行），没选规则时先选，不能先交
+        val q = QuoteResult(boxCount = 1, issues = listOf("NO_RULE", "NO_BASE_PRICE"))
+        assertFalse(SummaryUiState(quote = q, allowWithoutPrice = true).canSubmit)
     }
 
     @Test
