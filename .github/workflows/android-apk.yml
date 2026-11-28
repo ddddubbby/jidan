@@ -56,12 +56,12 @@ jobs:
           cp app/build/outputs/apk/sim/debug/app-sim-debug.apk ../dist/shoudan-sim-$vname.apk
           if [ -n "$LANSTAR_COMPANY_KEY" ]; then key="实机版已带蓝石 companyKey。"; else key="实机版没有带蓝石 companyKey。"; fi
           cat > ../dist/notes.md <<NOTES
-          新增：建单找农户可按名称、好生意编码或拼音首字母（需要后端同版本，见 PR #101）。
+          新增：定价规则不绑农户，建单按名称选；规则带出规格与包装箱，可调每箱损耗；全系统重量单位改为斤（秤读数默认按公斤换算）。**必须与同版本后端一起更新**，旧版 APP 连新后端会提交失败（见 PR #103）。
 
           - 实机版（给磅秤员用）：\`shoudan-real-$vname.apk\`，包名 \`com.jidan.receiving\`
           - 模拟版（没有秤也能试流程）：\`shoudan-sim-$vname.apk\`，包名 \`com.jidan.receiving.sim\`
 
-          $key versionCode 比 0.1.0 大，已装旧版的手机在服务器发布后会看到“有新版本”。debug 签名：手机上若装的是别处打的包，要先卸载再装。
+          $key versionCode 比 0.1.1 大，已装旧版的手机在服务器发布后会看到“有新版本”。debug 签名：手机上若装的是别处打的包，要先卸载再装。
 
           构建自 \`${GITHUB_REF_NAME}\` @ \`$sha\`。
 
@@ -69,4 +69,4 @@ jobs:
           NOTES
           sed -i 's/^          //' ../dist/notes.md
           gh release create "apk-$vname" ../dist/shoudan-real-$vname.apk ../dist/shoudan-sim-$vname.apk \
-            --target "$GITHUB_SHA" --title "收蛋 APK $vname（按名称找农户）" --notes-file ../dist/notes.md
+            --target "$GITHUB_SHA" --title "收蛋 APK $vname（规则按名称选，全系统用斤）" --notes-file ../dist/notes.md
