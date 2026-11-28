@@ -4,8 +4,8 @@ spring:
     name: egg-backend
   datasource:
     url: ${EGG_DB_URL:jdbc:mysql://localhost:3306/egg?characterEncoding=utf8&connectionTimeZone=Asia/Shanghai}
-    username: ${EGG_DB_USER:egg}
-    password: ${EGG_DB_PASSWORD:egg}
+    username: ${EGG_DB_USER:root}
+    password: ${EGG_DB_PASSWORD:123456}
   jackson:
     time-zone: Asia/Shanghai
 
@@ -21,19 +21,23 @@ mybatis-plus:
 egg:
   # 库里没有业务数据时写入一套演示数据（开发规格 7.3）。开发与模拟模式默认开；
   # 正式部署设 EGG_SEED_DEMO=false。
-  seed-demo: ${EGG_SEED_DEMO:true}
+  seed-demo: ${EGG_SEED_DEMO:false}
 
   # 好生意对接（开发规格 3.5）。mode 为 fake（默认，模拟好生意）或 real；
   # real 下面四项密钥可以不填，服务照常启动，同步与回传时会提示缺哪几项。
   chanjet:
-    mode: ${CHANJET_MODE:fake}
+#    mode: ${CHANJET_MODE:fake}
+    mode: ${CHANJET_MODE:real}
     base-url: ${CHANJET_BASE_URL:https://openapi.chanjet.com}
-    app-key: ${CHANJET_APP_KEY:}
-    app-secret: ${CHANJET_APP_SECRET:}
-    book-id: ${CHANJET_BOOK_ID:}
+    app-key: ${CHANJET_APP_KEY:QwNE3sPm}
+    app-secret: ${CHANJET_APP_SECRET:BC89EF6EFDA836B82F08DFEDFA0F3118}
+    book-id: ${CHANJET_BOOK_ID:3287237344233925}
     open-token: ${CHANJET_OPEN_TOKEN:}
-    certificate: ${CHANJET_CERTIFICATE:}
-    token-mode: ${CHANJET_TOKEN_MODE:auto}
+    certificate: ${CHANJET_CERTIFICATE:Jf+LmYUqM4F0mCc3pvFY8srH7xX16ATlDb9JNRko1r8uwwZ9fU+Eh5PGCradX2D7GRuvwPVGaMKri+HCZvHWo4IhHuVA2gPpSqW9Pwqecx61/6GQJUl7RvjkYtCFRsErhslSsQlMmeK63Pdl/GqT/5cpHTo+o1WXSxbce4s6JSQnpqR0C7ayYUDwKuEIYj+Q}
+    # 开放平台给自建应用的“消息加解密密钥”：Token 安全级别“高”时解开推来的 appTicket
+    encrypt-key: ${CHANJET_ENCRYPT_KEY:lsglsglsglsglsgl}
+    # openToken 通过开放平台接口换取（appTicket + 软证书），不再从配置里读
+    token-mode: ${CHANJET_TOKEN_MODE:ticket}
 
   # 初始管理员（开发规格 7.2）：启动时库里没有任何管理员才建；已有管理员时这三项不起作用。
   admin:

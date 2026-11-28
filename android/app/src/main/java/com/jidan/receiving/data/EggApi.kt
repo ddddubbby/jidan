@@ -27,6 +27,10 @@ interface EggApi {
     @GET("api/farmers")
     suspend fun farmersByTail(@Query("tail") tail: String?): List<FarmerDto>
 
+    /** 按名称、编码、号码或拼音首字母找农户（好生意里没填号码的农户靠这个）。 */
+    @GET("api/farmers")
+    suspend fun farmersByName(@Query("q") q: String): List<FarmerDto>
+
     @GET("api/farmers/recent")
     suspend fun farmersRecent(): List<FarmerDto>
 

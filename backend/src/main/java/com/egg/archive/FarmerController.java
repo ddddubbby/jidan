@@ -21,10 +21,16 @@ public class FarmerController {
         this.service = service;
     }
 
-    /** 按手机后四位查农户，返回匹配到的号码；没有匹配返回空列表。 */
+    /**
+     * 找农户。给 tail：按手机后四位查，返回匹配到的号码；给 q：按名称、编码、号码或拼音首字母查（好生意里没填号码的农户靠这个）。
+     * 没有匹配返回空列表。
+     */
     @Access(Who.ADMIN_OR_SCALE)
     @GetMapping("/api/farmers")
-    public List<Farmer> byTail(@RequestParam(required = false) String tail) {
+    public List<Farmer> find(@RequestParam(required = false) String tail, @RequestParam(required = false) String q) {
+        if (q != null && tail == null) {
+            return service.farmersByName(q);
+        }
         return service.farmersByTail(tail);
     }
 

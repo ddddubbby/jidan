@@ -155,18 +155,37 @@ class ArchiveTest {
     }
 
     @Test
-    void 同步失败时保留旧数据并给出原因() {
+    void 某一类同步失败时其他类照常写入_失败的那类保留旧数据并写明是哪一类() {
         sync();
         jdbc.update("UPDATE product SET name = '旧数据' WHERE hs_code = 'SP0001'");
+        jdbc.update("UPDATE vendor SET name = '旧农户' WHERE hs_code = 'GYS0001'");
         doThrow(new ChanjetException("好生意返回：appSecret 校验失败（openapi.e1001）")).when(chanjet).listVendors();
 
         ResponseEntity<JsonNode> res = call(adminToken, HttpMethod.POST, "/api/archive/sync", null);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.getBody().get("code").asText()).isEqualTo("INVALID");
-        assertThat(res.getBody().get("message").asText()).contains("保留了上次的数据").contains("appSecret 校验失败");
-        // 四类一起写：商品虽然先拉到了，也没有被写进去
-        assertThat(jdbc.queryForObject("SELECT name FROM product WHERE hs_code = 'SP0001'", String.class)).isEqualTo("旧数据");
+        assertThat(res.getBody().get("message").asText()).contains("商品、客户、仓库已更新")
+                .contains("农户档案没有同步").contains("appSecret 校验失败").contains("保留了上次的数据");
+        // 商品照常写入；农户保持上次的数据
+        assertThat(jdbc.queryForObject("SELECT name FROM product WHERE hs_code = 'SP0001'", String.class)).isNotEqualTo("旧数据");
+        assertThat(jdbc.queryForObject("SELECT name FROM vendor WHERE hs_code = 'GYS0001'", String.class)).isEqualTo("旧农户");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM vendor", Integer.class)).isEqualTo(4);
+    }
+
+    @Test
+    void 四类都失败且原因相同时只说一遍并保留旧数据() {
+        sync();
+        jdbc.update("UPDATE product SET name = '旧数据' WHERE hs_code = 'SP0001'");
+        ChanjetException e = new ChanjetException("好生意返回：appSecret 校验失败（openapi.e1001）");
+        doThrow(e).when(chanjet).listProducts();
+        doThrow(e).when(chanjet).listVendors();
+        doThrow(e).when(chanjet).listCustomers();
+        doThrow(e).when(chanjet).listWarehouses();
+
+        ResponseEntity<JsonNode> res = call(adminToken, HttpMethod.POST, "/api/archive/sync", null);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getBody().get("message").asText()).isEqualTo("同步失败，保留了上次的数据：好生意返回：appSecret 校验失败（openapi.e1001）");
+        assertThat(jdbc.queryForObject("SELECT name FROM product WHERE hs_code = 'SP0001'", String.class)).isEqualTo("旧数据");
     }
 
     @Test
@@ -188,6 +207,25 @@ class ArchiveTest {
         assertThat(texts(r, "name")).containsExactly("张三", "李四");
         assertThat(r.get(1).get("hsCode").asText()).isEqualTo("GYS0004");
         assertThat(get(scaleToken, "/api/farmers?tail=0000")).isEmpty();
+    }
+
+    @Test
+    void 按名称找农户_汉字_编码_拼音首字母_没号码的也能找到() {
+        sync();
+        jdbc.update("INSERT INTO vendor (hs_code, name) VALUES ('GYS001', '湖南湘食双茂食品有限公司')");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=李"), "name")).containsExactly("李四", "李四");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=湘食"), "name")).containsExactly("湖南湘食双茂食品有限公司");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=GYS001"), "hsCode")).containsExactly("GYS001");
+        // 拼音首字母：任意位置包含都算，不分大小写
+        assertThat(texts(get(scaleToken, "/api/farmers?q=wxy"), "name")).containsExactly("王秀英");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=XY"), "name")).contains("王秀英");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=hnxs"), "name")).containsExactly("湖南湘食双茂食品有限公司");
+        // 号码也能命中（与 Web 档案页同一套条件）；结果带全部号码，matchedPhones 为空
+        JsonNode r = get(scaleToken, "/api/farmers?q=王秀英");
+        assertThat(r.get(0).get("phones")).hasSize(2);
+        assertThat(r.get(0).get("matchedPhones")).isEmpty();
+        assertThat(get(scaleToken, "/api/farmers?q=没有这个人")).isEmpty();
+        assertThat(get(scaleToken, "/api/farmers?q= ")).isEmpty();
     }
 
     @Test

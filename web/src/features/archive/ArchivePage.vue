@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { getArchive, getArchiveStatus, syncArchive, type ArchivePage, type ArchiveStatus, type ArchiveType } from '../../api/archive'
+import { getChanjetStatus, type ChanjetStatus } from '../../api/chanjet'
 import { errorText } from '../../api/http'
+import { getMeta } from '../../api/nav'
 import { fmtPhone } from '../../ui/phone'
 import { toast } from '../../ui/toast'
 import '../../styles/settings.css'
@@ -22,6 +25,9 @@ const status = ref<ArchiveStatus>()
 const loadError = ref('')
 const syncError = ref('')
 const syncing = ref(false)
+// Token 安全级别“高”下还没有可用的 appTicket 与 token 时，同步按钮换成去高级选项页看原因
+const chanjet = ref<ChanjetStatus>()
+const waitingTicket = computed(() => chanjet.value?.tokenMode === 'ticket' && !chanjet.value.ready)
 
 let seq = 0
 async function load() {
@@ -39,6 +45,8 @@ async function load() {
 
 async function loadStatus() {
   try {
+    const meta = await getMeta().catch(() => undefined)
+    chanjet.value = meta?.chanjetMode === 'real' ? await getChanjetStatus().catch(() => undefined) : undefined
     status.value = await getArchiveStatus()
   } catch (e) {
     loadError.value = errorText(e)
@@ -76,8 +84,9 @@ async function sync() {
     await load()
     toast('已同步')
   } catch (e) {
-    // 后端的失败提示本身就写明“保留了上次的数据”和好生意给的原因
+    // 后端的提示写明哪一类没同步、好生意给的原因；其他类已经写进去了，所以照样刷新
     syncError.value = errorText(e)
+    await Promise.all([loadStatus(), load()]).catch(() => {})
   } finally {
     syncing.value = false
   }
@@ -102,11 +111,12 @@ const cols = computed(() => 2 + (isVendors.value || isProducts.value ? 1 : 0))
     <div class="acts">
       <span class="muted" style="font-size: 13px">{{ everSynced ? '上次同步 ' + lastSync : '还没有同步过' }}</span>
       <button v-if="syncing" class="btn" disabled><span class="spin"></span> 正在同步</button>
+      <RouterLink v-else-if="waitingTicket" class="btn todo" to="/options#chanjet-ticket" data-testid="wait-ticket">等待开放平台推送 appTicket</RouterLink>
       <button v-else class="btn" :class="everSynced ? 'dark' : 'primary'" @click="sync">从好生意同步</button>
     </div>
   </div>
 
-  <div v-if="syncError" class="result err" role="alert"><b>同步失败</b>{{ syncError }}</div>
+  <div v-if="syncError" class="result err" role="alert"><b>同步未完成</b>{{ syncError }}</div>
   <div v-if="loadError" class="result err" role="alert">{{ loadError }}</div>
 
   <div class="tabs">
@@ -136,7 +146,10 @@ const cols = computed(() => 2 + (isVendors.value || isProducts.value ? 1 : 0))
           <template v-if="q.trim()">没有匹配的档案</template>
           <template v-else-if="!everSynced">
             还没有档案，先同步一次
-            <div style="margin-top: 12px"><button class="btn primary" :disabled="syncing" @click="sync">从好生意同步</button></div>
+            <div style="margin-top: 12px">
+              <RouterLink v-if="waitingTicket" class="btn todo" to="/options#chanjet-ticket">等待开放平台推送 appTicket</RouterLink>
+              <button v-else class="btn primary" :disabled="syncing" @click="sync">从好生意同步</button>
+            </div>
           </template>
           <template v-else>这一类档案是空的</template>
         </td>

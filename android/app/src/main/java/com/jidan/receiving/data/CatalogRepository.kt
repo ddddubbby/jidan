@@ -25,6 +25,9 @@ class CatalogRepository(
     suspend fun farmersByTail(tail: String): List<FarmerDto> =
         client.runApi { this.farmersByTail(tail) }
 
+    suspend fun farmersByName(q: String): List<FarmerDto> =
+        client.runApi { this.farmersByName(q) }
+
     suspend fun farmersRecent(): List<FarmerDto> =
         client.runApi { this.farmersRecent() }
 
