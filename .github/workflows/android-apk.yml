@@ -27,6 +27,7 @@ jobs:
         env:
           LANSTAR_COMPANY_KEY: ${{ secrets.LANSTAR_COMPANY_KEY }}
         run: |
+          if [ -n "$LANSTAR_COMPANY_KEY" ]; then echo "::notice::实机版已带蓝石 companyKey"; else echo "::warning::没有 LANSTAR_COMPANY_KEY，实机版的 companyKey 为空串"; fi
           chmod +x gradlew
           ./gradlew --no-daemon :app:testSimDebugUnitTest :app:testSimDemoUnitTest :app:assembleSimDebug :app:assembleRealDebug
       - uses: actions/upload-artifact@v4
