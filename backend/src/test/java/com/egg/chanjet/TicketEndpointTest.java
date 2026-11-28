@@ -69,4 +69,12 @@ class TicketEndpointTest {
         assertThat(s.get("ticketFresh").asBoolean()).isTrue();
         assertThat(s.get("ready").asBoolean()).isTrue();
     }
+
+    @Test
+    void checkFileInStaticIsServedWithoutLogin() {
+        // 开放平台的校验文件放在 resources/static/，后端直接提供，不用登录
+        ResponseEntity<String> r = http.getForEntity("/CHANJET_CHECK_test.txt", String.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody()).isEqualTo("egg-check-test");
+    }
 }

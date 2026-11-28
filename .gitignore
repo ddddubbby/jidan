@@ -31,8 +31,6 @@ local.properties
 deploy/apk/version.json
 deploy/backups/
 # 开放平台消息接收地址的校验文件（Token 安全级别“高”），目录里只留说明
-deploy/chanjet-check/*
-!deploy/chanjet-check/README.md
 
 # UI 对照截图（F4-1）：原型与 APP 渲染的输出，每次现生成
 tools/ui-compare/out/
