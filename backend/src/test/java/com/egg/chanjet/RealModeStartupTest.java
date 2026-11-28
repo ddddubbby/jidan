@@ -29,7 +29,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"egg.chanjet.mode=real", "egg.chanjet.app-key=", "egg.chanjet.app-secret=",
-                "egg.chanjet.book-id=", "egg.chanjet.open-token=", "egg.admin.phone=13700000081",
+                "egg.chanjet.book-id=", "egg.chanjet.open-token=", "egg.chanjet.token-mode=static", "egg.admin.phone=13700000081",
                 "egg.admin.password=boss-pass-8", "egg.admin.name=真实模式测试管理员"})
 @Import(MySqlTestConfig.class)
 class RealModeStartupTest {
