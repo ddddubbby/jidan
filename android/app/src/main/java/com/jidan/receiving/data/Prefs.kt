@@ -22,6 +22,11 @@ class Prefs(context: Context) {
             ed.apply()
         }
 
+    /** 建单找农户上次用的方式：true 按名称，false 按手机尾号（默认）。 */
+    var findFarmerByName: Boolean
+        get() = sp.getBoolean(KEY_FIND_BY_NAME, false)
+        set(value) = sp.edit().putBoolean(KEY_FIND_BY_NAME, value).apply()
+
     var lastTareId: Long?
         get() = if (sp.contains(KEY_TARE)) sp.getLong(KEY_TARE, 0L) else null
         set(value) {
@@ -68,6 +73,7 @@ class Prefs(context: Context) {
         private const val KEY_SERVER = "server_url"
         private const val KEY_PHONE = "last_phone"
         private const val KEY_WAREHOUSE = "last_warehouse_id"
+        private const val KEY_FIND_BY_NAME = "find_farmer_by_name"
         private const val KEY_TARE = "last_tare_id"
         private const val KEY_SCALE = "paired_scale_id"
         private const val KEY_PRINTER = "paired_printer_id"

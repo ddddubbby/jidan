@@ -143,16 +143,48 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/tailLabel"
-                            style="@style/Text.Section"
+                        <!-- 找农户的方式：按手机尾号或按名称（好生意里很多农户没填号码），右边一键切换 -->
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:labelFor="@id/tail"
-                            android:text="@string/create_tail_label" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tailLabel"
+                                style="@style/Text.Section"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:labelFor="@id/tail"
+                                android:text="@string/create_tail_label" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/findSwitch"
+                                style="@style/Widget.Jidan.Button.Text.Accent"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="-12dp"
+                                android:text="@string/create_find_by_name" />
+                        </LinearLayout>
+
+                        <EditText
+                            android:id="@+id/nameInput"
+                            style="@style/Input"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/input_large_height"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/create_name_hint"
+                            android:imeOptions="actionSearch"
+                            android:importantForAutofill="no"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textSize="@dimen/text_17"
+                            android:visibility="gone" />
 
                         <!-- 手机尾号：4 个格子，一眼看出只要 4 位；输入框透明地盖在格子上，点哪格都在输 -->
                         <FrameLayout
+                            android:id="@+id/tailBox"
                             android:layout_width="match_parent"
                             android:layout_height="64dp"
                             android:layout_marginTop="8dp">

@@ -80,6 +80,16 @@ class DemoBackendTest {
     }
 
     @Test
+    fun farmersByName() {
+        fun names(q: String) = arr(call("GET", "/api/farmers", mapOf("q" to q))).map { it.asJsonObject.get("name").asString }
+        assertEquals(listOf("李四", "李四"), names("李"))
+        assertEquals(listOf("王秀英"), names("秀英"))
+        assertEquals(listOf("张三"), names("GYS0003"))
+        assertEquals(emptyList<String>(), names("没有这个人"))
+        assertEquals(emptyList<String>(), names(" "))
+    }
+
+    @Test
     fun lisiRuleAndQuoteMatchV7() {
         val rules = arr(call("GET", "/api/farmers/1/rules")).map { it.asJsonObject }
         assertEquals(1, rules.size)

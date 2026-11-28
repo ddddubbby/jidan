@@ -210,6 +210,25 @@ class ArchiveTest {
     }
 
     @Test
+    void 按名称找农户_汉字_编码_拼音首字母_没号码的也能找到() {
+        sync();
+        jdbc.update("INSERT INTO vendor (hs_code, name) VALUES ('GYS001', '湖南湘食双茂食品有限公司')");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=李"), "name")).containsExactly("李四", "李四");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=湘食"), "name")).containsExactly("湖南湘食双茂食品有限公司");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=GYS001"), "hsCode")).containsExactly("GYS001");
+        // 拼音首字母：任意位置包含都算，不分大小写
+        assertThat(texts(get(scaleToken, "/api/farmers?q=wxy"), "name")).containsExactly("王秀英");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=XY"), "name")).contains("王秀英");
+        assertThat(texts(get(scaleToken, "/api/farmers?q=hnxs"), "name")).containsExactly("湖南湘食双茂食品有限公司");
+        // 号码也能命中（与 Web 档案页同一套条件）；结果带全部号码，matchedPhones 为空
+        JsonNode r = get(scaleToken, "/api/farmers?q=王秀英");
+        assertThat(r.get(0).get("phones")).hasSize(2);
+        assertThat(r.get(0).get("matchedPhones")).isEmpty();
+        assertThat(get(scaleToken, "/api/farmers?q=没有这个人")).isEmpty();
+        assertThat(get(scaleToken, "/api/farmers?q= ")).isEmpty();
+    }
+
+    @Test
     void 尾号不是四位数字被拒() {
         for (String url : List.of("/api/farmers?tail=12", "/api/farmers?tail=abcd", "/api/farmers")) {
             ResponseEntity<JsonNode> res = call(scaleToken, HttpMethod.GET, url, null);
