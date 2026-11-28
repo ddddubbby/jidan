@@ -164,7 +164,8 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             "POST /api/auth/login" -> return LoginResult("demo-token", "张师傅", "SCALE")
             "GET /api/auth/me" -> return CurrentUser(1, "张师傅", "13900001111", "SCALE")
             "GET /api/app/bootstrap" -> return bootstrap()
-            "GET /api/farmers" -> return farmersByTail(query["tail"])
+            "GET /api/farmers" -> return query["q"]?.takeIf { query["tail"] == null }?.let(::farmersByName)
+                ?: farmersByTail(query["tail"])
             "GET /api/farmers/recent" -> return recent.mapNotNull { id -> farmers.firstOrNull { it.id == id } }.map { farmerDto(it) }
             "POST /api/batches" -> return nextBatch()
             "POST /api/orders/quote" -> return quote(parse(body, QuoteRequest::class.java))
@@ -221,6 +222,15 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             val hit = f.phones.filter { it.takeLast(4) == tail }
             if (hit.isEmpty()) null else farmerDto(f, hit)
         }
+    }
+
+    /** 与后端相同的条件：名称、编码、号码包含 q；演示数据里没有拼音表，首字母检索只在真后端里有。 */
+    private fun farmersByName(q: String): List<FarmerDto> {
+        val key = q.trim()
+        if (key.isEmpty()) return emptyList()
+        return farmers.filter { f ->
+            f.name.contains(key) || f.hsCode.contains(key, ignoreCase = true) || f.phones.any { it.contains(key) }
+        }.map { farmerDto(it) }
     }
 
     private fun requireFarmer(id: Long): Farmer =

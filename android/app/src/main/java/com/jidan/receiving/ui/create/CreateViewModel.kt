@@ -14,6 +14,7 @@ import com.jidan.receiving.data.userMessage
 import com.jidan.receiving.ui.update.UpdateOffer
 import com.jidan.receiving.ui.update.fetchUpdateOffer
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,12 @@ import kotlinx.coroutines.launch
 
 data class CreateUiState(
     val query: String = "",
+    /** 找农户的方式：按名称（好生意里很多农户没填号码）或按手机尾号。 */
+    val byName: Boolean = false,
+    val name: String = "",
+    val nameHits: List<FarmerDto> = emptyList(),
+    /** nameHits 对应的输入；与 name 不同说明还在查。 */
+    val nameSearched: String = "",
     val farmers: List<FarmerDto> = emptyList(),
     val recent: List<FarmerDto> = emptyList(),
     val noMatch: String = "",
@@ -56,7 +63,10 @@ class CreateViewModel(
     private val container: AppContainer,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(
-        CreateUiState(operatorName = container.session.value?.name.orEmpty()),
+        CreateUiState(
+            operatorName = container.session.value?.name.orEmpty(),
+            byName = container.prefs.findFarmerByName,
+        ),
     )
     val ui: StateFlow<CreateUiState> = _ui.asStateFlow()
 
@@ -142,6 +152,38 @@ class CreateViewModel(
         }
     }
 
+    /** 切换按名称 / 按尾号找；记住这次的选择，下一单默认同样的方式。 */
+    fun setFindByName(byName: Boolean) {
+        searchJob?.cancel()
+        container.prefs.findFarmerByName = byName
+        _ui.update {
+            it.copy(
+                byName = byName, query = "", farmers = emptyList(), noMatch = "",
+                name = "", nameHits = emptyList(), nameSearched = "", error = "",
+            )
+        }
+    }
+
+    /** 按名称边输边搜：停顿一下再查，免得每敲一个字都发请求。结果总是列出来让人点，不自动选（输到一半可能只剩一个）。 */
+    fun onName(raw: String) {
+        val q = raw.trim()
+        _ui.update { it.copy(name = raw, error = "") }
+        searchJob?.cancel()
+        if (q.isEmpty()) {
+            _ui.update { it.copy(nameHits = emptyList(), nameSearched = "") }
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(NAME_DEBOUNCE_MS)
+            try {
+                val hits = container.catalog.farmersByName(q)
+                _ui.update { it.copy(nameHits = hits, nameSearched = q) }
+            } catch (e: Throwable) {
+                _ui.update { it.copy(error = e.userMessage(), nameHits = emptyList(), nameSearched = q) }
+            }
+        }
+    }
+
     fun selectFarmer(f: FarmerDto) {
         viewModelScope.launch {
             val q = _ui.value.query
@@ -162,6 +204,9 @@ class CreateViewModel(
                     farmers = emptyList(),
                     query = "",
                     noMatch = "",
+                    name = "",
+                    nameHits = emptyList(),
+                    nameSearched = "",
                 )
             }
             try {
@@ -236,6 +281,10 @@ class CreateViewModel(
         }
         container.prefs.lastWarehouseId = s.warehouseId
         return true
+    }
+
+    companion object {
+        const val NAME_DEBOUNCE_MS = 250L
     }
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {

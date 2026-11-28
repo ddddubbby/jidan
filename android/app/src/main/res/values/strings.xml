@@ -16,6 +16,11 @@
     <string name="create_step_warehouse">收购仓库</string>
     <string name="create_tail_label">手机尾号</string>
     <string name="create_tail_hint">后四位</string>
+    <string name="create_name_label">农户名称</string>
+    <string name="create_name_hint">名称、编码或拼音首字母</string>
+    <string name="create_find_by_name">改用名称找</string>
+    <string name="create_find_by_tail">改用尾号找</string>
+    <string name="create_name_no_match">没有名称含“%1$s”的农户</string>
     <string name="create_recent">最近</string>
     <string name="create_no_match">没有尾号 %1$s 的农户</string>
     <string name="create_last_warehouse">上一单用的</string>

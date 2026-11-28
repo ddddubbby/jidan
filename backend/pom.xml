@@ -67,6 +67,13 @@
     </dependency>
 
     <dependency>
+      <!-- APP 按名称找农户时支持拼音首字母（“wxy”找到“王秀英”） -->
+      <groupId>com.belerweb</groupId>
+      <artifactId>pinyin4j</artifactId>
+      <version>2.5.1</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>

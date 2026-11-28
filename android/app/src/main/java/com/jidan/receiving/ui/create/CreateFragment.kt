@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Space
@@ -57,6 +58,8 @@ class CreateFragment : Fragment() {
         CreateViewModel.Factory(requireContext().appContainer())
     }
     private var syncingTail = false
+    private var syncingName = false
+    private var lastByName: Boolean? = null
     private val prompts = BluetoothPrompts(this)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -80,6 +83,15 @@ class CreateFragment : Fragment() {
                 vm.onTail(s?.toString().orEmpty())
             }
         })
+        b.nameInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (syncingName) return
+                vm.onName(s?.toString().orEmpty())
+            }
+        })
+        b.findSwitch.setOnClickListener { vm.setFindByName(!vm.ui.value.byName) }
 
         fun openSheet() {
             DevicesSheet().show(parentFragmentManager, DevicesSheet.TAG)
@@ -173,6 +185,12 @@ class CreateFragment : Fragment() {
             b.tail.setSelection(b.tail.text?.length ?: 0)
         }
         syncingTail = false
+        syncingName = true
+        if (b.nameInput.text?.toString() != state.name) {
+            b.nameInput.setText(state.name)
+            b.nameInput.setSelection(b.nameInput.text?.length ?: 0)
+        }
+        syncingName = false
 
         val active = state.active
         val steps = stepViews(b)
@@ -225,33 +243,72 @@ class CreateFragment : Fragment() {
         }
         b.stepFarmer.isClickable = done && !isActive
 
-        renderTailCells(b, state.query, isActive)
-        b.noMatch.isVisible = isActive && state.noMatch.isNotBlank() && state.query.isEmpty()
-        if (state.noMatch.isNotBlank()) {
+        // 找农户的方式：尾号（4 个格子）或名称（文字输入框）；切换后光标直接落在要输的框里
+        b.tailLabel.text = getString(if (state.byName) R.string.create_name_label else R.string.create_tail_label)
+        b.tailLabel.labelFor = if (state.byName) R.id.nameInput else R.id.tail
+        b.findSwitch.text = getString(if (state.byName) R.string.create_find_by_tail else R.string.create_find_by_name)
+        b.tailBox.isVisible = !state.byName
+        b.nameInput.isVisible = state.byName
+        if (isActive && lastByName != null && lastByName != state.byName) {
+            showKeyboard(if (state.byName) b.nameInput else b.tail)
+        }
+        lastByName = state.byName
+
+        renderTailCells(b, state.query, isActive && !state.byName)
+        val nameKey = state.name.trim()
+        val nameDone = nameKey.isNotEmpty() && nameKey == state.nameSearched
+        b.noMatch.isVisible = isActive && if (state.byName) {
+            nameDone && state.nameHits.isEmpty()
+        } else {
+            state.noMatch.isNotBlank() && state.query.isEmpty()
+        }
+        if (state.byName) {
+            if (nameDone) b.noMatch.text = getString(R.string.create_name_no_match, nameKey)
+        } else if (state.noMatch.isNotBlank()) {
             b.noMatch.text = getString(R.string.create_no_match, state.noMatch)
         }
 
         b.farmerList.removeAllViews()
+        val showRecent = if (state.byName) nameKey.isEmpty() else state.query.isEmpty()
         val rows: List<FarmerDto> = when {
             !isActive -> emptyList()
+            showRecent -> state.recent
+            state.byName -> if (nameDone) state.nameHits else emptyList()
             state.query.length == 4 -> state.farmers
-            state.query.isEmpty() -> state.recent
             else -> emptyList()
         }
-        b.recentLabel.isVisible = isActive && state.query.isEmpty() && state.recent.isNotEmpty()
+        b.recentLabel.isVisible = isActive && showRecent && state.recent.isNotEmpty()
         b.farmerList.isVisible = rows.isNotEmpty()
+        val tail = if (state.byName) "" else state.query
         rows.forEachIndexed { i, f ->
             if (i > 0) b.farmerList.addView(divider())
-            val selected = state.query.length == 4 && f.id == state.farmerId
+            val selected = !showRecent && f.id == state.farmerId
             b.farmerList.addView(
                 listRow(
                     parent = b.farmerList,
-                    main = farmerRowText(f, state.query),
+                    main = farmerRowText(f, tail, withCode = state.byName && !showRecent),
                     side = if (selected) getString(R.string.create_selected) else null,
                     selected = selected,
-                ) { vm.selectFarmer(f) },
+                ) {
+                    hideKeyboard()
+                    vm.selectFarmer(f)
+                },
             )
         }
+    }
+
+    private fun showKeyboard(v: View) {
+        v.requestFocus()
+        v.post {
+            ContextCompat.getSystemService(requireContext(), InputMethodManager::class.java)
+                ?.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    private fun hideKeyboard() {
+        val v = view ?: return
+        ContextCompat.getSystemService(requireContext(), InputMethodManager::class.java)
+            ?.hideSoftInputFromWindow(v.windowToken, 0)
     }
 
     /** 手机尾号 4 个格子：当前要输的那一格亮边（空的再加光标线）。 */
@@ -610,8 +667,11 @@ class CreateFragment : Fragment() {
         if (font != null) out.setSpan(NumText.TypefaceSpanCompat(font), start, end, flags)
     }
 
-    /** 农户行：名称大而粗，下面手机号；尾号搜到的把匹配上的后 4 位加粗，同名的人靠号码区分。 */
-    private fun farmerRowText(f: FarmerDto, query: String): CharSequence {
+    /**
+     * 农户行：名称大而粗，下面手机号；尾号搜到的把匹配上的后 4 位加粗，同名的人靠号码区分。
+     * [withCode]（按名称找的结果）：副行先写好生意编码，好生意里没填号码的同名农户靠编码区分。
+     */
+    private fun farmerRowText(f: FarmerDto, query: String, withCode: Boolean = false): CharSequence {
         val phones = if (query.length == 4) {
             f.phones.filter { it.replace("\\D".toRegex(), "").endsWith(query) }
                 .ifEmpty { f.matchedPhones.ifEmpty { f.phones.take(1) } }
@@ -620,8 +680,15 @@ class CreateFragment : Fragment() {
         }
         val out = SpannableStringBuilder(f.name)
         out.setSpan(StyleSpan(Typeface.BOLD), 0, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        if (phones.isNotEmpty()) {
+        val code = f.hsCode?.takeIf { withCode && it.isNotBlank() }
+        if (code != null) {
             out.append('\n')
+            val from = out.length
+            out.append(code)
+            subSpans(out, from, out.length, 15f / 17f, bold = false)
+        }
+        if (phones.isNotEmpty()) {
+            out.append(if (code != null) "  " else "\n")
             val start = out.length
             phones.forEachIndexed { i, p ->
                 if (i > 0) out.append("  ")

@@ -43,6 +43,7 @@ public class ArchiveService {
 
     private static final int MAX_PAGE_SIZE = 100;
     private static final int RECENT_FARMERS = 5;
+    private static final int MAX_NAME_HITS = 20;
 
     private final ChanjetClient chanjet;
     private final TransactionTemplate tx;
@@ -163,11 +164,7 @@ public class ArchiveService {
             case "warehouses" -> paged(warehouses, byNameOrCode(new QueryWrapper<>(), key), p, size,
                     list -> list.stream().map(x -> new ArchiveRow(x.id, x.hsCode, x.name, null, null, x.syncedAt)).toList());
             case "vendors" -> {
-                QueryWrapper<Vendor> w = new QueryWrapper<>();
-                if (!key.isEmpty()) {
-                    w.and(a -> a.like("name", key).or().like("hs_code", key)
-                            .or().apply("id IN (SELECT vendor_id FROM vendor_phone WHERE phone LIKE {0})", "%" + key + "%"));
-                }
+                QueryWrapper<Vendor> w = vendorMatch(new QueryWrapper<>(), key);
                 yield paged(vendors, w, p, size, list -> {
                     Map<Long, List<String>> byVendor = phonesOf(list.stream().map(v -> v.id).toList());
                     return list.stream().map(v -> new ArchiveRow(v.id, v.hsCode, v.name, null,
@@ -176,6 +173,15 @@ public class ArchiveService {
             }
             default -> throw ApiException.invalid("不认识的档案类型：" + type);
         };
+    }
+
+    /** 供应商检索条件：名称、编码或号码包含 key。Web 档案页与 APP 按名称找农户共用。 */
+    private static QueryWrapper<Vendor> vendorMatch(QueryWrapper<Vendor> w, String key) {
+        if (!key.isEmpty()) {
+            w.and(a -> a.like("name", key).or().like("hs_code", key)
+                    .or().apply("id IN (SELECT vendor_id FROM vendor_phone WHERE phone LIKE {0})", "%" + key + "%"));
+        }
+        return w;
     }
 
     private static <E> QueryWrapper<E> byNameOrCode(QueryWrapper<E> w, String key) {
@@ -266,6 +272,31 @@ public class ArchiveService {
         }
         List<Vendor> found = vendors.selectList(new QueryWrapper<Vendor>().in("id", matched.keySet()).orderByAsc("id"));
         return farmers(found, matched);
+    }
+
+    /**
+     * 按名称找农户（好生意里很多供应商没填号码，尾号找不到）。条件与 Web 档案页的供应商检索相同（名称、编码、号码包含 q），
+     * q 全是字母时再按名称的拼音首字母包含匹配（“wxy”“xy”都找到“王秀英”）。最多返回 {@value #MAX_NAME_HITS} 个，按档案顺序。
+     */
+    public List<Farmer> farmersByName(String q) {
+        String key = q == null ? "" : q.trim();
+        if (key.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Vendor> hits = new LinkedHashMap<>();
+        QueryWrapper<Vendor> w = vendorMatch(new QueryWrapper<>(), key);
+        w.orderByAsc("id").last("LIMIT " + MAX_NAME_HITS);
+        vendors.selectList(w).forEach(v -> hits.put(v.id, v));
+        if (key.matches("[A-Za-z]+")) {
+            String letters = key.toLowerCase();
+            for (Vendor v : vendors.selectList(new QueryWrapper<Vendor>().orderByAsc("id"))) {
+                if (!hits.containsKey(v.id) && Pinyin.initials(v.name).contains(letters)) {
+                    hits.put(v.id, v);
+                }
+            }
+        }
+        List<Vendor> found = hits.values().stream().sorted(Comparator.comparing(v -> v.id)).limit(MAX_NAME_HITS).toList();
+        return farmers(found, Map.of());
     }
 
     /** 当前磅秤员最近收过的 5 位农户，最近的在前。 */
