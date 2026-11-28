@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { errorText } from '../../api/http'
 import { getPrices } from '../../api/basics'
 import { getOptions } from '../../api/options'
 import {
-  bindVendorRule, getBatch, listProducts, listWarehouses, quote, searchVendors, submitOrder, vendorBuyRules,
+  getBatch, listWarehouses, quote, searchVendors, submitOrder,
   type NamedRow, type QuoteResult, type VendorRow,
 } from '../../api/orderCreate'
-import { createRule, listRules, type RuleView } from '../../api/rules'
+import { listRules, lossText, type RuleView } from '../../api/rules'
 import { useMeta } from '../../stores/meta'
 import DateField from '../../ui/DateField.vue'
 import { dot, today } from '../../ui/date'
@@ -17,30 +17,30 @@ import { fmtPhone } from '../../ui/phone'
 import { toast } from '../../ui/toast'
 import BoxEntryTable from './BoxEntryTable.vue'
 
-// 新建入库单（WEB-06，原型 pageNew）：农户 → 商品 → 规格 → 仓库与日期 → 逐箱净重，当前一步高亮，
-// 主按钮始终写明还缺哪一步（v7 4.5-1），点了直达。缺基准价、缺规则时主按钮改成对应的动作。
+// 新建入库单（WEB-06，原型 pageNew）：农户 → 定价规则 → 仓库与日期 → 逐箱净重，当前一步高亮，
+// 主按钮始终写明还缺哪一步（v7 4.5-1），点了直达。缺基准价时主按钮改成对应的动作。
+// 定价规则按名称直接选，不绑农户；选了规则，商品、规格、包装箱与每箱损耗就都定了（附录 E R-1 行）。
 // 保存时先按收购日期取批次号，再带着它提交；保存失败重试复用同一个批次号，改了日期才重新取（开发规格 8.2）。
 const route = useRoute()
 const router = useRouter()
 const meta = useMeta()
 
-type StepKey = 'farmer' | 'product' | 'spec' | 'warehouse' | 'boxes'
-const STEPS: [StepKey, string][] = [['farmer', '农户'], ['product', '商品'], ['spec', '规格'], ['warehouse', '仓库与日期'], ['boxes', '逐箱净重']]
+type StepKey = 'farmer' | 'rule' | 'warehouse' | 'boxes'
+const STEPS: [StepKey, string][] = [['farmer', '农户'], ['rule', '定价规则'], ['warehouse', '仓库与日期'], ['boxes', '逐箱净重']]
 
 // ---- 选择 ----
 const q = ref('')
 const hits = ref<VendorRow[]>([])
 const hitsFor = ref('') // hits 是按哪个关键词查到的；没查完时不说“没有匹配”
 const vendor = ref<VendorRow | null>(null)
-const vendorRules = ref<RuleView[]>([])
-const productId = ref<number | null>(null)
-const specId = ref<number | null>(null)
+const ruleId = ref<number | null>(null)
+const ruleQ = ref('')
 const warehouseId = ref<number | null>(null)
 const date = ref(today())
 const boxes = ref<number[]>([])
 
 // ---- 选项数据 ----
-const products = ref<NamedRow[]>([])
+const rules = ref<RuleView[]>([])
 const warehouses = ref<NamedRow[]>([])
 const specs = ref<{ id: number; name: string; price: number | null }[]>([])
 const blockNoPrice = ref(true) // submit.without-price：默认不能带着缺项提交
@@ -56,41 +56,47 @@ let batch: { batchNo: string; date: string } | null = null
 const boxTable = ref<InstanceType<typeof BoxEntryTable> | null>(null)
 const qEl = ref<HTMLInputElement | null>(null)
 
-const productName = computed(() => products.value.find((p) => p.id === productId.value)?.name ?? '')
-const spec = computed(() => specs.value.find((s) => s.id === specId.value) ?? null)
-const specName = computed(() => spec.value?.name ?? '')
+const rule = computed(() => rules.value.find((r) => r.id === ruleId.value) ?? null)
+const specId = computed(() => rule.value?.specId ?? null)
+const specName = computed(() => rule.value?.specName ?? '')
+const priceOf = (specId: number) => specs.value.find((s) => s.id === specId)?.price ?? null
+// 规则多时按名称、商品、规格、包装箱筛；空格分开的几个词都要命中
+const shownRules = computed(() => {
+  const words = ruleQ.value.trim().split(/\s+/).filter(Boolean)
+  return rules.value.filter((r) => words.every((w) => `${r.name} ${r.productName} ${r.specName} ${r.tareName ?? ''}`.includes(w)))
+})
 const warehouseName = computed(() => warehouses.value.find((w) => w.id === warehouseId.value)?.name ?? '')
 
 const done = computed<Record<StepKey, boolean>>(() => ({
   farmer: !!vendor.value,
-  product: productId.value != null,
-  spec: specId.value != null,
+  rule: ruleId.value != null,
   warehouse: warehouseId.value != null && !!date.value,
   boxes: boxes.value.length > 0,
 }))
 const active = computed(() => STEPS.find(([k]) => !done.value[k])?.[0] ?? null)
 const stepState = (k: StepKey) => (done.value[k] ? 'done' : k === active.value ? 'active' : 'todo')
 
-const hasRule = (p: number, s?: number | null) => vendorRules.value.some((r) => r.productId === p && (s == null || r.specId === s))
-const noRule = computed(() => !!vendor.value && productId.value != null && specId.value != null && !hasRule(productId.value, specId.value))
 
 // ---- 总数：箱数、总重用整数分算，不引入浮点误差；均重按后端取整规则 ----
-const totalKg = computed(() => boxes.value.reduce((s, n) => s + Math.round(n * 100), 0) / 100)
-const kg = (n: number) => String(Math.round(n * 100) / 100)
+const totalJin = computed(() => boxes.value.reduce((s, n) => s + Math.round(n * 100), 0) / 100)
+const jin = (n: number) => String(Math.round(n * 100) / 100)
 const money = (n: number) => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const num = (n: number) => String(Math.round(n * 100) / 100)
 
 const issues = computed(() => result.value?.issues ?? [])
 const noBase = computed(() => issues.value.includes('NO_BASE_PRICE'))
-const missingRule = computed(() => issues.value.includes('NO_RULE'))
 const ROUND_NAME: Record<string, string> = { HALF: '四舍五入', FLOOR: '抹零', CEIL: '进位' }
 const formula = computed(() => {
   const r = result.value
   if (!r || r.unitPrice == null) return ''
-  const head = `均重 ${(r.rawAvgKg ?? 0).toFixed(2)} ${ROUND_NAME[r.roundMode ?? 'HALF']}为 ${num(r.avgKg ?? 0)}kg`
-  const x = r.tailKg ?? 0
+  const raw = r.rawAvgJin ?? 0
+  const loss = r.lossJin ?? 0
+  // 每箱损耗调整加在均重上再取整（附录 E R-1 行）
+  const adj = loss ? ` ${loss > 0 ? '+' : '−'} 每箱损耗 ${num(Math.abs(loss))} = ${(raw + loss).toFixed(2)}` : ''
+  const head = `均重 ${raw.toFixed(2)}${adj} ${ROUND_NAME[r.roundMode ?? 'HALF']}为 ${num(r.avgJin ?? 0)} 斤`
+  const x = r.tailJin ?? 0
   if (x === 0) return `${head} · 正好标准，按基准 ${num(r.basePrice ?? 0)} 元/箱`
-  return `${head} · 基准 ${num(r.basePrice ?? 0)} ${x > 0 ? '+ 多' : '− 少'} ${num(Math.abs(x))}kg × ${num(r.coefficient ?? 0)} 元 = ${num(r.unitPrice)} 元/箱`
+  return `${head} · 基准 ${num(r.basePrice ?? 0)} ${x > 0 ? '+ 多' : '− 少'} ${num(Math.abs(x))} 斤 × ${num(r.coefficient ?? 0)} 元 = ${num(r.unitPrice)} 元/箱`
 })
 
 // ---- 主按钮：还缺哪一步 / 缺什么就写什么，点了直达 ----
@@ -100,7 +106,6 @@ const primary = computed<Primary>(() => {
   if (a) return { text: '还差：' + STEPS.find(([k]) => k === a)![1], kind: 'todo', go: () => focusStep(a) }
   if (saving.value) return { text: '保存中…', kind: 'primary', disabled: true, go: () => {} }
   if (blockNoPrice.value && noBase.value) return { text: `录入 ${specName.value} 基准价`, kind: 'fix', go: fixPrice }
-  if (blockNoPrice.value && (missingRule.value || noRule.value)) return { text: '还差：收购规则', kind: 'fix', go: () => focusStep('spec') }
   return { text: '保存为待审核', kind: 'primary', go: save }
 })
 
@@ -112,7 +117,7 @@ function focusStep(k: StepKey) {
   }
   if (k === 'farmer') qEl.value?.focus()
   else if (k === 'boxes') boxTable.value?.focus()
-  else el?.querySelector<HTMLElement>('.seg button:not([disabled]), .nw-rulepick button, .nw-rulepick input')?.focus()
+  else el?.querySelector<HTMLElement>('.seg button:not([disabled]), .pick button:not([disabled]), input')?.focus()
 }
 
 // 去基准价页录入当日（收购日期）这个规格的价，录完回到这里，已填的内容从草稿恢复（P4-2 的约定：back、backLabel、spec、date）
@@ -144,89 +149,30 @@ async function pickVendor(v: VendorRow) {
   q.value = ''
   hits.value = []
   hitsFor.value = ''
-  await loadVendorRules()
-  // 该农户只有一条收购规则时，商品与规格直接带出来
-  if (vendorRules.value.length === 1) {
-    productId.value = vendorRules.value[0].productId
-    specId.value = vendorRules.value[0].specId
-  }
   await nextTick()
   if (active.value && active.value !== 'farmer') focusStep(active.value)
 }
-async function loadVendorRules() {
-  if (!vendor.value) { vendorRules.value = []; return }
-  try {
-    vendorRules.value = await vendorBuyRules(vendor.value.id)
-  } catch {
-    vendorRules.value = []
-  }
-}
 function clearVendor() {
   vendor.value = null
-  vendorRules.value = []
-  productId.value = null
-  specId.value = null
   nextTick(() => qEl.value?.focus())
 }
-function pickProduct(id: number) {
-  productId.value = id
-  const mine = vendorRules.value.filter((r) => r.productId === id)
-  specId.value = mine.length === 1 ? mine[0].specId : null
+function pickRule(id: number) {
+  ruleId.value = id
+  ruleQ.value = ''
+  nextTick(() => { if (active.value) focusStep(active.value) })
 }
 function pickWarehouse(id: number) {
   warehouseId.value = id
   nextTick(() => boxTable.value?.focus())
 }
 
-// ---- 缺规则：绑定已有的，或就地新建一条 ----
-const candidates = ref<RuleView[]>([])
-const newName = ref('')
-const newCoef = ref('1')
-const ruleErr = ref('')
-const ruleBusy = ref(false)
-let candSeq = 0
-watch(noRule, async (on) => {
-  candidates.value = []
-  ruleErr.value = ''
-  if (!on) return
-  const my = ++candSeq
-  newName.value = `${vendor.value?.name ?? ''} ${productName.value}${specName.value}`.trim()
-  newCoef.value = '1'
+// 启用的收购规则；规则页改过后回到这里重新拉
+async function loadRules() {
   try {
-    const list = await listRules({ kind: 'BUY', productId: productId.value!, specId: specId.value! })
-    if (my === candSeq) candidates.value = list.filter((r) => r.enabled)
-  } catch {
-    if (my === candSeq) candidates.value = []
-  }
-}, { flush: 'post' })
-watch([productId, specId], () => { if (noRule.value) candSeq++ })
-
-async function bind(r: RuleView) {
-  ruleBusy.value = true
-  ruleErr.value = ''
-  try {
-    await bindVendorRule(vendor.value!.id, productId.value!, specId.value!, r.id)
-    await loadVendorRules()
-    toast('已绑定收购规则')
+    rules.value = await listRules({ kind: 'BUY', enabled: true })
+    if (ruleId.value != null && !rules.value.some((r) => r.id === ruleId.value)) ruleId.value = null
   } catch (e) {
-    ruleErr.value = errorText(e)
-  } finally {
-    ruleBusy.value = false
-  }
-}
-const coefOk = computed(() => /^\d+(\.\d{1,2})?$/.test(newCoef.value.trim()) && parseFloat(newCoef.value) >= 0)
-async function makeRule() {
-  if (!newName.value.trim() || !coefOk.value) { ruleErr.value = '写上规则名称和换算系数'; return }
-  ruleBusy.value = true
-  ruleErr.value = ''
-  try {
-    await createRule({ name: newName.value.trim(), kind: 'BUY', productId: productId.value!, specId: specId.value!, coef: parseFloat(newCoef.value), enabled: true, bindIds: [vendor.value!.id] })
-    await loadVendorRules()
-    toast('已新建并绑定收购规则')
-  } catch (e) {
-    ruleErr.value = errorText(e)
-  } finally {
-    ruleBusy.value = false
+    loadErr.value = errorText(e)
   }
 }
 
@@ -238,7 +184,6 @@ async function loadSpecs() {
     const day = await getPrices(date.value)
     if (my !== priceSeq) return
     specs.value = (day.items ?? []).map((i) => ({ id: i.specId!, name: i.specName ?? '', price: i.price ?? null }))
-    if (specId.value != null && !specs.value.some((s) => s.id === specId.value)) specId.value = null
   } catch (e) {
     if (my === priceSeq) loadErr.value = errorText(e)
   }
@@ -250,11 +195,11 @@ let quoteTimer: ReturnType<typeof setTimeout> | undefined
 let quoteSeq = 0
 function requote() {
   clearTimeout(quoteTimer)
-  if (!vendor.value || productId.value == null || specId.value == null) { result.value = null; return }
+  if (!vendor.value || ruleId.value == null) { result.value = null; return }
   quoteTimer = setTimeout(async () => {
     const my = ++quoteSeq
     try {
-      const r = await quote({ vendorId: vendor.value!.id, productId: productId.value!, specId: specId.value!, date: date.value, boxNetKg: boxes.value })
+      const r = await quote({ ruleId: ruleId.value!, date: date.value, boxNetJin: boxes.value })
       if (my !== quoteSeq) return
       result.value = r
       quoteErr.value = ''
@@ -263,7 +208,7 @@ function requote() {
     }
   }, 150)
 }
-watch([vendor, productId, specId, date, boxes, vendorRules, specs], requote, { deep: false })
+watch([vendor, ruleId, date, boxes, specs], requote, { deep: false })
 
 // ---- 保存 ----
 async function save() {
@@ -272,8 +217,8 @@ async function save() {
   try {
     if (!batch || batch.date !== date.value) batch = await getBatch(date.value)
     const r = await submitOrder({
-      batchNo: batch.batchNo, vendorId: vendor.value!.id, productId: productId.value!, specId: specId.value!, warehouseId: warehouseId.value!,
-      boxes: boxes.value.map((n, i) => ({ seq: i + 1, netKg: n })),
+      batchNo: batch.batchNo, vendorId: vendor.value!.id, ruleId: ruleId.value!, warehouseId: warehouseId.value!,
+      boxes: boxes.value.map((n, i) => ({ seq: i + 1, netJin: n })),
     })
     clearDraft()
     meta.refresh().catch(() => {})
@@ -291,7 +236,7 @@ const DRAFT = 'new-order-draft'
 function saveDraft() {
   try {
     sessionStorage.setItem(DRAFT, JSON.stringify({
-      vendor: vendor.value, productId: productId.value, specId: specId.value, warehouseId: warehouseId.value,
+      vendor: vendor.value, ruleId: ruleId.value, warehouseId: warehouseId.value,
       date: date.value, boxes: boxes.value, batch,
     }))
   } catch { /* 存不了就当没有草稿 */ }
@@ -305,13 +250,11 @@ async function restoreDraft() {
     if (!raw) return
     const d = JSON.parse(raw)
     vendor.value = d.vendor ?? null
-    productId.value = d.productId ?? null
-    specId.value = d.specId ?? null
+    ruleId.value = d.ruleId ?? null
     warehouseId.value = d.warehouseId ?? null
     date.value = d.date ?? today()
     boxes.value = Array.isArray(d.boxes) ? d.boxes : []
     batch = d.batch ?? null
-    await loadVendorRules()
   } catch { /* 草稿坏了就从头来 */ }
 }
 
@@ -319,7 +262,7 @@ onMounted(async () => {
   const resume = route.query.resume === '1'
   if (!resume) clearDraft()
   try {
-    ;[products.value, warehouses.value] = await Promise.all([listProducts(), listWarehouses()])
+    warehouses.value = await listWarehouses()
   } catch (e) {
     loadErr.value = errorText(e)
   }
@@ -327,7 +270,7 @@ onMounted(async () => {
     .then((items) => (blockNoPrice.value = items.find((i) => i.key === 'submit.without-price')?.value !== 'allow'))
     .catch(() => {})
   if (resume) await restoreDraft()
-  await loadSpecs()
+  await Promise.all([loadRules(), loadSpecs()])
   requote()
   if (resume && active.value) nextTick(() => focusStep(active.value!))
   else qEl.value?.focus()
@@ -374,63 +317,50 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- 2 商品 -->
-      <section id="st-product" class="card nw-step" :class="stepState('product')">
-        <div class="lbl"><i>{{ done.product ? '✓' : 2 }}</i>商品</div>
+      <!-- 2 定价规则：按名称选，商品、规格、包装箱、每箱损耗都在规则里 -->
+      <section id="st-rule" class="card nw-step" :class="stepState('rule')">
+        <div class="lbl"><i>{{ done.rule ? '✓' : 2 }}</i>定价规则</div>
         <div>
-          <div class="seg">
-            <button v-for="p in products" :key="p.id" :aria-pressed="productId === p.id" :disabled="!vendor" @click="pickProduct(p.id)">
-              {{ p.name }}<small v-if="hasRule(p.id)">有规则</small>
-            </button>
+          <div v-if="rule" class="setrow">
+            <b class="nw-big">{{ rule.name }}</b>
+            <button class="btn sm ghost" @click="ruleId = null">换一条</button>
           </div>
-        </div>
-      </section>
-
-      <!-- 3 规格 -->
-      <section id="st-spec" class="card nw-step" :class="stepState('spec')">
-        <div class="lbl"><i>{{ done.spec ? '✓' : 3 }}</i>规格</div>
-        <div>
-          <div class="seg">
-            <button v-for="s in specs" :key="s.id" :aria-pressed="specId === s.id" :disabled="productId == null" @click="specId = s.id">
-              {{ s.name }}<small v-if="s.price == null" class="w">无基准价</small><small v-else-if="productId != null && hasRule(productId, s.id)">有规则</small>
-            </button>
+          <div v-if="rule" class="muted nw-pack">
+            {{ rule.productName }} {{ rule.specName }} · {{ rule.tareName ? `${rule.tareName} ${rule.tareJin} 斤` : '未设包装箱' }}
+            · 每箱损耗 {{ lossText(rule.lossJin) }} · 每斤尾差 {{ rule.coef }} 元
           </div>
-          <div v-if="noRule" class="nw-rulepick">
-            <div class="t2"><span class="tag warn">无收购规则</span>{{ vendor?.name }} · {{ productName }} {{ specName }}</div>
-            <div v-if="candidates.length" class="pick" style="margin: 0">
-              <button v-for="r in candidates" :key="r.id" :disabled="ruleBusy" @click="bind(r)">
-                <span>{{ r.name }}</span><span class="muted">绑定 ›</span>
+          <template v-else-if="vendor">
+            <input v-if="rules.length > 6" v-model="ruleQ" class="in" placeholder="规则名称、商品或规格" autocomplete="off" aria-label="筛选定价规则" />
+            <div v-if="shownRules.length" class="pick">
+              <button v-for="r in shownRules" :key="r.id" @click="pickRule(r.id)">
+                <span><b>{{ r.name }}</b><span class="muted nw-pack">{{ r.productName }} {{ r.specName }} · {{ r.tareName ?? '未设包装箱' }}{{ r.lossJin ? ` · 每箱 ${lossText(r.lossJin)}` : '' }}</span></span>
+                <small v-if="priceOf(r.specId) == null" class="tag warn">无基准价</small>
               </button>
             </div>
-            <div class="setrow" style="margin-top: 8px">
-              <input v-model="newName" class="in" style="width: 240px; height: 36px" aria-label="新规则名称" placeholder="规则名称" />
-              <span class="muted">换算系数</span>
-              <input v-model="newCoef" class="in numin" :class="{ bad: !coefOk }" style="width: 80px; height: 36px" inputmode="decimal" aria-label="换算系数（元/kg）" />
-              <button class="btn sm" :disabled="ruleBusy" @click="makeRule">新建并绑定</button>
-            </div>
-            <p v-if="ruleErr" class="inline-err" role="alert" style="margin: 8px 0 0">{{ ruleErr }}</p>
-          </div>
+            <div v-else-if="rules.length" class="pick"><button disabled>没有匹配的规则</button></div>
+            <RouterLink v-else class="btn todo" to="/rules">还没有启用的收购规则，去新建</RouterLink>
+          </template>
         </div>
       </section>
 
       <!-- 4 仓库与日期 -->
       <section id="st-warehouse" class="card nw-step" :class="stepState('warehouse')">
-        <div class="lbl"><i>{{ done.warehouse ? '✓' : 4 }}</i>仓库与日期</div>
+        <div class="lbl"><i>{{ done.warehouse ? '✓' : 3 }}</i>仓库与日期</div>
         <div class="setrow">
           <div class="seg">
-            <button v-for="w in warehouses" :key="w.id" :aria-pressed="warehouseId === w.id" :disabled="specId == null" @click="pickWarehouse(w.id)">{{ w.name }}</button>
+            <button v-for="w in warehouses" :key="w.id" :aria-pressed="warehouseId === w.id" :disabled="ruleId == null" @click="pickWarehouse(w.id)">{{ w.name }}</button>
           </div>
-          <DateField v-if="specId != null" v-model="date" />
+          <DateField v-if="ruleId != null" v-model="date" />
         </div>
       </section>
 
       <!-- 5 逐箱净重 -->
       <section id="st-boxes" class="card nw-step" :class="stepState('boxes')">
-        <div class="lbl"><i>{{ done.boxes ? '✓' : 5 }}</i>逐箱净重</div>
+        <div class="lbl"><i>{{ done.boxes ? '✓' : 4 }}</i>逐箱净重</div>
         <div>
           <template v-if="warehouseId != null">
             <div v-if="boxes.length" class="nw-sum">
-              <b class="num">{{ boxes.length }} 箱 · {{ kg(totalKg) }} kg<template v-if="result && result.boxCount"> · 均重 {{ num(result.avgKg ?? 0) }} kg</template></b>
+              <b class="num">{{ boxes.length }} 箱 · {{ jin(totalJin) }}斤<template v-if="result && result.boxCount"> · 均重 {{ num(result.avgJin ?? 0) }}斤</template></b>
             </div>
             <div class="twrap"><BoxEntryTable ref="boxTable" v-model="boxes" /></div>
           </template>
@@ -451,10 +381,6 @@ onBeforeUnmount(() => {
           <span class="tag warn">无 {{ dot(date) }} 基准价</span>
           <button class="btn sm fix" @click="fixPrice">录入</button>
         </div>
-      </template>
-      <template v-else-if="result && missingRule">
-        <div class="nw-amt" style="color: var(--ink-3)">—</div>
-        <div class="nw-fixline"><span class="tag warn">无收购规则</span></div>
       </template>
       <div v-else class="nw-amt" style="color: var(--ink-3)">—</div>
       <p v-if="quoteErr" class="inline-err" role="alert">{{ quoteErr }}</p>
@@ -487,8 +413,8 @@ onBeforeUnmount(() => {
 .pick button:last-child { border-bottom: 0; }
 .pick button .num { flex: none; white-space: nowrap; }
 .pick button:hover:not(:disabled) { background: var(--sunken); }
-.nw-rulepick { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--sunken); }
-.nw-rulepick .t2 { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nw-pack { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; }
+.pick button > span:first-child { min-width: 0; }
 .nw-sum { margin-bottom: 10px; }
 .nw-side { position: sticky; top: 24px; padding: 20px; }
 .nw-side .k { font-size: 15px; font-weight: 600; color: var(--ink-2); }

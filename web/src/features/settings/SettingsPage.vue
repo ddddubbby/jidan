@@ -88,7 +88,7 @@ async function save() {
 }
 
 // 取整规则卡片上的示例（只是说明文字，不参与计算）
-const roundDesc = { half: '46.05 → 46 kg · 46.5 → 47 kg', floor: '46.05 → 46 kg · 46.5 → 46 kg', ceil: '46.05 → 47 kg · 46.5 → 47 kg' }
+const roundDesc = { half: '92.1 → 92 斤 · 92.5 → 93 斤', floor: '92.1 → 92 斤 · 92.5 → 92 斤', ceil: '92.1 → 93 斤 · 92.5 → 93 斤' }
 const timingDesc = { 'per-box': '记一箱打一张', 'after-confirm': '确认计量完毕后按箱序号依次打' }
 const contentDesc = { minimal: '净重、批次、批次序号、二维码', full: '商品、规格、净重、农户、日期、仓库、批次、批次序号、二维码，共 9 项' }
 </script>

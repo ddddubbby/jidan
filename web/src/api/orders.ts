@@ -39,7 +39,7 @@ export const unapproveOrder = (id: number) => http.post<OrderFlow>(`/orders/${id
 export const markPushed = (id: number, hsId: string) => http.post<OrderFlow>(`/orders/${id}/mark-pushed`, hsId ? { hsId } : {})
 export const voidOrder = (id: number) => http.post<OrderFlow>(`/orders/${id}/void`)
 
-export type HeadPatch = Partial<Pick<UpdateForm, 'bizDate' | 'vendorId' | 'productId' | 'specId' | 'warehouseId'>>
+export type HeadPatch = Partial<Pick<UpdateForm, 'bizDate' | 'vendorId' | 'ruleId' | 'warehouseId'>>
 
 export type BoxRec = S['Box']
 
@@ -50,9 +50,9 @@ export type BoxRec = S['Box']
 async function putOrder(d: OrderDetail, patch: HeadPatch, boxes?: BoxRec[]) {
   const list = boxes ?? (await getRecords(d.id!)).boxes ?? []
   const body: UpdateForm = {
-    bizDate: d.bizDate!, vendorId: d.vendor!.id!, productId: d.product!.id!, specId: d.spec!.id!, warehouseId: d.warehouse!.id!,
+    bizDate: d.bizDate!, vendorId: d.vendor!.id!, ruleId: d.pricing!.ruleId!, warehouseId: d.warehouse!.id!,
     ...patch,
-    boxes: list.map((b) => ({ ...b, seq: b.seq!, netKg: b.netKg! })),
+    boxes: list.map((b) => ({ ...b, seq: b.seq!, netJin: b.netJin! })),
   }
   return http.put<OrderDetail>('/orders/' + d.id, body)
 }

@@ -32,13 +32,13 @@ function saveW0(close: () => void) {
       <p>
         标准净含量：
         <InlineEdit label="标准净含量" @update:open="(o: boolean) => o && (draft = w0)">
-          <b>{{ w0 }} kg</b>
+          <b>{{ w0 }}斤</b>
           <template #editor="{ close }">
             <input v-model="draft" class="in numin" aria-label="标准净含量" @keydown.enter.prevent="saveW0(close)" />
           </template>
         </InlineEdit>
       </p>
-      <p>已锁定：<InlineEdit label="标准净含量" locked><b>45 kg</b></InlineEdit></p>
+      <p>已锁定：<InlineEdit label="标准净含量" locked><b>45斤</b></InlineEdit></p>
     </section>
 
     <section>

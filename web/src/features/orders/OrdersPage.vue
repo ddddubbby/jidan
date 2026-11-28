@@ -105,7 +105,7 @@ function fixPrice(specId: number) {
 }
 
 // 缺项就地补：缺基准价的单，单价格里给“录入基准价”，去的是同一个地方，只是带上这张单的收购日期与规格；
-// 缺规则的单给“绑定规则”，去详情页并直接打开绑定规则的抽屉（详情页的主按钮也是这样）。列表行没带规格编号，按规格名对。
+// 缺规则的单给“选择规则”，去详情页并直接打开定价规则的抽屉（详情页的主按钮也是这样）。列表行没带规格编号，按规格名对。
 const specIds = ref<Record<string, number>>({})
 getSpecs()
   .then((l) => (specIds.value = Object.fromEntries(l.filter((s) => s.id != null && s.name).map((s) => [s.name!, s.id!]))))
@@ -192,10 +192,10 @@ const emptyText = computed(() => (q.value.trim() ? '没有匹配的单据' : tab
             </td>
             <td class="narrowhide"><span class="nb">{{ o.productName }} {{ o.specName }}</span></td>
             <td class="r">{{ o.boxCount }}</td>
-            <td class="r narrowhide hf"><Num :value="o.avgKg" unit="kg" /></td>
+            <td class="r narrowhide hf"><Num :value="o.avgJin" unit="斤" /></td>
             <td class="r hf">
               <button v-if="fixOf(o) === 'price'" class="fixlink" @click.stop="fixInRow(o)" @keydown.enter.stop>录入基准价</button>
-              <button v-else-if="fixOf(o) === 'rule'" class="fixlink" @click.stop="fixInRow(o)" @keydown.enter.stop>绑定规则</button>
+              <button v-else-if="fixOf(o) === 'rule'" class="fixlink" @click.stop="fixInRow(o)" @keydown.enter.stop>选择规则</button>
               <Num v-else :value="o.price" />
             </td>
             <td class="r">

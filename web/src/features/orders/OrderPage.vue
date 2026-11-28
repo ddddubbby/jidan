@@ -61,10 +61,14 @@ const ROUND: Record<string, string> = { HALF: '四舍五入', FLOOR: '抹零', C
 const formula = computed(() => {
   const p = d.value?.pricing
   if (!p || p.unitPrice == null) return ''
-  const head = `均重 ${p.rawAvgKg?.toFixed(2)} ${ROUND[p.roundMode ?? ''] ?? ''}为 ${p.avgKg}kg`
-  const tail = p.tailKg ?? 0
+  const raw = p.rawAvgJin ?? 0
+  const loss = p.lossJin ?? 0
+  // 每箱损耗调整加在均重上再取整（附录 E R-1 行）
+  const adj = loss ? ` ${loss > 0 ? '+' : '−'} 每箱损耗 ${Math.abs(loss)} = ${(raw + loss).toFixed(2)}` : ''
+  const head = `均重 ${raw.toFixed(2)}${adj} ${ROUND[p.roundMode ?? ''] ?? ''}为 ${p.avgJin} 斤`
+  const tail = p.tailJin ?? 0
   if (tail === 0) return `${head} · 正好标准，按基准 ${p.basePrice} 元/箱`
-  return `${head} · 基准 ${p.basePrice} ${tail > 0 ? '+ 多' : '− 少'} ${Math.abs(tail)}kg × ${p.coefficient} 元 = ${p.unitPrice} 元/箱`
+  return `${head} · 基准 ${p.basePrice} ${tail > 0 ? '+ 多' : '− 少'} ${Math.abs(tail)} 斤 × ${p.coefficient} 元 = ${p.unitPrice} 元/箱`
 })
 
 // 返回列表时回到原来的页签、关键词与页码（列表把它们放在地址里）；从别处来的就回列表首页
@@ -97,7 +101,7 @@ onMounted(async () => {
   getOptions()
     .then((items) => (manualPush.value = items.find((i) => i.key === 'push.on-approve')?.value === 'manual'))
     .catch(() => {})
-  // 列表里缺规则的单点“绑定规则”过来（?bindRule=1）：详情载入后直接打开绑定规则的抽屉，并把这个参数从地址里去掉
+  // 列表里缺规则的单点“选择规则”过来（?bindRule=1）：详情载入后直接打开定价规则的抽屉，并把这个参数从地址里去掉
   await opening
   if (route.query.bindRule) {
     if (missRule.value) ruleOpen.value = true
@@ -201,10 +205,10 @@ const goNext = () => router.push('/orders/' + next.value!.id)
           <div class="fixline"><span class="tag warn">{{ issues.includes('NO_BASE_PRICE') ? `无 ${dot(d.bizDate ?? '')} 基准价` : '无收购规则' }}</span></div>
         </template>
         <hr />
-        <div class="row"><span class="muted">累计净重</span><span class="v"><Num :value="d.pricing?.totalKg" unit="kg" /></span></div>
+        <div class="row"><span class="muted">累计净重</span><span class="v"><Num :value="d.pricing?.totalJin" unit="斤" /></span></div>
         <div class="row">
           <span class="muted">均重</span>
-          <span class="v"><Num :value="d.pricing?.avgKg" unit="kg" /> <span class="muted" style="font-weight: 400">（原始 {{ d.pricing?.rawAvgKg?.toFixed(2) }}）</span></span>
+          <span class="v"><Num :value="d.pricing?.avgJin" unit="斤" /> <span class="muted" style="font-weight: 400">（原始 {{ d.pricing?.rawAvgJin?.toFixed(2) }}）</span></span>
         </div>
         <div class="row"><span class="muted">定价规则</span><span class="v" style="max-width: 190px">{{ d.pricing?.ruleName ?? '—' }}</span></div>
         <div v-if="manualCount" class="row"><span class="muted">手录</span><span class="v"><span class="tag warn">{{ manualCount }} 箱</span></span></div>
@@ -226,7 +230,7 @@ const goNext = () => router.push('/orders/' + next.value!.id)
 
           <template v-else-if="status === 'PENDING'">
             <button v-if="missM0" class="btn fix lg" @click="fixPrice">录入 {{ d.spec?.name }} 基准价</button>
-            <button v-else-if="missRule" class="btn fix lg" @click="ruleOpen = true">绑定收购规则</button>
+            <button v-else-if="missRule" class="btn fix lg" @click="ruleOpen = true">选择收购规则</button>
             <button v-else class="btn primary lg" @click="approveOpen = true">{{ manualPush ? '审核' : '审核并回传' }}</button>
             <button class="btn red" @click="voidOpen = true">作废</button>
           </template>

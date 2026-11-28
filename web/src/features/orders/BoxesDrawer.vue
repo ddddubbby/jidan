@@ -41,14 +41,14 @@ const rows = computed(() => (onlyManual.value ? boxes.value.filter((b) => b.manu
 const groups = computed(() => rec.value?.groups ?? [])
 const p = computed(() => props.order.pricing)
 
-const kg = (n?: number | null) => String(Math.round((n ?? 0) * 100) / 100)
+const jin = (n?: number | null) => String(Math.round((n ?? 0) * 100) / 100)
 const money = (n?: number) => (n == null ? '—' : n.toLocaleString('zh-CN', { maximumFractionDigits: 2 }))
-const validKg = (v: string) => /^\d{1,3}(\.\d{1,2})?$/.test(v.trim()) && parseFloat(v) > 0
+const validJin = (v: string) => /^\d{1,3}(\.\d{1,2})?$/.test(v.trim()) && parseFloat(v) > 0
 const round2 = (v: string) => Math.round(parseFloat(v) * 100) / 100
 
 const tareText = computed(() => {
   const b = boxes.value[0]
-  return b ? ` · 每箱皮重 ${kg(b.tareKg)} kg${b.tareName ? `（${b.tareName}）` : ''}` : ''
+  return b ? ` · 每箱皮重 ${jin(b.tareJin)} 斤${b.tareName ? `（${b.tareName}）` : ''}` : ''
 })
 
 async function loadRec() {
@@ -64,7 +64,7 @@ async function loadRec() {
 watch(open, (o) => {
   if (!o) return
   const pr = props.order.pricing
-  base.value = { n: pr?.boxCount, avg: pr?.avgKg, price: pr?.unitPrice, amount: pr?.amount }
+  base.value = { n: pr?.boxCount, avg: pr?.avgJin, price: pr?.unitPrice, amount: pr?.amount }
   onlyManual.value = false
   editing.value = -1
   add.value = ''
@@ -93,7 +93,7 @@ async function save(next: BoxRec[]) {
 
 function startEdit(b: BoxRec) {
   editing.value = b.seq!
-  editVal.value = kg(b.netKg)
+  editVal.value = jin(b.netJin)
   editBad.value = false
   nextTick(() => {
     editEl?.focus()
@@ -101,7 +101,7 @@ function startEdit(b: BoxRec) {
   })
 }
 async function saveEdit() {
-  if (!validKg(editVal.value)) {
+  if (!validJin(editVal.value)) {
     editBad.value = true
     editEl?.focus()
     return
@@ -110,8 +110,8 @@ async function saveEdit() {
   const v = round2(editVal.value)
   editing.value = -1
   const b = boxes.value.find((x) => x.seq === seq)
-  if (!b || b.netKg === v) return
-  await save(boxes.value.map((x) => (x.seq === seq ? { ...x, netKg: v, manual: true, rawKg: x.manual ? x.rawKg : x.netKg } : x)))
+  if (!b || b.netJin === v) return
+  await save(boxes.value.map((x) => (x.seq === seq ? { ...x, netJin: v, manual: true, rawJin: x.manual ? x.rawJin : x.netJin } : x)))
 }
 const cancelEdit = () => (editing.value = -1)
 
@@ -124,7 +124,7 @@ async function remove(seq: number) {
 async function addBoxes() {
   const parts = add.value.split(/[\s,，、;；]+/).filter(Boolean)
   if (!parts.length) return
-  const bad = parts.find((x) => !validKg(x))
+  const bad = parts.find((x) => !validJin(x))
   if (bad) {
     addErr.value = `“${bad}”不是有效的净重`
     return
@@ -132,7 +132,7 @@ async function addBoxes() {
   const first = boxes.value[0]
   const n = nextSeq.value - 1
   const extra: BoxRec[] = parts.map((x, i) => ({
-    seq: n + i + 1, netKg: round2(x), tareKg: first?.tareKg, tareName: first?.tareName, groupK: 1, manual: true, printed: false,
+    seq: n + i + 1, netJin: round2(x), tareJin: first?.tareJin, tareName: first?.tareName, groupK: 1, manual: true, printed: false,
   }))
   if (await save([...boxes.value, ...extra])) {
     add.value = ''
@@ -147,7 +147,7 @@ async function addBoxes() {
     <p v-if="loadErr" class="inline-err" role="alert">加载失败：{{ loadErr }} <button class="btn sm" @click="loadRec">重试</button></p>
     <template v-else-if="rec">
       <div class="groups" aria-label="同重归类">
-        <span v-for="g in groups.slice(0, 10)" :key="g.kg">{{ kg(g.kg) }}kg-{{ g.boxes }}箱</span>
+        <span v-for="g in groups.slice(0, 10)" :key="g.jin">{{ jin(g.jin) }}斤-{{ g.boxes }}箱</span>
         <span v-if="groups.length > 10">另 {{ groups.length - 10 }} 种</span>
       </div>
 
@@ -176,9 +176,9 @@ async function addBoxes() {
                 @keydown.esc.stop.prevent="cancelEdit"
                 @input="editBad = false"
               />
-              <button v-else-if="editable" class="netbtn" :disabled="busy" :aria-label="`改第 ${b.seq} 箱净重`" @click="startEdit(b)"><Num :value="kg(b.netKg)" unit="kg" /></button>
-              <b v-else class="num"><Num :value="kg(b.netKg)" unit="kg" /></b>
-              <span v-if="b.manual && b.rawKg != null && editing !== b.seq" class="orig">秤读数 {{ kg(b.rawKg) }} kg</span>
+              <button v-else-if="editable" class="netbtn" :disabled="busy" :aria-label="`改第 ${b.seq} 箱净重`" @click="startEdit(b)"><Num :value="jin(b.netJin)" unit="斤" /></button>
+              <b v-else class="num"><Num :value="jin(b.netJin)" unit="斤" /></b>
+              <span v-if="b.manual && b.rawJin != null && editing !== b.seq" class="orig">秤读数 {{ jin(b.rawJin) }}斤</span>
             </td>
             <td><span v-if="b.manual" class="tag warn">手录</span></td>
             <td class="r nb">
@@ -220,7 +220,7 @@ async function addBoxes() {
 
     <template v-if="editable" #foot>
       <div><span class="k">箱数</span><span class="v"><s v-if="base.n !== p?.boxCount">{{ base.n }}</s>{{ p?.boxCount }}</span></div>
-      <div><span class="k">均重</span><span class="v"><s v-if="base.avg !== p?.avgKg">{{ base.avg }}</s><Num :value="p?.avgKg" unit="kg" /></span></div>
+      <div><span class="k">均重</span><span class="v"><s v-if="base.avg !== p?.avgJin">{{ base.avg }}</s><Num :value="p?.avgJin" unit="斤" /></span></div>
       <div>
         <span class="k">单价</span>
         <span class="v"><s v-if="base.price != null && p?.unitPrice != null && base.price !== p.unitPrice">{{ base.price }}</s>{{ p?.unitPrice ?? '—' }}</span>

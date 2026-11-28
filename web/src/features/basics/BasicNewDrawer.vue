@@ -43,8 +43,8 @@ async function submit() {
   busy.value = true
   err.value = ''
   try {
-    if (isSpec.value) await createSpec({ name: name.value.trim(), eggCount: Number(count.value), stdNetKg: Number(val.value) })
-    else await createTare({ name: name.value.trim(), tareKg: Number(val.value) })
+    if (isSpec.value) await createSpec({ name: name.value.trim(), eggCount: Number(count.value), stdNetJin: Number(val.value) })
+    else await createTare({ name: name.value.trim(), tareJin: Number(val.value) })
     toast(`已新增${isSpec.value ? '规格' : '包装箱'}：${name.value.trim()}`)
     open.value = false
     emit('created')
@@ -68,7 +68,7 @@ async function submit() {
         <input ref="countEl" v-model="count" class="in numin" inputmode="numeric" style="width: 160px" autocomplete="off" />
       </label>
       <label class="field">
-        <span>{{ isSpec ? '标准净含量（kg/箱）' : '皮重（kg）' }}</span>
+        <span>{{ isSpec ? '标准净含量（斤/箱）' : '皮重（斤）' }}</span>
         <input ref="valEl" v-model="val" class="in numin" inputmode="decimal" style="width: 160px" autocomplete="off" />
       </label>
       <div v-if="err" class="inline-err">{{ err }}</div>

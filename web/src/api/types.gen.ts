@@ -100,22 +100,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/farmers/{id}/rule-binding": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["bind"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/base-prices": {
         parameters: {
             query?: never;
@@ -507,23 +491,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["byTail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/farmers/{id}/rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["rules"];
+        get: operations["find"];
         put?: never;
         post?: never;
         delete?: never;
@@ -650,7 +618,7 @@ export interface components {
     schemas: {
         TarePatch: {
             name?: string;
-            tareKg?: number;
+            tareJin?: number;
             hotkey?: boolean;
             enabled?: boolean;
         };
@@ -658,7 +626,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             name?: string;
-            tareKg?: number;
+            tareJin?: number;
             hotkey?: boolean;
             enabled?: boolean;
             /** Format: int64 */
@@ -670,7 +638,7 @@ export interface components {
             name?: string;
             /** Format: int32 */
             eggCount?: number;
-            stdNetKg?: number;
+            stdNetJin?: number;
             enabled?: boolean;
         };
         Spec: {
@@ -679,7 +647,7 @@ export interface components {
             name?: string;
             /** Format: int32 */
             eggCount?: number;
-            stdNetKg?: number;
+            stdNetJin?: number;
             enabled?: boolean;
             /** Format: int64 */
             updatedBy?: number;
@@ -718,9 +686,11 @@ export interface components {
             productId?: number;
             /** Format: int64 */
             specId?: number;
+            /** Format: int64 */
+            tareBoxId?: number;
+            lossJin?: number;
             coef?: number;
             enabled?: boolean;
-            bindIds?: number[];
         };
         RuleView: {
             /** Format: int64 */
@@ -733,31 +703,28 @@ export interface components {
             /** Format: int64 */
             specId?: number;
             specName?: string;
+            stdNetJin?: number;
+            /** Format: int64 */
+            tareBoxId?: number;
+            tareName?: string;
+            tareJin?: number;
+            lossJin?: number;
             coef?: number;
             enabled?: boolean;
-            binds?: components["schemas"]["Target"][];
-            /** Format: int32 */
-            bindCount?: number;
-        };
-        Target: {
-            /** Format: int64 */
-            id?: number;
-            name?: string;
-            tail4?: string;
         };
         BoxForm: {
             /** Format: int32 */
             seq: number;
-            netKg: number;
-            grossKg?: number;
-            tareKg?: number;
+            netJin: number;
+            grossJin?: number;
+            tareJin?: number;
             tareName?: string;
             /** Format: int32 */
             groupNo?: number;
             /** Format: int32 */
             groupK?: number;
             manual?: boolean;
-            rawKg?: number;
+            rawJin?: number;
             printed?: boolean;
         };
         UpdateForm: {
@@ -766,9 +733,7 @@ export interface components {
             /** Format: int64 */
             vendorId: number;
             /** Format: int64 */
-            productId: number;
-            /** Format: int64 */
-            specId: number;
+            ruleId: number;
             /** Format: int64 */
             warehouseId: number;
             boxes: components["schemas"]["BoxForm"][];
@@ -812,16 +777,17 @@ export interface components {
         Result: {
             /** Format: int32 */
             boxCount?: number;
-            totalKg?: number;
-            rawAvgKg?: number;
-            avgKg?: number;
-            standardNetKg?: number;
+            totalJin?: number;
+            rawAvgJin?: number;
+            lossJin?: number;
+            avgJin?: number;
+            standardNetJin?: number;
             basePrice?: number;
             /** Format: int64 */
             ruleId?: number;
             ruleName?: string;
             coefficient?: number;
-            tailKg?: number;
+            tailJin?: number;
             priceDiff?: number;
             unitPrice?: number;
             amount?: number;
@@ -833,7 +799,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             name?: string;
-            stdNetKg?: number;
+            stdNetJin?: number;
         };
         VendorRef: {
             /** Format: int64 */
@@ -841,14 +807,6 @@ export interface components {
             name?: string;
             hsCode?: string;
             phones?: string[];
-        };
-        BindingForm: {
-            /** Format: int64 */
-            productId: number;
-            /** Format: int64 */
-            specId: number;
-            /** Format: int64 */
-            ruleId?: number;
         };
         BasePriceForm: {
             /** Format: date */
@@ -861,7 +819,7 @@ export interface components {
             /** Format: int64 */
             specId?: number;
             specName?: string;
-            stdNetKg?: number;
+            stdNetJin?: number;
             price?: number;
             prevPrice?: number;
         };
@@ -879,14 +837,14 @@ export interface components {
         };
         TareCreate: {
             name: string;
-            tareKg: number;
+            tareJin: number;
             hotkey?: boolean;
         };
         SpecCreate: {
             name: string;
             /** Format: int32 */
             eggCount: number;
-            stdNetKg: number;
+            stdNetJin: number;
         };
         RuleCreate: {
             name: string;
@@ -895,18 +853,18 @@ export interface components {
             productId: number;
             /** Format: int64 */
             specId: number;
+            /** Format: int64 */
+            tareBoxId: number;
+            lossJin?: number;
             coef: number;
             enabled?: boolean;
-            bindIds?: number[];
         };
         SubmitForm: {
             batchNo: string;
             /** Format: int64 */
             vendorId: number;
             /** Format: int64 */
-            productId: number;
-            /** Format: int64 */
-            specId: number;
+            ruleId: number;
             /** Format: int64 */
             warehouseId: number;
             boxes: components["schemas"]["BoxForm"][];
@@ -922,8 +880,8 @@ export interface components {
             source?: "APP" | "WEB";
             /** Format: int32 */
             boxCount?: number;
-            totalNetKg?: number;
-            avgKg?: number;
+            totalNetJin?: number;
+            avgJin?: number;
             submittedPrice?: number;
             submittedAmount?: number;
         };
@@ -940,8 +898,8 @@ export interface components {
             pushError?: string;
             /** Format: int32 */
             boxCount?: number;
-            totalNetKg?: number;
-            avgKg?: number;
+            totalNetJin?: number;
+            avgJin?: number;
             price?: number;
             amount?: number;
         };
@@ -950,17 +908,12 @@ export interface components {
         };
         QuoteForm: {
             /** Format: int64 */
-            vendorId: number;
-            /** Format: int64 */
-            productId: number;
-            /** Format: int64 */
-            specId: number;
+            ruleId: number;
             /** Format: date */
             date?: string;
-            boxNetKg?: number[];
-            /** Format: int64 */
-            trialRuleId?: number;
+            boxNetJin?: number[];
             trialCoef?: number;
+            trialLossJin?: number;
         };
         FailForm: {
             mode?: string;
@@ -1028,7 +981,7 @@ export interface components {
             specName?: string;
             /** Format: int32 */
             boxCount?: number;
-            avgKg?: number;
+            avgJin?: number;
             price?: number;
             amount?: number;
             submittedAmount?: number;
@@ -1051,20 +1004,20 @@ export interface components {
         Box: {
             /** Format: int32 */
             seq?: number;
-            netKg?: number;
-            grossKg?: number;
-            tareKg?: number;
+            netJin?: number;
+            grossJin?: number;
+            tareJin?: number;
             tareName?: string;
             /** Format: int32 */
             groupNo?: number;
             /** Format: int32 */
             groupK?: number;
             manual?: boolean;
-            rawKg?: number;
+            rawJin?: number;
             printed?: boolean;
         };
         Group: {
-            kg?: number;
+            jin?: number;
             /** Format: int32 */
             boxes?: number;
         };
@@ -1128,9 +1081,9 @@ export interface components {
             batchNo?: string;
             /** Format: int32 */
             seq?: number;
-            netKg?: number;
+            netJin?: number;
             manual?: boolean;
-            rawKg?: number;
+            rawJin?: number;
             vendor?: components["schemas"]["Ref"];
             product?: components["schemas"]["Ref"];
             spec?: components["schemas"]["SpecRef"];
@@ -1139,7 +1092,7 @@ export interface components {
             orderCode?: string;
             /** @enum {string} */
             status?: "PENDING" | "APPROVED" | "PUSHED" | "VOID";
-            avgKg?: number;
+            avgJin?: number;
             price?: number;
         };
         Day: {
@@ -1187,6 +1140,7 @@ export interface components {
             options?: {
                 [key: string]: string;
             };
+            rules?: components["schemas"]["RuleView"][];
         };
         Named: {
             /** Format: int64 */
@@ -1199,14 +1153,14 @@ export interface components {
             name?: string;
             /** Format: int32 */
             eggCount?: number;
-            stdNetKg?: number;
+            stdNetJin?: number;
             basePrice?: number;
         };
         Tare: {
             /** Format: int64 */
             id?: number;
             name?: string;
-            tareKg?: number;
+            tareJin?: number;
         };
     };
     responses: never;
@@ -1431,32 +1385,6 @@ export interface operations {
             };
         };
     };
-    bind: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BindingForm"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RuleView"][];
-                };
-            };
-        };
-    };
     day: {
         parameters: {
             query?: {
@@ -1623,6 +1551,7 @@ export interface operations {
                 kind?: string;
                 productId?: number;
                 specId?: number;
+                enabled?: boolean;
                 q?: string;
             };
             header?: never;
@@ -2139,10 +2068,11 @@ export interface operations {
             };
         };
     };
-    byTail: {
+    find: {
         parameters: {
             query?: {
                 tail?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -2157,28 +2087,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Farmer"][];
-                };
-            };
-        };
-    };
-    rules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RuleView"][];
                 };
             };
         };
