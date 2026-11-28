@@ -40,9 +40,9 @@ export function conflictsOf(e: unknown): Conflict[] | null {
 
 export const kindText = (k: string) => (k === 'BUY' ? '收购' : '发货')
 export const fmtPhone = (p: string) => (/^\d{11}$/.test(p) ? `${p.slice(0, 3)} ${p.slice(3, 7)} ${p.slice(7)}` : p)
-/** 每箱损耗调整的写法：+0.5 斤、−1 斤、0 显示“不调整” */
+/** 每箱损耗调整的写法：+0.5 斤、−1 斤、0 写 0 斤 */
 export const lossText = (v: number | null | undefined) =>
-  !v ? '不调整' : `${v > 0 ? '+' : '−'}${Math.abs(v)} 斤`
+  !v ? '0 斤' : `${v > 0 ? '+' : '−'}${Math.abs(v)} 斤`
 /** 一行写清规则打包了什么：粉蛋 360枚/箱 · 2号包装箱 4 斤 · 每箱 −1 斤 */
 export const packText = (r: RuleView) =>
-  `${r.productName} ${r.specName} · ${r.tareName ? `${r.tareName} ${r.tareJin} 斤` : '未设包装箱'}${r.lossJin ? ` · 每箱 ${lossText(r.lossJin)}` : ''}`
+  `${r.productName} ${r.specName}${r.tareName ? ` · ${r.tareName} ${r.tareJin} 斤` : ''}${r.lossJin ? ` · 每箱 ${lossText(r.lossJin)}` : ''}`

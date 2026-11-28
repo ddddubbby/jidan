@@ -22,8 +22,7 @@
     <string name="create_recent">最近</string>
     <string name="create_no_match">没有尾号 %1$s 的农户</string>
     <string name="create_last_warehouse">上一单用的</string>
-    <string name="create_no_rules">还没有可用的收购规则，请管理员在 Web 端新建</string>
-    <string name="create_no_tare">规则未设包装箱，称重时再选</string>
+    <string name="create_no_rules">没有可用的收购规则</string>
     <string name="create_no_base_price">无基准价</string>
     <string name="create_missing">还差 %1$d 步</string>
     <string name="create_start">开始收蛋</string>
@@ -90,7 +89,7 @@
     <string name="rule_sheet_loss">每箱损耗</string>
     <string name="rule_sheet_loss_down">减少损耗</string>
     <string name="rule_sheet_loss_up">增加损耗</string>
-    <string name="rule_sheet_no_loss">不调整</string>
+    <string name="rule_sheet_no_loss">0</string>
     <string name="rule_sheet_preview">本单收购价</string>
     <string name="rule_sheet_revert">还原</string>
     <string name="rule_sheet_save">保存到规则</string>
@@ -98,7 +97,7 @@
     <string name="rule_sheet_change">更换规则</string>
     <string name="rule_sheet_no_rules">没有可用规则</string>
     <string name="rule_sheet_candidate_coef">每斤尾差 %1$s&#160;元</string>
-    <string name="rule_sheet_candidate_price">本单 %1$s&#160;元/&#8288;箱</string>
+    <string name="rule_sheet_candidate_price">%1$s&#160;元/&#8288;箱</string>
     <string name="weigh_cancel_reweigh">取消</string>
     <string name="weigh_phase_locked">未设皮重</string>
     <string name="weigh_phase_unstable">读数未稳定</string>

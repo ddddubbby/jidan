@@ -344,9 +344,6 @@ class CreateFragment : Fragment() {
                     text = packText(rule)
                 },
             )
-            if (rule.tareBoxId == null) {
-                b.ruleHints.addView(tagline(getString(R.string.create_no_tare)))
-            }
             if (state.prices[rule.specId] == null) {
                 b.ruleHints.addView(tagline(getString(R.string.create_no_base_price)))
             }
@@ -368,7 +365,7 @@ class CreateFragment : Fragment() {
                     val noPrice = state.prices[r.specId] == null
                     Choice(
                         label = r.name,
-                        badge = if (noPrice) getString(R.string.create_no_base_price) else r.specName,
+                        badge = if (noPrice) getString(R.string.create_no_base_price) else null,
                         warn = noPrice,
                         selected = r.id == state.ruleId,
                     ) { vm.selectRule(r) }

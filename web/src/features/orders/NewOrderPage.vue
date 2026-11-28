@@ -8,7 +8,7 @@ import {
   getBatch, listWarehouses, quote, searchVendors, submitOrder,
   type NamedRow, type QuoteResult, type VendorRow,
 } from '../../api/orderCreate'
-import { listRules, lossText, type RuleView } from '../../api/rules'
+import { listRules, packText, type RuleView } from '../../api/rules'
 import { useMeta } from '../../stores/meta'
 import DateField from '../../ui/DateField.vue'
 import { dot, today } from '../../ui/date'
@@ -326,14 +326,13 @@ onBeforeUnmount(() => {
             <button class="btn sm ghost" @click="ruleId = null">换一条</button>
           </div>
           <div v-if="rule" class="muted nw-pack">
-            {{ rule.productName }} {{ rule.specName }} · {{ rule.tareName ? `${rule.tareName} ${rule.tareJin} 斤` : '未设包装箱' }}
-            · 每箱损耗 {{ lossText(rule.lossJin) }} · 每斤尾差 {{ rule.coef }} 元
+            {{ packText(rule) }} · 每斤尾差 {{ rule.coef }} 元
           </div>
           <template v-else-if="vendor">
             <input v-if="rules.length > 6" v-model="ruleQ" class="in" placeholder="规则名称、商品或规格" autocomplete="off" aria-label="筛选定价规则" />
             <div v-if="shownRules.length" class="pick">
               <button v-for="r in shownRules" :key="r.id" @click="pickRule(r.id)">
-                <span><b>{{ r.name }}</b><span class="muted nw-pack">{{ r.productName }} {{ r.specName }} · {{ r.tareName ?? '未设包装箱' }}{{ r.lossJin ? ` · 每箱 ${lossText(r.lossJin)}` : '' }}</span></span>
+                <span><b>{{ r.name }}</b><span class="muted nw-pack">{{ packText(r) }}</span></span>
                 <small v-if="priceOf(r.specId) == null" class="tag warn">无基准价</small>
               </button>
             </div>

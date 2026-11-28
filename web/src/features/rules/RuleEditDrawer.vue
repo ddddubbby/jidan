@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getTares } from '../../api/basics'
 import { errorText } from '../../api/http'
-import { conflictsOf, createRule, lossText, updateRule, type ArchiveRow, type Conflict, type Kind, type RuleView, type Spec } from '../../api/rules'
+import { conflictsOf, createRule, updateRule, type ArchiveRow, type Conflict, type Kind, type RuleView, type Spec } from '../../api/rules'
 import type { TareBox } from '../../api/types'
 import Drawer from '../../ui/Drawer.vue'
 import { toast } from '../../ui/toast'
@@ -147,9 +147,7 @@ const enabledTares = computed(() => tares.value.filter((t) => t.enabled || t.id 
           <button aria-label="减少损耗" @click="stepLoss(-0.5)">−</button>
           <input ref="lossInput" v-model="form.lossJin" class="in num" :class="{ bad: form.lossJin !== '' && !lossOk }" inputmode="decimal" autocomplete="off" aria-label="每箱损耗" />
           <button aria-label="增加损耗" @click="stepLoss(0.5)">+</button>
-          <span class="muted">{{ lossOk ? lossText(Number(form.lossJin)) : '' }}</span>
         </div>
-        <small class="muted">计价时加到每箱净重上再算均重；正数加、负数减。箱贴和回传备注仍按实称净重</small>
       </div>
 
       <label class="field"><span>每斤尾差（元）</span>

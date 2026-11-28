@@ -168,7 +168,7 @@ const saveRule = () => run(() => updateRule(current.value!.id, { coef: newCoef.v
             </div>
           </div>
           <div class="field">
-            <span>每箱损耗（斤，负数为减）</span>
+            <span>每箱损耗（斤）</span>
             <div class="stepper">
               <button aria-label="减少损耗" :disabled="busy" @click="stepLoss(-0.5)">−</button>
               <input
@@ -192,9 +192,9 @@ const saveRule = () => run(() => updateRule(current.value!.id, { coef: newCoef.v
             <template v-else><template v-if="trial !== p?.unitPrice"><s>{{ num(p?.unitPrice) }}</s> → </template><b>{{ num(trial) }}</b> 元/箱</template>
           </span>
           <span v-else-if="p?.unitPrice != null"><b>{{ num(p.unitPrice) }}</b> 元/箱</span>
-          <span v-else class="muted">缺基准价，算不出</span>
+          <span v-else class="muted">缺基准价</span>
         </div>
-        <p class="muted rl-note">标准 {{ num(p?.standardNetJin) }} 斤/箱 · {{ dot(order.bizDate ?? '') }} 基准 {{ p?.basePrice != null ? num(p.basePrice) + ' 元/箱' : '未录' }} · 改动保存到规则，用这条规则的待审核单一起重算</p>
+        <p class="muted rl-note">标准 {{ num(p?.standardNetJin) }} 斤/箱 · {{ dot(order.bizDate ?? '') }} 基准 {{ p?.basePrice != null ? num(p.basePrice) + ' 元/箱' : '未录' }}</p>
       </template>
 
       <div>
@@ -203,7 +203,7 @@ const saveRule = () => run(() => updateRule(current.value!.id, { coef: newCoef.v
         <div v-if="others.length" class="rl-pick">
           <button v-for="r in others" :key="r.id" :disabled="busy" @click="choose(r)">
             <span><b>{{ r.name }}</b><span class="muted rl-sub">{{ packText(r) }} · 每斤尾差 {{ num(r.coef) }} 元</span></span>
-            <span class="num nb"><b v-if="prices[r.id] != null">本单 {{ num(prices[r.id]) }} 元/箱</b></span>
+            <span class="num nb"><b v-if="prices[r.id] != null">{{ num(prices[r.id]) }} 元/箱</b></span>
           </button>
         </div>
         <template v-else>

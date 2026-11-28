@@ -134,7 +134,7 @@ class RuleSheet : JidanSheet() {
         return out.append(NumText.row(ctx, after, "元/箱"))
     }
 
-    /** 每箱损耗：0 写“不调整”，其余带正负号，如 +0.5 斤、−1 斤。 */
+    /** 每箱损耗：0 写 0，其余带正负号，如 +0.5 斤、−1 斤。 */
     private fun lossLabel(loss: Double): CharSequence =
         lossText(loss)?.let { TextGlue.withUnit(it.removeSuffix(" 斤"), "斤") } ?: getString(R.string.rule_sheet_no_loss)
 
