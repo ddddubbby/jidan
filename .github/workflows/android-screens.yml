@@ -8,11 +8,6 @@ on:
       - "android/**"
       - ".github/workflows/android-screens.yml"
   workflow_dispatch:
-    inputs:
-      print:
-        description: "把截图以 base64 打进日志（构建产物下载不了时用）"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -40,8 +35,3 @@ jobs:
           name: screens
           path: android/app/build/screens/**/*.png
           if-no-files-found: error
-      - name: 截图打进日志
-        if: ${{ inputs.print }}
-        run: |
-          cd app/build/screens
-          for f in $(find . -name '*.png' | sort); do echo "==FILE $f"; base64 -w 0 "$f"; echo; echo "==END"; done
