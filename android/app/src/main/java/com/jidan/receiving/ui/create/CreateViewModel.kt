@@ -179,7 +179,9 @@ class CreateViewModel(
                 val hits = container.catalog.farmersByName(q)
                 _ui.update { it.copy(nameHits = hits, nameSearched = q) }
             } catch (e: Throwable) {
-                _ui.update { it.copy(error = e.userMessage(), nameHits = emptyList(), nameSearched = q) }
+                // 旧后端不认 q，只会说“请输入手机号后四位”：换成说清楚是后端要更新；出错时不显示“没有名称含…”
+                val msg = e.userMessage().let { if (it.contains("手机号后四位")) OLD_BACKEND else it }
+                _ui.update { it.copy(error = msg, nameHits = emptyList(), nameSearched = "") }
             }
         }
     }
@@ -285,6 +287,7 @@ class CreateViewModel(
 
     companion object {
         const val NAME_DEBOUNCE_MS = 250L
+        const val OLD_BACKEND = "服务器还是旧版本，不支持按名称找农户。请先更新后端，或改用尾号找"
     }
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
