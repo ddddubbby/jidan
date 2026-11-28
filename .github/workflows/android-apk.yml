@@ -8,6 +8,14 @@ on:
       - "android/**"
       - ".github/workflows/android-apk.yml"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "打完包后发一个 GitHub Release（标签 apk-<versionName>）"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   apk:
@@ -35,3 +43,30 @@ jobs:
           name: apk
           path: android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+      - name: 发 Release
+        if: ${{ inputs.release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LANSTAR_COMPANY_KEY: ${{ secrets.LANSTAR_COMPANY_KEY }}
+        run: |
+          vname=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          sha=$(git rev-parse --short HEAD)
+          mkdir -p ../dist
+          cp app/build/outputs/apk/real/debug/app-real-debug.apk ../dist/shoudan-real-$vname.apk
+          cp app/build/outputs/apk/sim/debug/app-sim-debug.apk ../dist/shoudan-sim-$vname.apk
+          if [ -n "$LANSTAR_COMPANY_KEY" ]; then key="实机版已带蓝石 companyKey。"; else key="实机版没有带蓝石 companyKey。"; fi
+          cat > ../dist/notes.md <<NOTES
+          新增：建单找农户可按名称、好生意编码或拼音首字母（需要后端同版本，见 PR #101）。
+
+          - 实机版（给磅秤员用）：\`shoudan-real-$vname.apk\`，包名 \`com.jidan.receiving\`
+          - 模拟版（没有秤也能试流程）：\`shoudan-sim-$vname.apk\`，包名 \`com.jidan.receiving.sim\`
+
+          $key versionCode 比 0.1.0 大，已装旧版的手机在服务器发布后会看到“有新版本”。debug 签名：手机上若装的是别处打的包，要先卸载再装。
+
+          构建自 \`${GITHUB_REF_NAME}\` @ \`$sha\`。
+
+          **未经真秤/真打印机/真好生意账套实物验证。**
+          NOTES
+          sed -i 's/^          //' ../dist/notes.md
+          gh release create "apk-$vname" ../dist/shoudan-real-$vname.apk ../dist/shoudan-sim-$vname.apk \
+            --target "$GITHUB_SHA" --title "收蛋 APK $vname（按名称找农户）" --notes-file ../dist/notes.md
