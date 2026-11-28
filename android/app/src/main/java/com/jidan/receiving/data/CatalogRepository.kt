@@ -8,6 +8,8 @@ data class Catalog(
     val tares: List<TareDto>,
     /** 启用的收购规则，建单时按名称选 */
     val rules: List<RuleViewDto> = emptyList(),
+    /** bootstrap 里没有 rules 字段：服务器还是 0.2.0 之前的后端 */
+    val oldBackend: Boolean = false,
 ) {
     /** 规格 → 当日基准价；没录的规格不在表里（APP 标“无基准价”）。 */
     fun basePrices(): Map<Long, Double?> = specs.associate { it.id to it.basePrice }
@@ -19,6 +21,7 @@ fun BootstrapResponse.toCatalog(): Catalog = Catalog(
     warehouses = warehouses.orEmpty(),
     tares = tares.orEmpty(),
     rules = rules.orEmpty().filter { it.enabled && (it.kind == null || it.kind.equals("BUY", ignoreCase = true)) },
+    oldBackend = rules == null,
 )
 
 /** 建单用的档案与规则：商品、规格、仓库、皮重、启用的收购规则取自 bootstrap，农户与改规则走磅秤员可调的接口（开发规格 5.2）。 */

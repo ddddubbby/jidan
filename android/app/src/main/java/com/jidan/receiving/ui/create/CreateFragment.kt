@@ -355,8 +355,22 @@ class CreateFragment : Fragment() {
         b.stepRule.isClickable = done && !isActive
         if (isActive) {
             if (state.rules.isEmpty()) {
-                b.ruleChoices.removeAllViews()
-                b.ruleChoices.addView(tagline(getString(R.string.create_no_rules)))
+                // 管理员在 Web 上建好或启用规则后，点一下重新取，不用退出 APP
+                fillChoices(
+                    b.ruleChoices,
+                    listOf(
+                        Choice(
+                            label = getString(if (state.loading) R.string.create_rules_loading else R.string.create_rules_reload),
+                            badge = null,
+                            warn = false,
+                            selected = false,
+                        ) { if (!state.loading) vm.loadCatalog() },
+                    ),
+                )
+                b.ruleChoices.addView(
+                    tagline(getString(if (state.oldBackend) R.string.create_rules_old_backend else R.string.create_no_rules)),
+                    0,
+                )
                 return
             }
             fillChoices(
