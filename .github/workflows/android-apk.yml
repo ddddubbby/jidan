@@ -1,0 +1,36 @@
+# 打 APP 安装包：模拟版（sim）与实机版（real）的 debug APK，并跑 APP 单测。
+# 实机版的蓝石秤 companyKey 不入库：仓库 Secrets 里有 LANSTAR_COMPANY_KEY 就带上，没有则为空串（见 sdk/README.md）。
+name: android-apk
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 单测与打包
+        env:
+          LANSTAR_COMPANY_KEY: ${{ secrets.LANSTAR_COMPANY_KEY }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testSimDebugUnitTest :app:testSimDemoUnitTest :app:assembleSimDebug :app:assembleRealDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
