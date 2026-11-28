@@ -1,6 +1,6 @@
 package com.jidan.receiving.device
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,18 +13,33 @@ import kotlin.test.assertTrue
 class LanstarMappingTest {
     @Test
     fun weightToCents() {
-        assertEquals(Kg(4650), LanstarMapping.toKg(BigDecimal("46.5")))
-        assertEquals(Kg(4560), LanstarMapping.toKg(BigDecimal("45.60")))
-        assertEquals(Kg(1), LanstarMapping.toKg(BigDecimal("0.005"))) // 第 3 位起四舍五入
-        assertEquals(Kg(0), LanstarMapping.toKg(BigDecimal("0.004")))
-        assertEquals(Kg(-10), LanstarMapping.toKg(BigDecimal("-0.1")))
+        val j = ScaleUnit.JIN
+        assertEquals(Jin(4650), LanstarMapping.toJin(BigDecimal("46.5"), j))
+        assertEquals(Jin(4560), LanstarMapping.toJin(BigDecimal("45.60"), j))
+        assertEquals(Jin(1), LanstarMapping.toJin(BigDecimal("0.005"), j)) // 第 3 位起四舍五入
+        assertEquals(Jin(0), LanstarMapping.toJin(BigDecimal("0.004"), j))
+        assertEquals(Jin(-10), LanstarMapping.toJin(BigDecimal("-0.1"), j))
+    }
+
+    /** 秤按公斤计（scale.unit = kg）：读数 ×2 成斤，下发皮重 ÷2 成公斤 */
+    @Test
+    fun kgScaleIsConvertedToJin() {
+        val k = ScaleUnit.KG
+        assertEquals(Jin(9300), LanstarMapping.toJin(BigDecimal("46.5"), k))
+        assertEquals(Jin(9121), LanstarMapping.toJin(BigDecimal("45.605"), k))
+        assertEquals(Jin(-20), LanstarMapping.toJin(BigDecimal("-0.1"), k))
+        assertEquals("2.00", LanstarMapping.peelText(Jin(400), k))
+        assertEquals("4.20", LanstarMapping.peelText(Jin(840), k))
+        assertEquals(ScaleUnit.KG, ScaleUnit.of(null))
+        assertEquals(ScaleUnit.JIN, ScaleUnit.of("jin"))
     }
 
     @Test
     fun peelTextHasTwoDecimalsAndNoLocaleComma() {
-        assertEquals("2.16", LanstarMapping.peelText(Kg(216)))
-        assertEquals("2.00", LanstarMapping.peelText(Kg(200)))
-        assertEquals("0.50", LanstarMapping.peelText(Kg(50)))
+        val j = ScaleUnit.JIN
+        assertEquals("2.16", LanstarMapping.peelText(Jin(216), j))
+        assertEquals("2.00", LanstarMapping.peelText(Jin(200), j))
+        assertEquals("0.50", LanstarMapping.peelText(Jin(50), j))
     }
 
     @Test

@@ -118,6 +118,9 @@ public final class Options {
                 c("gainscha-gp-m32b", "佳博 GP-M32B"));
 
         // ---- 第一组：设备与接口适配 ----
+        // 业务上全系统用斤；秤给的读数是什么单位没实测过，默认按 kg，APP 收到读数先换成斤（附录 E R-1 行）
+        enumOf("scale.unit", Group.ADAPTER, "秤读数单位", "秤显示和上传的是斤而不是公斤时改成斤", "kg",
+                c("kg", "公斤（APP 乘 2 换成斤）"), c("jin", "斤（不换算）"));
         enumOf("scale.tare-by", Group.ADAPTER, "去皮方式", "秤的去皮接口不好用，或读数含义搞不清", "scale",
                 c("scale", "皮重下发到秤"), c("app", "APP 自己扣皮"));
         // v7 7.2、Q-03 未确认；默认按“SDK 设皮后读数已是净重”，实测不是时改成否
@@ -127,9 +130,9 @@ public final class Options {
                 c("sdk", "用秤给的稳定标志"), c("app", "APP 按读数是否不动判断"));
         number("scale.stable-window-ms", Group.ADAPTER, Type.INT, "稳定窗口（毫秒）", "“稳定判断”为 APP 判断时，记得太早或太晚",
                 "100", "10000", "800");
-        number("scale.stable-tolerance-kg", Group.ADAPTER, Type.DECIMAL, "稳定容差（kg）", "“稳定判断”为 APP 判断时，记得太早或太晚",
-                "0", "5", "0.05");
-        number("weigh.empty-below-kg", Group.ADAPTER, Type.DECIMAL, "空秤阈值（kg）", "“秤面已清空”判断不准", "0", "50", "5");
+        number("scale.stable-tolerance-jin", Group.ADAPTER, Type.DECIMAL, "稳定容差（斤）", "“稳定判断”为 APP 判断时，记得太早或太晚",
+                "0", "10", "0.1");
+        number("weigh.empty-below-jin", Group.ADAPTER, Type.DECIMAL, "空秤阈值（斤）", "“秤面已清空”判断不准", "0", "100", "10");
         number("weigh.merge-tolerance-pct", Group.ADAPTER, Type.INT, "合并称重识别范围（%）",
                 "合并称重时“识别不准”的提示太多或太少", "1", "100", "10");
         number("weigh.merge-max-k", Group.ADAPTER, Type.INT, "合并称重最多箱数", "合并称重时“识别不准”的提示太多或太少",

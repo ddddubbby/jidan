@@ -86,7 +86,7 @@ class LedgerSheet : JidanSheet() {
         if (sameTare) {
             val first = state.boxes[0]
             b.tareSame.text = buildString {
-                append("每箱皮重 ").append(TextGlue.withUnit(first.tare.format(), "kg"))
+                append("每箱皮重 ").append(TextGlue.withUnit(first.tare.format(), "斤"))
                 if (first.tareName.isNotBlank()) append("（").append(first.tareName).append("）")
             }
         }
@@ -101,11 +101,11 @@ class LedgerSheet : JidanSheet() {
         val r = ViewLedgerRowBinding.inflate(layoutInflater, parent, false)
         val ctx = requireContext()
         r.ledgerSeq.text = getString(R.string.ledger_row_seq, box.seq)
-        r.ledgerNet.text = NumText.row(ctx, box.net.format(), "kg")
+        r.ledgerNet.text = NumText.row(ctx, box.net.format(), "斤")
         r.ledgerManual.isVisible = box.manual
         val sub = buildList {
-            if (box.manual && box.raw != null) add("原 ${TextGlue.withUnit(box.raw!!.format(), "kg")}")
-            if (!sameTare) add("皮重 ${TextGlue.withUnit(box.tare.format(), "kg")}")
+            if (box.manual && box.raw != null) add("原 ${TextGlue.withUnit(box.raw!!.format(), "斤")}")
+            if (!sameTare) add("皮重 ${TextGlue.withUnit(box.tare.format(), "斤")}")
         }
         r.ledgerSub.isVisible = sub.isNotEmpty()
         r.ledgerSub.text = sub.joinToString("\n")

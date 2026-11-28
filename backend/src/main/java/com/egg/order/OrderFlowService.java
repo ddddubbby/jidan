@@ -44,7 +44,7 @@ public class OrderFlowService {
 
     /** 动作做完后的单据状态。详情页另由 P2-3 的 GET /orders/{id} 提供，这里只返回状态与回传结果。 */
     public record Flow(long id, String code, String batchNo, OrderStatus status, LocalDateTime approvedAt, String hsId,
-            String pushError, Integer boxCount, BigDecimal totalNetKg, BigDecimal avgKg, BigDecimal price,
+            String pushError, Integer boxCount, BigDecimal totalNetJin, BigDecimal avgJin, BigDecimal price,
             BigDecimal amount) {
     }
 
@@ -82,24 +82,24 @@ public class OrderFlowService {
             if (o.status == OrderStatus.VOID) {
                 throw new ApiException(ErrorCode.ORDER_LOCKED, "这张单已作废，不能审核");
             }
-            List<BigDecimal> nets = netKgs(o.id);
+            List<BigDecimal> nets = netJins(o.id);
             if (nets.isEmpty()) {
                 throw new ApiException(ErrorCode.NOT_READY, "这张单没有称重流水，现在不能审核");
             }
-            Result r = pricing.price(new PricingService.Request(o.vendorId, o.productId, o.specId, o.bizDate, nets));
+            Result r = pricing.price(new PricingService.Request(o.ruleId, o.specId, o.bizDate, nets));
             if (!r.issues().isEmpty()) {
                 throw new ApiException(ErrorCode.NOT_READY, missing(r));
             }
 
             o.roundMode = r.roundMode().name();
             o.boxCount = r.boxCount();
-            o.totalNetKg = r.totalKg();
-            o.avgKg = r.avgKg();
-            o.stdNetKg = r.standardNetKg();
+            o.totalNetJin = r.totalJin();
+            o.avgJin = r.avgJin();
+            o.stdNetJin = r.standardNetJin();
             o.basePrice = r.basePrice();
-            o.ruleId = r.ruleId();
             o.ruleName = r.ruleName();
             o.ruleCoef = r.coefficient();
+            o.ruleLossJin = r.lossJin();
             o.price = r.unitPrice();
             o.amount = r.amount();
             o.pushPayload = payload(o, nets);
@@ -134,8 +134,8 @@ public class OrderFlowService {
     private static String missing(Result r) {
         boolean noRule = r.issues().contains(PricingService.NO_RULE);
         boolean noBase = r.issues().contains(PricingService.NO_BASE_PRICE);
-        String what = noRule && noBase ? "没有收购规则，当日也没录基准价"
-                : noRule ? "这位农户在该商品规格上没有收购规则" : "当日该规格没录基准价";
+        String what = noRule && noBase ? "没有选定价规则，当日也没录基准价"
+                : noRule ? "没有选定价规则" : "当日该规格没录基准价";
         return what + "，现在不能审核";
     }
 
@@ -195,13 +195,14 @@ public class OrderFlowService {
             o.pushPayload = null;
             o.roundMode = null;
             o.boxCount = null;
-            o.totalNetKg = null;
-            o.avgKg = null;
-            o.stdNetKg = null;
+            o.totalNetJin = null;
+            o.avgJin = null;
+            o.stdNetJin = null;
             o.basePrice = null;
-            o.ruleId = null;
+            // 规则是建单时选的（表头），退回不清；只清审核时冻结的规则名、系数、损耗
             o.ruleName = null;
             o.ruleCoef = null;
+            o.ruleLossJin = null;
             o.price = null;
             o.amount = null;
             touch(o, me);
@@ -257,9 +258,9 @@ public class OrderFlowService {
         return o;
     }
 
-    private List<BigDecimal> netKgs(long orderId) {
+    private List<BigDecimal> netJins(long orderId) {
         return records.selectList(new QueryWrapper<WeighRecord>().eq("order_id", orderId).orderByAsc("seq"))
-                .stream().map(r -> r.netKg).toList();
+                .stream().map(r -> r.netJin).toList();
     }
 
     private static void touch(PurchaseOrder o, CurrentUser me) {
@@ -278,13 +279,14 @@ public class OrderFlowService {
                 .set("push_payload", o.pushPayload)
                 .set("round_mode", o.roundMode)
                 .set("box_count", o.boxCount)
-                .set("total_net_kg", o.totalNetKg)
-                .set("avg_kg", o.avgKg)
-                .set("std_net_kg", o.stdNetKg)
+                .set("total_net_jin", o.totalNetJin)
+                .set("avg_jin", o.avgJin)
+                .set("std_net_jin", o.stdNetJin)
                 .set("base_price", o.basePrice)
                 .set("rule_id", o.ruleId)
                 .set("rule_name", o.ruleName)
                 .set("rule_coef", o.ruleCoef)
+                .set("rule_loss_jin", o.ruleLossJin)
                 .set("price", o.price)
                 .set("amount", o.amount)
                 .set("updated_by", o.updatedBy)
@@ -293,6 +295,6 @@ public class OrderFlowService {
 
     private static Flow flow(PurchaseOrder o) {
         return new Flow(o.id, o.code, o.batchNo, o.status, o.approvedAt, o.hsId, o.pushError, o.boxCount,
-                o.totalNetKg, o.avgKg, o.price, o.amount);
+                o.totalNetJin, o.avgJin, o.price, o.amount);
     }
 }

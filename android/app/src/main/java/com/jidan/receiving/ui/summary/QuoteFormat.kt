@@ -57,22 +57,25 @@ fun roundModeLabel(mode: String?): String = when (mode?.uppercase(Locale.ROOT)) 
  */
 fun formulaLine(q: QuoteResult): String {
     if (q.unitPrice == null || q.boxCount <= 0) return ""
-    val raw = q.rawAvgKg?.let { String.format(Locale.US, "%.2f", it) } ?: "—"
-    val avg = formatNum(q.avgKg)
+    val raw = q.rawAvgJin?.let { String.format(Locale.US, "%.2f", it) } ?: "—"
+    val avg = formatNum(q.avgJin)
     val round = roundModeLabel(q.roundMode)
-    return "均重 $raw ${round}为 ${avg}kg · ${priceLine(q)}"
+    // 规则带每箱损耗时写在称得均重后面：均重 92.10（每箱 −1 斤）四舍五入为 91斤
+    val loss = q.lossJin?.takeIf { abs(it) > 0.000_000_1 }
+        ?.let { "（每箱 ${if (it > 0) "+" else "−"}${formatNum(abs(it))}${TextGlue.NBSP}斤）" }.orEmpty()
+    return "均重 $raw$loss ${round}为 ${avg}斤 · ${priceLine(q)}"
 }
 
 fun priceLine(q: QuoteResult): String {
     val base = formatNum(q.basePrice)
     val unit = TextGlue.withUnit(formatNum(q.unitPrice), "元/箱")
-    val avg = formatNum(q.avgKg)
+    val avg = formatNum(q.avgJin)
     val diff = q.priceDiff ?: 0.0
     if (abs(diff) < 0.000_000_1) {
-        return "基准 $base，均重正好 ${avg}kg = $unit"
+        return "基准 $base，均重正好 ${avg}斤 = $unit"
     }
     val coef = TextGlue.withUnit(formatNum(q.coefficient), "元")
-    val tail = formatNum(abs(q.tailKg ?: 0.0))
+    val tail = formatNum(abs(q.tailJin ?: 0.0))
     val sign = if (diff > 0) "+ 多" else "− 少"
-    return "基准 $base $sign ${tail}kg × $coef = $unit"
+    return "基准 $base $sign ${tail}斤 × $coef = $unit"
 }

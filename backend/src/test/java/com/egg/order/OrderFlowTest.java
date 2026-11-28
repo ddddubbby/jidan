@@ -41,12 +41,12 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 @Import(MySqlTestConfig.class)
 class OrderFlowTest {
 
-    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5kg，均重 46，181 元/箱，1810 元 */
+    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5斤，均重 46，181 元/箱，1810 元 */
     private static final List<Double> LI_SI_BOXES = List.of(46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8);
     /** v7 6.3 的备注全文 */
     private static final String REMARK_FULL = "共10箱；逐箱：46.5,45.8,46,46,46,45.6,45.6,45.6,45.6,47.8；"
-            + "归类：45.6kg-4箱,46kg-3箱,46.5kg-1箱,45.8kg-1箱,47.8kg-1箱";
-    private static final String REMARK_SUMMARY = "共10箱；归类：45.6kg-4箱,46kg-3箱,46.5kg-1箱,45.8kg-1箱,47.8kg-1箱";
+            + "归类：45.6斤-4箱,46斤-3箱,46.5斤-1箱,45.8斤-1箱,47.8斤-1箱";
+    private static final String REMARK_SUMMARY = "共10箱；归类：45.6斤-4箱,46斤-3箱,46.5斤-1箱,45.8斤-1箱,47.8斤-1箱";
 
     @Autowired
     TestRestTemplate http;
@@ -66,24 +66,34 @@ class OrderFlowTest {
 
     @BeforeEach
     void fixtures() {
-        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule_bind", "pricing_rule",
+        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule",
                 "base_price", "vendor_phone", "vendor", "warehouse", "product", "spec", "tare_box", "`option`")) {
             jdbc.update("DELETE FROM " + t);
         }
         fake = (FakeChanjetClient) chanjet;
         fake.failNext(null);
         pink = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0001', '粉蛋', '箱')");
-        s360 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('360枚/箱', 360, 45, 1)");
-        s480 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('480枚/箱', 480, 60, 1)");
+        s360 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('360枚/箱', 360, 45, 1)");
+        s480 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('480枚/箱', 480, 60, 1)");
         liSi = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0001', '李四')");
         warehouse = insert("INSERT INTO warehouse (hs_code, name) VALUES ('CK0001', '一号库')");
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 180)", today, s360);
         rule = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled)"
                 + " VALUES ('粉蛋李四收购定价方案', 'BUY', " + pink + ", " + s360 + ", 1, 1)");
-        jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?, ?)", rule, liSi);
     }
 
     // ---------------------------------------------------------------- 工具
+
+    /** 规则改为建单时选（附录 E R-1 行）：取这个商品规格上的第一条收购规则，没有就建一条系数 1 的。 */
+    private long ruleOf(long product, long spec) {
+        List<Long> found = jdbc.queryForList("SELECT id FROM pricing_rule WHERE kind = 'BUY' AND product_id = ? AND spec_id = ?"
+                + " ORDER BY id LIMIT 1", Long.class, product, spec);
+        if (!found.isEmpty()) {
+            return found.get(0);
+        }
+        return insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled) VALUES ('测试规则"
+                + product + "-" + spec + "', 'BUY', " + product + ", " + spec + ", 1, 1)");
+    }
 
     private long insert(String sql) {
         var keys = new GeneratedKeyHolder();
@@ -136,9 +146,9 @@ class OrderFlowTest {
     private Map<String, Object> box(int seq, double net) {
         Map<String, Object> m = new HashMap<>();
         m.put("seq", seq);
-        m.put("netKg", net);
-        m.put("grossKg", net + 2);
-        m.put("tareKg", 2);
+        m.put("netJin", net);
+        m.put("grossJin", net + 2);
+        m.put("tareJin", 2);
         m.put("tareName", "2号包装箱");
         m.put("groupNo", seq);
         m.put("groupK", 1);
@@ -154,8 +164,7 @@ class OrderFlowTest {
         for (int i = 0; i < nets.size(); i++) {
             boxes.add(box(i + 1, nets.get(i)));
         }
-        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSi, "productId", pink,
-                "specId", spec, "warehouseId", warehouse, "boxes", boxes), scale());
+        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSi, "ruleId", ruleOf(pink, spec), "warehouseId", warehouse, "boxes", boxes), scale());
         assertThat(res.getStatusCode().is2xxSuccessful()).as(String.valueOf(res.getBody())).isTrue();
         return res.getBody().get("id").asLong();
     }
@@ -193,9 +202,9 @@ class OrderFlowTest {
         assertThat(o.get("approved_at")).isNotNull();
         assertThat(o.get("round_mode")).isEqualTo("HALF");
         assertThat(o.get("box_count")).isEqualTo(10);
-        assertThat((java.math.BigDecimal) o.get("total_net_kg")).isEqualByComparingTo("460.5");
-        assertThat((java.math.BigDecimal) o.get("avg_kg")).isEqualByComparingTo("46");
-        assertThat((java.math.BigDecimal) o.get("std_net_kg")).isEqualByComparingTo("45");
+        assertThat((java.math.BigDecimal) o.get("total_net_jin")).isEqualByComparingTo("460.5");
+        assertThat((java.math.BigDecimal) o.get("avg_jin")).isEqualByComparingTo("46");
+        assertThat((java.math.BigDecimal) o.get("std_net_jin")).isEqualByComparingTo("45");
         assertThat((java.math.BigDecimal) o.get("base_price")).isEqualByComparingTo("180");
         assertThat(o.get("rule_id")).isEqualTo(rule);
         assertThat(o.get("rule_name")).isEqualTo("粉蛋李四收购定价方案");
@@ -236,7 +245,7 @@ class OrderFlowTest {
         Map<String, Object> o = row(id);
         assertThat((java.math.BigDecimal) o.get("price")).isEqualByComparingTo("181");
         assertThat((java.math.BigDecimal) o.get("amount")).isEqualByComparingTo("1810");
-        assertThat((java.math.BigDecimal) o.get("avg_kg")).isEqualByComparingTo("46");
+        assertThat((java.math.BigDecimal) o.get("avg_jin")).isEqualByComparingTo("46");
         assertThat(o.get("round_mode")).isEqualTo("HALF");
     }
 
@@ -253,7 +262,6 @@ class OrderFlowTest {
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 250)", today, s480);
         long r2 = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled)"
                 + " VALUES ('480 规则', 'BUY', " + pink + ", " + s480 + ", 2, 1)");
-        jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?, ?)", r2, liSi);
         assertThat(post(noBase, "approve").get("status").asText()).isEqualTo("PUSHED");
     }
 
@@ -366,10 +374,12 @@ class OrderFlowTest {
         assertThat(res.get("status").asText()).isEqualTo("PENDING");
         Map<String, Object> o = row(id);
         for (String col : List.of("approver_id", "approved_at", "hs_id", "push_error", "push_payload", "round_mode",
-                "box_count", "total_net_kg", "avg_kg", "std_net_kg", "base_price", "rule_id", "rule_name", "rule_coef",
-                "price", "amount")) {
+                "box_count", "total_net_jin", "avg_jin", "std_net_jin", "base_price", "rule_name", "rule_coef",
+                "rule_loss_jin", "price", "amount")) {
             assertThat(o.get(col)).as(col).isNull();
         }
+        // 规则是建单时选的，退回不清（附录 E R-1 行）
+        assertThat(o.get("rule_id")).isNotNull();
         // 流水还在，待审核可以改
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM weigh_record WHERE order_id = ?", Integer.class, id))
                 .isEqualTo(10);
@@ -495,12 +505,12 @@ class OrderFlowTest {
     @Test
     void remarkTooLongFallsBackToSummary() throws Exception {
         int before = fake.sentPayloads().size();
-        // 全文 102 个字：上限 101 降为汇总，102 仍带全文（与 fixtures/remark.json 一致）
-        setOption("push.remark-max-length", "101");
+        // 全文 97 个字：上限 96 降为汇总，97 仍带全文
+        setOption("push.remark-max-length", "96");
         post(submitLiSi(), "approve");
         assertThat(sentPayload(before).get("comments").asText()).isEqualTo(REMARK_SUMMARY);
 
-        setOption("push.remark-max-length", "102");
+        setOption("push.remark-max-length", "97");
         post(submitLiSi(), "approve");
         assertThat(sentPayload(before + 1).get("comments").asText()).isEqualTo(REMARK_FULL);
     }

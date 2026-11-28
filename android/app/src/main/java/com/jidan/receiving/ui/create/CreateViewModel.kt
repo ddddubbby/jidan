@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.jidan.receiving.AppContainer
 import com.jidan.receiving.BuildConfig
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
+import com.jidan.receiving.core.Tare
 import com.jidan.receiving.data.FarmerDto
 import com.jidan.receiving.data.NamedDto
 import com.jidan.receiving.data.RuleViewDto
@@ -32,18 +34,15 @@ data class CreateUiState(
     val farmers: List<FarmerDto> = emptyList(),
     val recent: List<FarmerDto> = emptyList(),
     val noMatch: String = "",
-    val products: List<NamedDto> = emptyList(),
     val specs: List<SpecDto> = emptyList(),
     val warehouses: List<NamedDto> = emptyList(),
+    /** 启用的收购规则（bootstrap 下发），按名称选 */
     val rules: List<RuleViewDto> = emptyList(),
     val prices: Map<Long, Double?> = emptyMap(),
     val farmerId: Long? = null,
     val farmerName: String? = null,
     val farmerPhone: String? = null,
-    val productId: Long? = null,
-    val productName: String? = null,
-    val specId: Long? = null,
-    val specName: String? = null,
+    val ruleId: Long? = null,
     val warehouseId: Long? = null,
     val warehouseName: String? = null,
     val open: CreateStep? = null,
@@ -53,7 +52,8 @@ data class CreateUiState(
     val update: UpdateOffer? = null,
 ) {
     val picks: CreatePicks
-        get() = CreatePicks(farmerId, productId, specId, warehouseId)
+        get() = CreatePicks(farmerId, ruleId, warehouseId)
+    val rule: RuleViewDto? get() = rules.firstOrNull { it.id == ruleId }
     val missing: List<CreateStep> get() = missingSteps(picks)
     val active: CreateStep? get() = activeStep(picks, open)
     val ready: Boolean get() = missing.isEmpty()
@@ -91,7 +91,7 @@ class CreateViewModel(
             _ui.update { it.copy(loading = true, error = "") }
             try {
                 val cat = container.catalog.catalog()
-                val products = cat.products
+                val rules = cat.rules
                 val specs = cat.specs
                 val warehouses = cat.warehouses
                 val prices = cat.basePrices()
@@ -100,7 +100,9 @@ class CreateViewModel(
                 _ui.update {
                     it.copy(
                         loading = false,
-                        products = products,
+                        rules = rules,
+                        // 选过的规则若已停用或删掉，就当没选
+                        ruleId = it.ruleId?.takeIf { id -> rules.any { r -> r.id == id } },
                         specs = specs,
                         warehouses = warehouses,
                         prices = prices,
@@ -187,70 +189,29 @@ class CreateViewModel(
     }
 
     fun selectFarmer(f: FarmerDto) {
-        viewModelScope.launch {
-            val q = _ui.value.query
-            val phone = f.matchedPhones.firstOrNull()
-                ?: f.phones.firstOrNull { it.replace("\\D".toRegex(), "").endsWith(q) }
-                ?: f.phones.firstOrNull()
-            _ui.update {
-                it.copy(
-                    farmerId = f.id,
-                    farmerName = f.name,
-                    farmerPhone = phone,
-                    productId = null,
-                    productName = null,
-                    specId = null,
-                    specName = null,
-                    open = null,
-                    rules = emptyList(),
-                    farmers = emptyList(),
-                    query = "",
-                    noMatch = "",
-                    name = "",
-                    nameHits = emptyList(),
-                    nameSearched = "",
-                )
-            }
-            try {
-                val rules = container.catalog.farmerBuyRules(f.id)
-                val pairs = rules.map { it.productId to it.specId }
-                val (pid, sid) = autoFillFromRules(pairs)
-                val product = _ui.value.products.firstOrNull { it.id == pid }
-                val spec = _ui.value.specs.firstOrNull { it.id == sid }
-                _ui.update {
-                    it.copy(
-                        rules = rules,
-                        productId = pid,
-                        productName = product?.name ?: rules.firstOrNull()?.productName,
-                        specId = sid,
-                        specName = spec?.name ?: rules.firstOrNull()?.specName,
-                    )
-                }
-            } catch (e: Throwable) {
-                _ui.update { it.copy(error = e.userMessage()) }
-            }
-        }
-    }
-
-    fun selectProduct(p: NamedDto) {
-        val pairs = _ui.value.rules.map { it.productId to it.specId }
-        val sid = autoFillSpecForProduct(pairs, p.id)
-        val spec = _ui.value.specs.firstOrNull { it.id == sid }
-            ?: _ui.value.rules.firstOrNull { it.productId == p.id && it.specId == sid }
-                ?.let { SpecDto(it.specId, it.specName ?: "") }
+        val q = _ui.value.query
+        val phone = f.matchedPhones.firstOrNull()
+            ?: f.phones.firstOrNull { it.replace("\\D".toRegex(), "").endsWith(q) }
+            ?: f.phones.firstOrNull()
         _ui.update {
             it.copy(
-                productId = p.id,
-                productName = p.name,
-                specId = sid,
-                specName = spec?.name,
+                farmerId = f.id,
+                farmerName = f.name,
+                farmerPhone = phone,
                 open = null,
+                farmers = emptyList(),
+                query = "",
+                noMatch = "",
+                name = "",
+                nameHits = emptyList(),
+                nameSearched = "",
             )
         }
     }
 
-    fun selectSpec(s: SpecDto) {
-        _ui.update { it.copy(specId = s.id, specName = s.name, open = null) }
+    /** 规则不绑农户：按名称直接选（附录 E R-1 行）。 */
+    fun selectRule(r: RuleViewDto) {
+        _ui.update { it.copy(ruleId = r.id, open = null) }
     }
 
     fun selectWarehouse(w: NamedDto) {
@@ -265,18 +226,23 @@ class CreateViewModel(
         _ui.update { it.copy(open = null) }
     }
 
-    /** 四步齐了：写入 OrderDraft，调用方导航去称重（P6-4）。 */
+    /** 三步齐了：写入 OrderDraft，调用方导航去称重（P6-4）。商品、规格、标准净含量、包装箱取自所选规则。 */
     fun commitHeader(): Boolean {
         val s = _ui.value
         if (!s.ready) return false
-        val std = s.specs.firstOrNull { it.id == s.specId }?.stdNetKg
-        val stdCents = std?.let { com.jidan.receiving.core.Kg.of(it).cents }
+        val r = s.rule ?: return false
+        val std = r.stdNetJin ?: s.specs.firstOrNull { it.id == r.specId }?.stdNetJin
+        val stdCents = std?.let { Jin.of(it).cents }
+        val tare = if (r.tareName != null && r.tareJin != null) Tare(Jin.of(r.tareJin), r.tareName) else null
         container.orderDraft.update {
             it.copy(
                 farmer = Pick(s.farmerId!!, s.farmerName!!),
                 farmerPhone = s.farmerPhone,
-                product = Pick(s.productId!!, s.productName!!),
-                spec = Pick(s.specId!!, s.specName!!),
+                rule = Pick(r.id, r.name),
+                tare = tare,
+                tareId = r.tareBoxId,
+                product = Pick(r.productId, r.productName.orEmpty()),
+                spec = Pick(r.specId, r.specName.orEmpty()),
                 stdNetCents = stdCents,
                 warehouse = Pick(s.warehouseId!!, s.warehouseName!!),
             )

@@ -14,7 +14,7 @@ import { toast } from '../../ui/toast'
 interface Row {
   specId: number
   name: string
-  stdNetKg: number
+  stdNetJin: number
   prev: number | null // 前一天的价
   price: number | null // 已保存的价
   draft: string
@@ -52,7 +52,7 @@ async function load() {
     rows.value = (day.items ?? []).map((i) => ({
       specId: i.specId!,
       name: i.specName ?? '',
-      stdNetKg: i.stdNetKg ?? 0,
+      stdNetJin: i.stdNetJin ?? 0,
       prev: i.prevPrice ?? null,
       price: i.price ?? null,
       draft: i.price == null ? '' : String(i.price),
@@ -171,7 +171,7 @@ function backTo() {
         <template v-for="r in rows" :key="r.specId">
         <tr :class="{ warnrow: r.price == null, errfirst: !!r.err }">
           <td class="spname"><b>{{ r.name }}</b></td>
-          <td class="r"><Num :value="r.stdNetKg" unit="kg" /></td>
+          <td class="r"><Num :value="r.stdNetJin" unit="斤" /></td>
           <td class="r"><Num :value="r.prev" /></td>
           <td>
             <input

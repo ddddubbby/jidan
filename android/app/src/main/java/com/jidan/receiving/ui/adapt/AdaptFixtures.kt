@@ -12,12 +12,12 @@ object AdaptFixtures {
 
     const val STRESS_BOX_COUNT = 100
 
-    /** 李四 10 箱净重（kg），循环灌入压力箱。 */
-    val SAMPLE_NETS_KG: DoubleArray = doubleArrayOf(
+    /** 李四 10 箱净重（斤），循环灌入压力箱。 */
+    val SAMPLE_NETS_JIN: DoubleArray = doubleArrayOf(
         46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8,
     )
 
-    fun netKgForIndex(i: Int): Double = SAMPLE_NETS_KG[i % SAMPLE_NETS_KG.size]
+    fun netJinForIndex(i: Int): Double = SAMPLE_NETS_JIN[i % SAMPLE_NETS_JIN.size]
 
     fun assertWorstNameUsable(name: String = WORST_FARMER_NAME): Boolean =
         name.length >= WORST_NAME_MIN_LEN && !name.contains('…') && !name.endsWith("...")

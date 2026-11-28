@@ -15,6 +15,7 @@ import com.jidan.receiving.data.TokenStore
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.LinkKeeper
 import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.ScaleUnit
 import com.jidan.receiving.device.fake.FakePrinter
 import com.jidan.receiving.device.fake.FakeScale
 import com.jidan.receiving.platform.BluetoothGate
@@ -90,7 +91,7 @@ class AppContainer(context: Context) : ReceivingDeps {
         scope,
         prefs,
         _options.value.get("device.scale-model"),
-    )
+    ) { ScaleUnit.of(_options.value.get("scale.unit")) }
     override val printer: LabelPrinter = DeviceFactory.createPrinter(
         appContext,
         scope,

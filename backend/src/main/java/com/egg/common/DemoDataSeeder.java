@@ -148,14 +148,14 @@ public class DemoDataSeeder implements ApplicationRunner {
     // ---------------------------------------------------------------- 规格、皮重、基准价
 
     private void seedBasics(LocalDate today, long admin) {
-        for (int[] s : new int[][] {{240, 30}, {360, 45}, {480, 60}}) {
-            ids.put("s" + s[0], insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled, updated_by) VALUES (?,?,?,1,?)",
+        for (int[] s : new int[][] {{240, 60}, {360, 90}, {480, 120}}) {
+            ids.put("s" + s[0], insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled, updated_by) VALUES (?,?,?,1,?)",
                     s[0] + "枚/箱", s[0], s[1], admin));
         }
-        tare("1号包装箱", "1.5", true, true, admin);
-        tare("2号包装箱", "2", true, true, admin);
-        tare("3号包装箱", "2.5", true, true, admin);
-        tare("旧款木箱", "4.2", false, false, admin); // 已停用，用来看“停用”的样子
+        tare("1号包装箱", "3", true, true, admin);
+        tare("2号包装箱", "4", true, true, admin);
+        tare("3号包装箱", "5", true, true, admin);
+        tare("旧款木箱", "8.4", false, false, admin); // 已停用，用来看“停用”的样子
         // 昨天三种规格都有价；今天 480枚/箱 留空，走“缺基准价”
         LocalDate y = today.minusDays(1);
         price(y, "s240", "118", admin);
@@ -165,9 +165,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         price(today, "s360", "180", admin);
     }
 
-    private void tare(String name, String kg, boolean hotkey, boolean enabled, long admin) {
-        ids.put("t:" + name, insert("INSERT INTO tare_box (name, tare_kg, hotkey, enabled, updated_by) VALUES (?,?,?,?,?)",
-                name, new BigDecimal(kg), hotkey, enabled, admin));
+    private void tare(String name, String jin, boolean hotkey, boolean enabled, long admin) {
+        ids.put("t:" + name, insert("INSERT INTO tare_box (name, tare_jin, hotkey, enabled, updated_by) VALUES (?,?,?,?,?)",
+                name, new BigDecimal(jin), hotkey, enabled, admin));
     }
 
     private void price(LocalDate date, String spec, String price, long admin) {
@@ -178,25 +178,26 @@ public class DemoDataSeeder implements ApplicationRunner {
     // ---------------------------------------------------------------- 规则
 
     private void seedRules(long admin) {
-        // v7 6.1 的李四规则是 r1；其余几条来自原型。r3 是没绑任何人的通用规则。
-        rule("r1", "粉蛋李四收购定价方案", "BUY", "粉蛋", "s360", "1", admin, "f1");
-        rule("r2", "红蛋张三收购定价方案", "BUY", "红蛋", "s360", "1.5", admin, "f3");
-        rule("r3", "粉蛋360通用收购方案", "BUY", "粉蛋", "s360", "0.8", admin);
-        rule("r5", "粉蛋王秀英收购定价方案", "BUY", "粉蛋", "s360", "1", admin, "f2");
-        rule("r6", "红蛋王秀英小箱收购方案", "BUY", "红蛋", "s240", "0.5", admin, "f2");
-        rule("r7", "粉蛋大箱收购方案", "BUY", "粉蛋", "s480", "1", admin, "f4");
-        rule("d1", "永丰市场粉蛋发货方案", "SELL", "粉蛋", "s360", "1.2", admin, "c1");
+        // v7 6.1 的李四规则是 r1；其余几条来自原型。规则不绑农户，建单时按名称选（附录 E R-1 行）。
+        // 系数是元/斤；r3 演示每箱损耗调整（每箱扣 1 斤）。
+        rule("r1", "粉蛋李四收购定价方案", "BUY", "粉蛋", "s360", "2号包装箱", "0", "0.5", admin);
+        rule("r2", "红蛋张三收购定价方案", "BUY", "红蛋", "s360", "2号包装箱", "0", "0.75", admin);
+        rule("r3", "粉蛋360通用收购方案", "BUY", "粉蛋", "s360", "2号包装箱", "-1", "0.4", admin);
+        rule("r5", "粉蛋王秀英收购定价方案", "BUY", "粉蛋", "s360", "2号包装箱", "0", "0.5", admin);
+        rule("r6", "红蛋王秀英小箱收购方案", "BUY", "红蛋", "s240", "1号包装箱", "0", "0.25", admin);
+        rule("r7", "粉蛋大箱收购方案", "BUY", "粉蛋", "s480", "3号包装箱", "0", "0.5", admin);
+        rule("d1", "永丰市场粉蛋发货方案", "SELL", "粉蛋", "s360", "2号包装箱", "0", "0.6", admin);
     }
 
-    private void rule(String key, String name, String kind, String product, String spec, String coef, long admin, String... targets) {
-        long id = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled, updated_by) VALUES (?,?,?,?,?,1,?)",
-                name, kind, ids.get("p:" + product), ids.get(spec), new BigDecimal(coef), admin);
+    private void rule(String key, String name, String kind, String product, String spec, String tare, String loss,
+            String coef, long admin) {
+        long id = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, tare_box_id, loss_jin, coef, enabled, updated_by)"
+                        + " VALUES (?,?,?,?,?,?,?,1,?)",
+                name, kind, ids.get("p:" + product), ids.get(spec), ids.get("t:" + tare), new BigDecimal(loss),
+                new BigDecimal(coef), admin);
         ids.put("r:" + key, id);
         ruleNames.put(key, name);
         ruleCoefs.put(key, new BigDecimal(coef));
-        for (String t : targets) {
-            jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?,?)", id, ids.get(t));
-        }
     }
 
     // ---------------------------------------------------------------- 单据
@@ -204,7 +205,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     /** 一张演示单。{@code frozen} 为空表示不冻结（待审核、已作废）。 */
     private record Demo(int dayOffset, int seq, String vendor, String product, String spec, String tare, String rule,
                         String status, String source, String operator, LocalTime at, String[] nets, int manualSeq,
-                        String rawKg, String submittedPrice, String submittedAmount, Frozen frozen, String pushError) {
+                        String rawJin, String submittedPrice, String submittedAmount, Frozen frozen, String pushError) {
     }
 
     /** 审核时冻结的计价结果与回传备注；字面值，见类注释。 */
@@ -214,53 +215,53 @@ public class DemoDataSeeder implements ApplicationRunner {
     private void seedOrders(LocalDate today, long admin) {
         String zhang = "张师傅", wang = "王会计";
         List<Demo> orders = new ArrayList<>();
-        // 今天。第 1 张就是 v7 第 6 章的李四算例：10 箱，均重 46kg，181 元/箱，1810 元
+        // 今天。第 1 张就是 v7 第 6 章的李四算例：10 箱，均重 92斤，181 元/箱，1810 元
         orders.add(new Demo(0, 1, "f1", "粉蛋", "s360", "2号包装箱", "r1", "PENDING", "APP", zhang, LocalTime.of(8, 16),
-                new String[] {"46.5", "45.8", "46", "46", "46", "45.6", "45.6", "45.6", "45.6", "47.8"}, 0, null,
+                new String[] {"93", "91.6", "92", "92", "92", "91.2", "91.2", "91.2", "91.2", "95.6"}, 0, null,
                 "181", "1810", null, null));
-        // 王秀英这张有一箱是手录的（秤给 30.4，手录成 29.2），审核页要显示“手录”记号
+        // 王秀英这张有一箱是手录的（秤给 60.8，手录成 58.4），审核页要显示“手录”记号
         orders.add(new Demo(0, 2, "f2", "红蛋", "s240", "1号包装箱", "r6", "PENDING", "APP", zhang, LocalTime.of(8, 51),
-                new String[] {"30", "30.5", "29.8", "30.2", "30.6", "29.2", "30.1", "30.3"}, 6, "30.4",
+                new String[] {"60", "61", "59.6", "60.4", "61.2", "58.4", "60.2", "60.6"}, 6, "60.8",
                 "120", "960", null, null));
         // 张三这张：APP 提交后管理员改过系数，实时重算的金额与提交时不同，审核页要标出来
         orders.add(new Demo(0, 3, "f3", "红蛋", "s360", "2号包装箱", "r2", "PENDING", "APP", zhang, LocalTime.of(9, 20),
-                new String[] {"46.2", "45.8", "46.6", "46", "45.9", "46.4"}, 0, null,
+                new String[] {"92.4", "91.6", "93.2", "92", "91.8", "92.8"}, 0, null,
                 "180", "1080", null, null));
         // 已审核但回传失败：好生意明确拒绝
         orders.add(new Demo(0, 4, "f2", "粉蛋", "s360", "2号包装箱", "r5", "APPROVED", "APP", zhang, LocalTime.of(7, 58),
-                new String[] {"46.1", "45.9", "46.3", "46", "45.8", "46.2", "46.1", "45.7", "46.4", "46", "45.9", "46.2"}, 0, null,
+                new String[] {"92.2", "91.8", "92.6", "92", "91.6", "92.4", "92.2", "91.4", "92.8", "92", "91.8", "92.4"}, 0, null,
                 "181", "2172",
-                new Frozen("46", "181", "2172",
-                        "共12箱；逐箱：46.1,45.9,46.3,46,45.8,46.2,46.1,45.7,46.4,46,45.9,46.2；"
-                                + "归类：46.1kg-2箱,45.9kg-2箱,46kg-2箱,46.2kg-2箱,46.3kg-1箱,45.8kg-1箱,45.7kg-1箱,46.4kg-1箱"),
+                new Frozen("92", "181", "2172",
+                        "共12箱；逐箱：92.2,91.8,92.6,92,91.6,92.4,92.2,91.4,92.8,92,91.8,92.4；"
+                                + "归类：92.2斤-2箱,91.8斤-2箱,92斤-2箱,92.4斤-2箱,92.6斤-1箱,91.6斤-1箱,91.4斤-1箱,92.8斤-1箱"),
                 "好生意返回：openToken 已过期（openapi.e1003）"));
         // 今天 480枚/箱 没有基准价：算不出价，提交时金额为空，Web 上标“缺基准价”
         orders.add(new Demo(0, 5, "f4", "粉蛋", "s480", "3号包装箱", "r7", "PENDING", "APP", zhang, LocalTime.of(10, 5),
-                new String[] {"59.8", "60.4", "60.1"}, 0, null, null, null, null, null));
+                new String[] {"119.6", "120.8", "120.2"}, 0, null, null, null, null, null));
         // Web 自建后作废的单
         orders.add(new Demo(0, 6, "f1", "粉蛋", "s360", "2号包装箱", "r1", "VOID", "WEB", wang, LocalTime.of(10, 30),
-                new String[] {"46", "45"}, 0, null, null, null, null, null));
+                new String[] {"92", "90"}, 0, null, null, null, null, null));
         // 昨天，已回传
         orders.add(new Demo(-1, 1, "f1", "粉蛋", "s360", "2号包装箱", "r1", "PUSHED", "APP", zhang, LocalTime.of(14, 0),
-                new String[] {"46.2", "45.7", "46", "45.9", "46.3", "45.6", "46.1", "46", "45.8", "46.4"}, 0, null,
+                new String[] {"92.4", "91.4", "92", "91.8", "92.6", "91.2", "92.2", "92", "91.6", "92.8"}, 0, null,
                 "179", "1790",
-                new Frozen("46", "179", "1790",
-                        "共10箱；逐箱：46.2,45.7,46,45.9,46.3,45.6,46.1,46,45.8,46.4；"
-                                + "归类：46kg-2箱,46.2kg-1箱,45.7kg-1箱,45.9kg-1箱,46.3kg-1箱,45.6kg-1箱,46.1kg-1箱,45.8kg-1箱,46.4kg-1箱"),
+                new Frozen("92", "179", "1790",
+                        "共10箱；逐箱：92.4,91.4,92,91.8,92.6,91.2,92.2,92,91.6,92.8；"
+                                + "归类：92斤-2箱,92.4斤-1箱,91.4斤-1箱,91.8斤-1箱,92.6斤-1箱,91.2斤-1箱,92.2斤-1箱,91.6斤-1箱,92.8斤-1箱"),
                 null));
         orders.add(new Demo(-1, 2, "f3", "红蛋", "s360", "2号包装箱", "r2", "PUSHED", "APP", zhang, LocalTime.of(15, 1),
-                new String[] {"45.8", "46.1", "45.4", "46.6", "45.9", "46.2", "45.7"}, 0, null,
+                new String[] {"91.6", "92.2", "90.8", "93.2", "91.8", "92.4", "91.4"}, 0, null,
                 "179.5", "1256.5",
-                new Frozen("46", "179.5", "1256.5",
-                        "共7箱；逐箱：45.8,46.1,45.4,46.6,45.9,46.2,45.7；"
-                                + "归类：45.8kg-1箱,46.1kg-1箱,45.4kg-1箱,46.6kg-1箱,45.9kg-1箱,46.2kg-1箱,45.7kg-1箱"),
+                new Frozen("92", "179.5", "1256.5",
+                        "共7箱；逐箱：91.6,92.2,90.8,93.2,91.8,92.4,91.4；"
+                                + "归类：91.6斤-1箱,92.2斤-1箱,90.8斤-1箱,93.2斤-1箱,91.8斤-1箱,92.4斤-1箱,91.4斤-1箱"),
                 null));
         orders.add(new Demo(-1, 3, "f2", "红蛋", "s240", "1号包装箱", "r6", "PUSHED", "APP", zhang, LocalTime.of(16, 2),
-                new String[] {"30.2", "29.9", "30.4", "30", "29.7", "30.3", "30.1", "29.8", "30.5"}, 0, null,
+                new String[] {"60.4", "59.8", "60.8", "60", "59.4", "60.6", "60.2", "59.6", "61"}, 0, null,
                 "118", "1062",
-                new Frozen("30", "118", "1062",
-                        "共9箱；逐箱：30.2,29.9,30.4,30,29.7,30.3,30.1,29.8,30.5；"
-                                + "归类：30.2kg-1箱,29.9kg-1箱,30.4kg-1箱,30kg-1箱,29.7kg-1箱,30.3kg-1箱,30.1kg-1箱,29.8kg-1箱,30.5kg-1箱"),
+                new Frozen("60", "118", "1062",
+                        "共9箱；逐箱：60.4,59.8,60.8,60,59.4,60.6,60.2,59.6,61；"
+                                + "归类：60.4斤-1箱,59.8斤-1箱,60.8斤-1箱,60斤-1箱,59.4斤-1箱,60.6斤-1箱,60.2斤-1箱,59.6斤-1箱,61斤-1箱"),
                 null));
 
         Map<LocalDate, Integer> lastSeq = new LinkedHashMap<>();
@@ -283,36 +284,37 @@ public class DemoDataSeeder implements ApplicationRunner {
         for (BigDecimal n : nets) {
             total = total.add(n);
         }
-        long orderId = insert("INSERT INTO purchase_order (code, batch_no, biz_date, vendor_id, warehouse_id, product_id, spec_id,"
-                        + " source, operator_id, created_at, status, submitted_price, submitted_amount, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        long orderId = insert("INSERT INTO purchase_order (code, batch_no, biz_date, vendor_id, warehouse_id, product_id, spec_id, rule_id,"
+                        + " source, operator_id, created_at, status, submitted_price, submitted_amount, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 code, batchNo, date, ids.get(d.vendor()), ids.get("w1"), ids.get("p:" + d.product()), ids.get(d.spec()),
+                ids.get("r:" + d.rule()),
                 d.source(), operator, createdAt, d.status(), dec(d.submittedPrice()), dec(d.submittedAmount()), operator);
 
         Frozen f = d.frozen();
         if (f != null) {
-            BigDecimal stdKg = jdbc.queryForObject("SELECT std_net_kg FROM spec WHERE id = ?", BigDecimal.class, ids.get(d.spec()));
+            BigDecimal stdJin = jdbc.queryForObject("SELECT std_net_jin FROM spec WHERE id = ?", BigDecimal.class, ids.get(d.spec()));
             BigDecimal base = jdbc.queryForObject("SELECT base_price FROM base_price WHERE price_date = ? AND spec_id = ?",
                     BigDecimal.class, date, ids.get(d.spec()));
             LocalDateTime approvedAt = date.atTime(d.at().plusHours(1));
             String hsId = d.status().equals("PUSHED") ? "CGRK-HSY-" + day + "-" + (30 + d.seq()) : null;
             jdbc.update("UPDATE purchase_order SET approver_id = ?, approved_at = ?, hs_id = ?, push_error = ?, push_payload = ?,"
-                            + " round_mode = 'HALF', box_count = ?, total_net_kg = ?, avg_kg = ?, std_net_kg = ?, base_price = ?,"
-                            + " rule_id = ?, rule_name = ?, rule_coef = ?, price = ?, amount = ? WHERE id = ?",
+                            + " round_mode = 'HALF', box_count = ?, total_net_jin = ?, avg_jin = ?, std_net_jin = ?, base_price = ?,"
+                            + " rule_name = ?, rule_coef = ?, rule_loss_jin = 0, price = ?, amount = ? WHERE id = ?",
                     admin, approvedAt, hsId, d.pushError(), payload(d, code, date, f), nets.length, total, dec(f.avg()),
-                    stdKg, base, ids.get("r:" + d.rule()), ruleNames.get(d.rule()), ruleCoefs.get(d.rule()),
+                    stdJin, base, ruleNames.get(d.rule()), ruleCoefs.get(d.rule()),
                     dec(f.price()), dec(f.amount()), orderId);
         }
 
         String tareName = d.tare();
-        BigDecimal tareKg = jdbc.queryForObject("SELECT tare_kg FROM tare_box WHERE name = ?", BigDecimal.class, tareName);
+        BigDecimal tareJin = jdbc.queryForObject("SELECT tare_jin FROM tare_box WHERE name = ?", BigDecimal.class, tareName);
         for (int i = 0; i < nets.length; i++) {
             int seq = i + 1;
             boolean manual = seq == d.manualSeq();
-            // 手录的箱净重是人输入的，没有毛重；秤给的原始读数留在 raw_kg
-            insert("INSERT INTO weigh_record (order_id, seq, net_kg, gross_kg, tare_kg, tare_name, group_no, group_k, manual, raw_kg, printed)"
+            // 手录的箱净重是人输入的，没有毛重；秤给的原始读数留在 raw_jin
+            insert("INSERT INTO weigh_record (order_id, seq, net_jin, gross_jin, tare_jin, tare_name, group_no, group_k, manual, raw_jin, printed)"
                             + " VALUES (?,?,?,?,?,?,?,1,?,?,?)",
-                    orderId, seq, nets[i], manual ? null : nets[i].add(tareKg), tareKg, tareName, seq,
-                    manual, manual ? new BigDecimal(d.rawKg()) : null, d.source().equals("APP"));
+                    orderId, seq, nets[i], manual ? null : nets[i].add(tareJin), tareJin, tareName, seq,
+                    manual, manual ? new BigDecimal(d.rawJin()) : null, d.source().equals("APP"));
         }
     }
 

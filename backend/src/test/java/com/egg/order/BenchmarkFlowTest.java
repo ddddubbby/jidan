@@ -44,7 +44,7 @@ class BenchmarkFlowTest {
     private static final List<Double> LI_SI_BOXES = List.of(46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8);
     /** v7 6.3 备注栏 */
     private static final String REMARK_FULL = "共10箱；逐箱：46.5,45.8,46,46,46,45.6,45.6,45.6,45.6,47.8；"
-            + "归类：45.6kg-4箱,46kg-3箱,46.5kg-1箱,45.8kg-1箱,47.8kg-1箱";
+            + "归类：45.6斤-4箱,46斤-3箱,46.5斤-1箱,45.8斤-1箱,47.8斤-1箱";
 
     @Autowired
     TestRestTemplate http;
@@ -66,7 +66,7 @@ class BenchmarkFlowTest {
     /** 每个用例从空库开始，按 v7 6.1 的初始条件用对外接口重新录一遍。 */
     @BeforeEach
     void initialConditions() {
-        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule_bind", "pricing_rule",
+        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule",
                 "base_price", "vendor_phone", "vendor", "warehouse", "product", "customer", "spec", "tare_box",
                 "`option`")) {
             jdbc.update("DELETE FROM " + t);
@@ -80,16 +80,17 @@ class BenchmarkFlowTest {
         pinkId = archiveId("products", "粉蛋");
         warehouseId = archiveId("warehouses", "1号仓库");
 
-        spec360 = admin(HttpMethod.POST, "/api/specs", Map.of("name", "360枚/箱", "eggCount", 360, "stdNetKg", 45)).get("id")
+        spec360 = admin(HttpMethod.POST, "/api/specs", Map.of("name", "360枚/箱", "eggCount", 360, "stdNetJin", 45)).get("id")
                 .asLong();
-        admin(HttpMethod.POST, "/api/tares", Map.of("name", "2号包装箱", "tareKg", 2, "hotkey", true));
+        long box2 = admin(HttpMethod.POST, "/api/tares", Map.of("name", "2号包装箱", "tareJin", 2, "hotkey", true)).get("id")
+                .asLong();
         admin(HttpMethod.PUT, "/api/base-prices", Map.of("date", today.toString(), "specId", spec360, "price", 180));
 
         JsonNode farmers = scale(HttpMethod.GET, "/api/farmers?tail=1234", null);
         liSiId = farmerId(farmers, "李四");
         wangId = farmerId(farmers, "王秀英");
         ruleId = admin(HttpMethod.POST, "/api/rules", Map.of("name", "粉蛋李四收购定价方案", "kind", "BUY", "productId", pinkId,
-                "specId", spec360, "coef", 1, "enabled", true, "bindIds", List.of(liSiId))).get("id").asLong();
+                "specId", spec360, "tareBoxId", box2, "coef", 1, "enabled", true)).get("id").asLong();
     }
 
     // ---------------------------------------------------------------- 工具
@@ -151,9 +152,9 @@ class BenchmarkFlowTest {
     private Map<String, Object> box(int seq, double net) {
         Map<String, Object> m = new HashMap<>();
         m.put("seq", seq);
-        m.put("netKg", net);
-        m.put("grossKg", net + 2);
-        m.put("tareKg", 2);
+        m.put("netJin", net);
+        m.put("grossJin", net + 2);
+        m.put("tareJin", 2);
         m.put("tareName", "2号包装箱");
         m.put("groupNo", seq);
         m.put("groupK", 1);
@@ -172,14 +173,13 @@ class BenchmarkFlowTest {
 
     private JsonNode quote(List<Double> nets) {
         return scale(HttpMethod.POST, "/api/orders/quote",
-                Map.of("vendorId", liSiId, "productId", pinkId, "specId", spec360, "boxNetKg", nets));
+                Map.of("vendorId", liSiId, "ruleId", ruleId, "boxNetJin", nets));
     }
 
     /** 磅秤员取批次号并提交，返回提交结果。 */
     private JsonNode submit(List<Map<String, Object>> boxes) {
         String batchNo = scale(HttpMethod.POST, "/api/batches", null).get("batchNo").asText();
-        return scale(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSiId, "productId", pinkId,
-                "specId", spec360, "warehouseId", warehouseId, "boxes", boxes));
+        return scale(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSiId, "ruleId", ruleId, "warehouseId", warehouseId, "boxes", boxes));
     }
 
     private JsonNode lookup(String code, String token) {
@@ -214,36 +214,37 @@ class BenchmarkFlowTest {
         JsonNode liSi = StreamSupport.stream(farmers.spliterator(), false).filter(f -> f.get("id").asLong() == liSiId)
                 .findFirst().orElseThrow();
         assertThat(liSi.get("matchedPhones").get(0).asText()).isEqualTo("13603511234");
-        JsonNode rules = scale(HttpMethod.GET, "/api/farmers/" + liSiId + "/rules", null);
-        assertThat(rules).hasSize(1);
-        assertThat(rules.get(0).get("name").asText()).isEqualTo("粉蛋李四收购定价方案");
-        assertThat(scale(HttpMethod.GET, "/api/farmers/" + wangId + "/rules", null)).isEmpty(); // 王秀英没有绑定规则
-
         JsonNode boot = scale(HttpMethod.GET, "/api/app/bootstrap", null);
+        // 规则不绑农户，建单时按名称选；选了规则，商品、规格、包装箱就都定了（附录 E R-1 行）
+        JsonNode rule = boot.get("rules").get(0);
+        assertThat(rule.get("name").asText()).isEqualTo("粉蛋李四收购定价方案");
+        assertThat(rule.get("productName").asText()).isEqualTo("粉蛋");
+        assertThat(rule.get("specName").asText()).isEqualTo("360枚/箱");
+        assertThat(rule.get("tareName").asText()).isEqualTo("2号包装箱");
         assertThat(boot.get("products").get(0).get("name").asText()).isEqualTo("粉蛋");
         JsonNode spec = boot.get("specs").get(0);
         assertThat(spec.get("name").asText()).isEqualTo("360枚/箱");
-        assertNum(spec.get("stdNetKg"), "45");
+        assertNum(spec.get("stdNetJin"), "45");
         assertNum(spec.get("basePrice"), "180");
         assertThat(boot.get("warehouses").get(0).get("name").asText()).isEqualTo("1号仓库");
         assertThat(boot.get("tares").get(0).get("name").asText()).isEqualTo("2号包装箱");
-        assertNum(boot.get("tares").get(0).get("tareKg"), "2");
+        assertNum(boot.get("tares").get(0).get("tareJin"), "2");
         // 6.1：系统设置均为默认值（四舍五入、逐箱打印、精简）
         assertThat(boot.get("settings").get("round.mode").asText()).isEqualTo("half");
         assertThat(boot.get("settings").get("print.timing").asText()).isEqualTo("per-box");
         assertThat(boot.get("settings").get("label.content").asText()).isEqualTo("minimal");
 
-        // 6.2 第 3 步：第 1 箱 46.5kg，实时均重 47（原始 46.50）
+        // 6.2 第 3 步：第 1 箱 46.5斤，实时均重 47（原始 46.50）
         JsonNode first = quote(List.of(46.5));
-        assertNum(first.get("rawAvgKg"), "46.5");
-        assertNum(first.get("avgKg"), "47");
-        // 第 5、6 步：10 箱 460.5kg，均重 46（原始 46.05），181 元/箱，1810 元
+        assertNum(first.get("rawAvgJin"), "46.5");
+        assertNum(first.get("avgJin"), "47");
+        // 第 5、6 步：10 箱 460.5斤，均重 46（原始 46.05），181 元/箱，1810 元
         JsonNode q = quote(LI_SI_BOXES);
         assertThat(q.get("boxCount").asInt()).isEqualTo(10);
-        assertNum(q.get("totalKg"), "460.5");
-        assertNum(q.get("rawAvgKg"), "46.05");
-        assertNum(q.get("avgKg"), "46");
-        assertNum(q.get("tailKg"), "1");
+        assertNum(q.get("totalJin"), "460.5");
+        assertNum(q.get("rawAvgJin"), "46.05");
+        assertNum(q.get("avgJin"), "46");
+        assertNum(q.get("tailJin"), "1");
         assertNum(q.get("priceDiff"), "1");
         assertNum(q.get("basePrice"), "180");
         assertNum(q.get("unitPrice"), "181");
@@ -252,7 +253,7 @@ class BenchmarkFlowTest {
 
         // 第 7 步：提交单据与 10 条流水；重试复用同一个批次号只会得到同一张单
         String batchNo = scale(HttpMethod.POST, "/api/batches", null).get("batchNo").asText();
-        Map<String, Object> form = Map.of("batchNo", batchNo, "vendorId", liSiId, "productId", pinkId, "specId", spec360,
+        Map<String, Object> form = Map.of("batchNo", batchNo, "vendorId", liSiId, "ruleId", ruleId,
                 "warehouseId", warehouseId, "boxes", boxes(LI_SI_BOXES));
         JsonNode submitted = scale(HttpMethod.POST, "/api/orders", form);
         assertThat(scale(HttpMethod.POST, "/api/orders", form).get("id").asLong()).isEqualTo(submitted.get("id").asLong());
@@ -260,8 +261,8 @@ class BenchmarkFlowTest {
         assertThat(submitted.get("status").asText()).isEqualTo("PENDING");
         assertThat(submitted.get("source").asText()).isEqualTo("APP");
         assertThat(submitted.get("boxCount").asInt()).isEqualTo(10);
-        assertNum(submitted.get("totalNetKg"), "460.5");
-        assertNum(submitted.get("avgKg"), "46");
+        assertNum(submitted.get("totalNetJin"), "460.5");
+        assertNum(submitted.get("avgJin"), "46");
         assertNum(submitted.get("submittedPrice"), "181");
         assertNum(submitted.get("submittedAmount"), "1810");
         long id = submitted.get("id").asLong();
@@ -297,18 +298,18 @@ class BenchmarkFlowTest {
         JsonNode records = admin(HttpMethod.GET, "/api/orders/" + id + "/records", null);
         assertThat(records.get("editable").asBoolean()).isTrue();
         assertThat(records.get("boxes")).hasSize(10);
-        assertNum(records.get("boxes").get(9).get("netKg"), "47.8");
+        assertNum(records.get("boxes").get(9).get("netJin"), "47.8");
         // 6.3：归类按箱数多的在前，箱数相同的按首次出现的先后
         List<String> groups = new ArrayList<>();
-        records.get("groups").forEach(g -> groups.add(g.get("kg").decimalValue().toPlainString() + "kg-" + g.get("boxes").asInt() + "箱"));
-        assertThat(groups).containsExactly("45.6kg-4箱", "46kg-3箱", "46.5kg-1箱", "45.8kg-1箱", "47.8kg-1箱");
+        records.get("groups").forEach(g -> groups.add(g.get("jin").decimalValue().toPlainString() + "斤-" + g.get("boxes").asInt() + "箱"));
+        assertThat(groups).containsExactly("45.6斤-4箱", "46斤-3箱", "46.5斤-1箱", "45.8斤-1箱", "47.8斤-1箱");
 
         JsonNode hit = lookup(batchNo + "#3", scaleToken());
         assertThat(hit.get("seq").asInt()).isEqualTo(3);
-        assertNum(hit.get("netKg"), "46");
+        assertNum(hit.get("netJin"), "46");
         assertThat(hit.get("vendor").get("name").asText()).isEqualTo("李四");
         assertThat(hit.get("status").asText()).isEqualTo("PENDING");
-        assertNum(hit.get("avgKg"), "46");
+        assertNum(hit.get("avgJin"), "46");
         assertNum(hit.get("price"), "181");
 
         // 审核通过：默认自动回传，模拟好生意只收到一份报文
@@ -374,7 +375,7 @@ class BenchmarkFlowTest {
 
     @Test
     void roundingRulesMatchTheComparisonTable() {
-        // 四舍五入、抹零：46kg、181 元、1810 元；进位：47kg、182 元、1820 元
+        // 四舍五入、抹零：46斤、181 元、1810 元；进位：47斤、182 元、1820 元
         Map<String, String[]> expected = Map.of(
                 "half", new String[] {"46", "1", "181", "1810"},
                 "floor", new String[] {"46", "1", "181", "1810"},
@@ -383,9 +384,9 @@ class BenchmarkFlowTest {
             admin(HttpMethod.PUT, "/api/settings", Map.of("values", Map.of("round.mode", e.getKey())));
             JsonNode q = quote(LI_SI_BOXES);
             String[] want = e.getValue();
-            assertNum(q.get("rawAvgKg"), "46.05");
-            assertNum(q.get("avgKg"), want[0]);
-            assertNum(q.get("tailKg"), want[1]);
+            assertNum(q.get("rawAvgJin"), "46.05");
+            assertNum(q.get("avgJin"), want[0]);
+            assertNum(q.get("tailJin"), want[1]);
             assertNum(q.get("unitPrice"), want[2]);
             assertNum(q.get("amount"), want[3]);
         }
@@ -399,26 +400,26 @@ class BenchmarkFlowTest {
         List<Double> edited = new ArrayList<>(LI_SI_BOXES);
         edited.set(9, 52.8);
         JsonNode q = quote(edited);
-        assertNum(q.get("totalKg"), "465.5");
-        assertNum(q.get("rawAvgKg"), "46.55");
-        assertNum(q.get("avgKg"), "47");
+        assertNum(q.get("totalJin"), "465.5");
+        assertNum(q.get("rawAvgJin"), "46.55");
+        assertNum(q.get("avgJin"), "47");
         assertNum(q.get("unitPrice"), "182");
         assertNum(q.get("amount"), "1820");
 
         List<Map<String, Object>> list = boxes(edited);
         list.get(9).put("manual", true);
-        list.get(9).put("rawKg", 47.8);
+        list.get(9).put("rawJin", 47.8);
         JsonNode submitted = submit(list);
         assertNum(submitted.get("submittedPrice"), "182");
         assertNum(submitted.get("submittedAmount"), "1820");
         long id = submitted.get("id").asLong();
 
-        // 第 10 箱流水：净重 52.8kg，带手录记号，秤原始读数 47.8kg
+        // 第 10 箱流水：净重 52.8斤，带手录记号，秤原始读数 47.8斤
         JsonNode records = admin(HttpMethod.GET, "/api/orders/" + id + "/records", null);
         JsonNode tenth = records.get("boxes").get(9);
-        assertNum(tenth.get("netKg"), "52.8");
+        assertNum(tenth.get("netJin"), "52.8");
         assertThat(tenth.get("manual").asBoolean()).isTrue();
-        assertNum(tenth.get("rawKg"), "47.8");
+        assertNum(tenth.get("rawJin"), "47.8");
         assertThat(records.get("manualCount").asInt()).isEqualTo(1);
         assertThat(detail(id).get("manualCount").asInt()).isEqualTo(1);
 
@@ -440,12 +441,12 @@ class BenchmarkFlowTest {
 
         // Web 整单覆盖：第 10 箱改为 52.8，前端标手录并记下原读数 47.8
         List<Map<String, Object>> list = boxes(LI_SI_BOXES);
-        list.get(9).put("netKg", 52.8);
+        list.get(9).put("netJin", 52.8);
         list.get(9).put("manual", true);
-        list.get(9).put("rawKg", 47.8);
+        list.get(9).put("rawJin", 47.8);
         JsonNode d = admin(HttpMethod.PUT, "/api/orders/" + id, Map.of("bizDate", today.toString(), "vendorId", liSiId,
-                "productId", pinkId, "specId", spec360, "warehouseId", warehouseId, "boxes", list));
-        assertNum(d.get("pricing").get("avgKg"), "47");
+                "ruleId", ruleId, "warehouseId", warehouseId, "boxes", list));
+        assertNum(d.get("pricing").get("avgJin"), "47");
         assertNum(d.get("pricing").get("unitPrice"), "182");
         assertNum(d.get("pricing").get("amount"), "1820");
         // 与 APP 提交时的金额对比：提交时是 1810，现在 1820
@@ -454,7 +455,7 @@ class BenchmarkFlowTest {
         assertThat(d.get("manualCount").asInt()).isEqualTo(1);
         JsonNode tenth = admin(HttpMethod.GET, "/api/orders/" + id + "/records", null).get("boxes").get(9);
         assertThat(tenth.get("manual").asBoolean()).isTrue();
-        assertNum(tenth.get("rawKg"), "47.8");
+        assertNum(tenth.get("rawJin"), "47.8");
 
         assertNum(post(id, "approve").get("amount"), "1820");
         assertNum(json.readTree(sent().get(0)).get("detailList").get(0).get("amount"), "1820");
@@ -464,7 +465,7 @@ class BenchmarkFlowTest {
 
     @Test
     void mergedWeighingKeepsTheGroup() {
-        // 一次放上 3 箱，每箱净重 46kg：识别为 3 箱，生成 3 条流水，共用一个称重组号
+        // 一次放上 3 箱，每箱净重 46斤：识别为 3 箱，生成 3 条流水，共用一个称重组号
         List<Map<String, Object>> list = new ArrayList<>();
         for (int i = 1; i <= 3; i++) {
             Map<String, Object> b = box(i, 46.0);
@@ -479,11 +480,11 @@ class BenchmarkFlowTest {
         records.get("boxes").forEach(b -> {
             assertThat(b.get("groupNo").asInt()).isEqualTo(1);
             assertThat(b.get("groupK").asInt()).isEqualTo(3);
-            assertNum(b.get("netKg"), "46");
+            assertNum(b.get("netJin"), "46");
         });
         assertThat(records.get("groups")).hasSize(1);
         assertThat(records.get("groups").get(0).get("boxes").asInt()).isEqualTo(3);
-        assertNum(detail(id).get("pricing").get("totalKg"), "138");
+        assertNum(detail(id).get("pricing").get("totalJin"), "138");
     }
 
     // ---------------------------------------------------------------- P2-4 留下的：退回后可修改，作废后不可修改
@@ -497,8 +498,7 @@ class BenchmarkFlowTest {
         // 已回传的单不能直接改，也不能退回
         List<Double> edited = new ArrayList<>(LI_SI_BOXES);
         edited.set(9, 52.8);
-        Map<String, Object> form = new HashMap<>(Map.of("bizDate", today.toString(), "vendorId", liSiId, "productId",
-                pinkId, "specId", spec360, "warehouseId", warehouseId, "boxes", boxes(edited)));
+        Map<String, Object> form = new HashMap<>(Map.of("bizDate", today.toString(), "vendorId", liSiId, "ruleId", ruleId, "warehouseId", warehouseId, "boxes", boxes(edited)));
         var locked = call(HttpMethod.PUT, "/api/orders/" + id, form, adminToken());
         assertThat(locked.getStatusCode().value()).isEqualTo(409);
         assertThat(locked.getBody().get("code").asText()).isEqualTo("ORDER_LOCKED");

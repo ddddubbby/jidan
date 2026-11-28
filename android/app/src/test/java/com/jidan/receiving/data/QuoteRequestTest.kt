@@ -1,7 +1,7 @@
 package com.jidan.receiving.data
 
 import com.google.gson.Gson
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.Session
 import kotlin.test.Test
@@ -14,15 +14,15 @@ class QuoteRequestTest {
     private fun session(batchNo: String) = Session(
         batchNo = batchNo,
         farmer = Pick(1, "李四"), product = Pick(2, "粉蛋"), spec = Pick(3, "360枚/箱"), warehouse = Pick(4, "一号库"),
-    ).addManual(Kg.of(46.0)).addManual(Kg.of(45.5))
+        rule = Pick(7, "粉蛋李四收购定价方案"),
+    ).addManual(Jin.of(46.0)).addManual(Jin.of(45.5))
 
     @Test
     fun dateInRequestEqualsDateInBatchNo() {
-        val req = quoteRequestOf(session("SG20261111-2"))
+        val req = quoteRequestOf(session("SG20261111-2"))!!
         assertEquals("2026-11-11", req.date)
-        assertEquals(listOf(46.0, 45.5), req.boxNetKg)
-        assertEquals(1L, req.vendorId)
-        assertEquals(3L, req.specId)
+        assertEquals(listOf(46.0, 45.5), req.boxNetJin)
+        assertEquals(7L, req.ruleId)
     }
 
     @Test
@@ -34,11 +34,18 @@ class QuoteRequestTest {
     }
 
     @Test
-    fun trialRuleAndCoefPassThrough() {
-        val req = quoteRequestOf(session("SG20261116-12"), trialRuleId = 9)
-        assertEquals(9L, req.trialRuleId)
+    fun otherRuleAndTrialPassThrough() {
+        val req = quoteRequestOf(session("SG20261116-12"), ruleId = 9, trialLossJin = -1.0)!!
+        assertEquals(9L, req.ruleId)
         assertNull(req.trialCoef)
+        assertEquals(-1.0, req.trialLossJin)
         assertEquals("2026-11-16", req.date)
+    }
+
+    @Test
+    fun draftWithoutRuleHasNoRequest() {
+        // 改版前的草稿没有规则：不调后端，汇总页直接让选规则
+        assertNull(quoteRequestOf(session("SG20261116-12").copy(rule = null)))
     }
 
     @Test
@@ -46,6 +53,6 @@ class QuoteRequestTest {
         assertNull(BatchNo.dateOf("SG-1"))
         assertNull(BatchNo.dateOf("XX20261111-2"))
         assertNull(BatchNo.dateOf("SG20261111-0"))
-        assertNull(quoteRequestOf(session("SG-1")).date)
+        assertNull(quoteRequestOf(session("SG-1"))!!.date)
     }
 }

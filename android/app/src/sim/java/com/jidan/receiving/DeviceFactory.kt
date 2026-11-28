@@ -4,6 +4,7 @@ import android.content.Context
 import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.ScaleUnit
 import com.jidan.receiving.device.fake.FakePrinter
 import com.jidan.receiving.device.fake.FakeScale
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +22,8 @@ object DeviceFactory {
     lateinit var fakePrinter: FakePrinter
         private set
 
-    fun createScale(context: Context, scope: CoroutineScope, prefs: Prefs, scaleModel: String?): Scale {
+    /** 模拟秤直接按斤给读数，不看 [unit] */
+    fun createScale(context: Context, scope: CoroutineScope, prefs: Prefs, scaleModel: String?, unit: () -> ScaleUnit): Scale {
         val fake = FakeScale(scope, prefs.pairedScaleId ?: FakeScale.MINE_ID)
         fakeScale = fake
         return fake

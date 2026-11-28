@@ -6,6 +6,7 @@ import com.jidan.receiving.data.Prefs
 import com.jidan.receiving.registry.DeviceRegistry
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.ScaleUnit
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -15,12 +16,13 @@ object DeviceFactory {
     const val variantName = "实机版"
     const val isSim = false
 
-    fun createScale(context: Context, scope: CoroutineScope, prefs: Prefs, scaleModel: String?): Scale =
+    fun createScale(context: Context, scope: CoroutineScope, prefs: Prefs, scaleModel: String?, unit: () -> ScaleUnit): Scale =
         DeviceRegistry.createScale(
             scaleModel,
             context.applicationContext as Application,
             prefs.pairedScaleId,
             BuildConfig.LANSTAR_COMPANY_KEY,
+            unit,
         )
 
     fun createPrinter(context: Context, scope: CoroutineScope, prefs: Prefs, printerModel: String?): LabelPrinter =

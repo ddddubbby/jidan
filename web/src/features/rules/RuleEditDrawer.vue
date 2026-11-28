@@ -1,155 +1,84 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { getTares } from '../../api/basics'
 import { errorText } from '../../api/http'
-import {
-  conflictsOf, createRule, fmtPhone, listRules, searchArchive, updateRule,
-  type ArchiveRow, type Conflict, type Kind, type RuleView, type Spec, type Target,
-} from '../../api/rules'
+import { conflictsOf, createRule, updateRule, type ArchiveRow, type Conflict, type Kind, type RuleView, type Spec } from '../../api/rules'
+import type { TareBox } from '../../api/types'
 import Drawer from '../../ui/Drawer.vue'
 import { toast } from '../../ui/toast'
 
-// 新建 / 编辑规则抽屉（原型 drawerRuleEdit，WEB-05）。
-// 冲突：同一农户在同一商品规格上只能绑一条启用的收购规则。改绑定、商品、规格时就拿同商品规格的收购规则比对，
-// 冲突就地标红并写明是哪条规则，点“从那条解绑”立即解绑；保存按钮在有冲突时变成“N 个冲突”，点了滚到冲突处。
+// 新建 / 编辑规则抽屉（原型 drawerRuleEdit，WEB-05，按附录 E R-1 行改版）。
+// 规则不绑农户或客户，建单时按名称选，所以名称不能重复；一条规则打包了商品、规格、包装箱（皮重）、每箱损耗与每斤尾差。
+// 重名时后端返回 RULE_CONFLICT，就地标在名称下面，保存按钮变成“改规则名称”。
 const props = defineProps<{ rule: RuleView | null; products: ArchiveRow[]; specs: Spec[] }>()
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ changed: [] }>()
 
-interface Form { name: string; enabled: boolean; kind: Kind; productId: number | null; specId: number | null; coef: string; binds: Target[] }
-const blank = (): Form => ({ name: '', enabled: true, kind: 'BUY', productId: null, specId: null, coef: '1', binds: [] })
+interface Form {
+  name: string; enabled: boolean; kind: Kind; productId: number | null; specId: number | null
+  tareBoxId: number | null; lossJin: string; coef: string
+}
+const blank = (): Form => ({ name: '', enabled: true, kind: 'BUY', productId: null, specId: null, tareBoxId: null, lossJin: '0', coef: '0.5' })
 const form = ref<Form>(blank())
 const saving = ref(false)
 const saveError = ref('')
-
-// 同商品规格的启用收购规则（含正在编辑的这条，比对时排除）
-const others = ref<RuleView[]>([])
-const serverConflicts = ref<Conflict[]>([])
-let othersSeq = 0
+const conflict = ref<Conflict | null>(null)
+const conflictName = ref('') // 冲突时的名称；名称一改，冲突提示就撤掉
+const tares = ref<TareBox[]>([])
 
 const isNew = computed(() => props.rule == null)
-const selfId = computed(() => props.rule?.id ?? -1)
 
 watch(open, (o) => {
   if (!o) return
   const r = props.rule
   form.value = r
-    ? { name: r.name, enabled: r.enabled, kind: r.kind, productId: r.productId, specId: r.specId, coef: String(r.coef), binds: r.binds.map((b) => ({ ...b })) }
+    ? { name: r.name, enabled: r.enabled, kind: r.kind, productId: r.productId, specId: r.specId, tareBoxId: r.tareBoxId, lossJin: String(r.lossJin ?? 0), coef: String(r.coef) }
     : blank()
   saveError.value = ''
-  serverConflicts.value = []
-  q.value = ''
-  hits.value = []
-  others.value = []
-  loadOthers()
+  conflict.value = null
+  getTares().then((l) => (tares.value = l)).catch(() => (tares.value = []))
   if (!r) nextTick(() => nameInput.value?.focus())
 })
+watch(() => form.value.name, (n) => { if (conflict.value && n.trim() !== conflictName.value) conflict.value = null })
 
-async function loadOthers() {
-  const f = form.value
-  if (f.kind !== 'BUY' || f.productId == null || f.specId == null) { others.value = []; return }
-  const seq = ++othersSeq
-  try {
-    const list = await listRules({ kind: 'BUY', productId: f.productId, specId: f.specId })
-    if (seq === othersSeq) others.value = list.filter((r) => r.enabled && r.id !== selfId.value)
-  } catch {
-    if (seq === othersSeq) others.value = []
-  }
-}
-watch(() => [form.value.kind, form.value.productId, form.value.specId], () => { serverConflicts.value = []; loadOthers() })
-
-// ---- 冲突：本地按已载入的同商品规格规则比对；保存时后端再查一遍，返回的冲突也并进来 ----
-const conflicts = computed<Conflict[]>(() => {
-  const f = form.value
-  if (f.kind !== 'BUY' || !f.enabled) return []
-  const out: Conflict[] = []
-  for (const b of f.binds) {
-    const o = others.value.find((r) => r.binds.some((x) => x.id === b.id))
-    if (o) out.push({ vendorId: b.id, vendorName: b.name, ruleId: o.id, ruleName: o.name })
-  }
-  if (out.length) return out
-  return serverConflicts.value.filter((c) => f.binds.some((b) => b.id === c.vendorId))
-})
-const conflictIds = computed(() => new Set(conflicts.value.map((c) => c.vendorId)))
-
-async function resolve(c: Conflict) {
-  try {
-    // 取最新的那条规则再摘人，避免用旧的绑定列表覆盖掉别人刚加的
-    const f = form.value
-    const fresh = f.productId != null && f.specId != null ? await listRules({ kind: 'BUY', productId: f.productId, specId: f.specId }) : []
-    const other = fresh.find((r) => r.id === c.ruleId)
-    if (other) await updateRule(other.id, { bindIds: other.binds.filter((b) => b.id !== c.vendorId).map((b) => b.id) })
-    serverConflicts.value = []
-    toast(`已把 ${c.vendorName} 从「${c.ruleName}」解绑`)
-    await loadOthers()
-    emit('changed')
-  } catch (e) {
-    saveError.value = errorText(e)
-  }
-}
-
-// ---- 绑定对象检索 ----
-const q = ref('')
-const hits = ref<ArchiveRow[]>([])
 const nameInput = ref<HTMLInputElement>()
 const coefInput = ref<HTMLInputElement>()
-const conflictBox = ref<HTMLElement>()
-let hitSeq = 0
-let hitTimer: ReturnType<typeof setTimeout> | undefined
+const lossInput = ref<HTMLInputElement>()
 
-watch(q, (v) => {
-  clearTimeout(hitTimer)
-  if (!v.trim()) { hits.value = []; return }
-  hitTimer = setTimeout(async () => {
-    const seq = ++hitSeq
-    try {
-      const rows = await searchArchive(form.value.kind === 'BUY' ? 'vendors' : 'customers', v.trim(), 20)
-      if (seq === hitSeq) hits.value = rows
-    } catch {
-      if (seq === hitSeq) hits.value = []
-    }
-  }, 200)
-})
-const candidates = computed(() => hits.value.filter((h) => !form.value.binds.some((b) => b.id === h.id)).slice(0, 8))
-
-function bind(h: ArchiveRow) {
-  const phone = h.phones?.[0]
-  form.value.binds.push({ id: h.id, name: h.name, tail4: phone ? phone.slice(-4) : null })
-  q.value = ''
-  hits.value = []
-}
-function unbind(id: number) { form.value.binds = form.value.binds.filter((b) => b.id !== id) }
-
-function setKind(k: Kind) {
-  if (form.value.kind === k) return
-  form.value.kind = k
-  form.value.binds = [] // 农户与客户不通用
-  q.value = ''
-  hits.value = []
+// ---- 每箱损耗：正数加、负数减，步进 0.5 斤 ----
+const lossOk = computed(() => /^-?\d{1,3}(\.\d{1,2})?$/.test(form.value.lossJin.trim()))
+function stepLoss(d: number) {
+  const cur = Number(form.value.lossJin)
+  form.value.lossJin = String(Math.round(((isNaN(cur) ? 0 : cur) + d) * 100) / 100)
 }
 
 // ---- 保存 ----
 const coefOk = computed(() => /^\d{1,4}(\.\d{1,4})?$/.test(form.value.coef.trim()))
 const nameOk = computed(() => form.value.name.trim() !== '')
-const shared = computed(() => (form.value.binds.length > 1 ? ` · ${form.value.binds.length} 户共用` : ''))
 
 // 保存按钮就是下一步：缺什么写什么，点了直达
 const next = computed<{ text: string; cls: string; go: () => void } | null>(() => {
   const f = form.value
   if (!nameOk.value) return { text: '填写规则名称', cls: 'todo', go: () => nameInput.value?.focus() }
+  if (conflict.value) return { text: '改规则名称', cls: 'fix', go: () => nameInput.value?.focus() }
   if (f.productId == null) return { text: '选择商品', cls: 'todo', go: () => document.getElementById('rule-products')?.querySelector('button')?.focus() }
   if (f.specId == null) return { text: '选择规格', cls: 'todo', go: () => document.getElementById('rule-specs')?.querySelector('button')?.focus() }
-  if (!coefOk.value) return { text: '填写每 kg 尾差', cls: 'todo', go: () => coefInput.value?.focus() }
-  if (conflicts.value.length) return { text: `${conflicts.value.length} 个冲突`, cls: 'fix', go: () => conflictBox.value?.scrollIntoView({ block: 'center' }) }
+  if (f.tareBoxId == null) return { text: '选择包装箱', cls: 'todo', go: () => document.getElementById('rule-tares')?.querySelector('button')?.focus() }
+  if (!lossOk.value) return { text: '填写每箱损耗', cls: 'todo', go: () => lossInput.value?.focus() }
+  if (!coefOk.value) return { text: '填写每斤尾差', cls: 'todo', go: () => coefInput.value?.focus() }
   return null
 })
 
 async function save() {
   const f = form.value
-  if (next.value || saving.value || f.productId == null || f.specId == null) return
+  if (next.value || saving.value || f.productId == null || f.specId == null || f.tareBoxId == null) return
   saving.value = true
   saveError.value = ''
-  const body = { name: f.name.trim(), kind: f.kind, productId: f.productId, specId: f.specId, coef: Number(f.coef), enabled: f.enabled, bindIds: f.binds.map((b) => b.id) }
+  const body = {
+    name: f.name.trim(), kind: f.kind, productId: f.productId, specId: f.specId, tareBoxId: f.tareBoxId,
+    lossJin: Number(f.lossJin), coef: Number(f.coef), enabled: f.enabled,
+  }
   try {
     if (props.rule) await updateRule(props.rule.id, body)
     else await createRule(body)
@@ -159,10 +88,9 @@ async function save() {
   } catch (e) {
     const c = conflictsOf(e)
     if (c) {
-      serverConflicts.value = c
-      await loadOthers()
-      await nextTick()
-      conflictBox.value?.scrollIntoView({ block: 'center' })
+      conflict.value = c[0] ?? { ruleId: 0, ruleName: f.name.trim() }
+      conflictName.value = f.name.trim()
+      nameInput.value?.focus()
     } else saveError.value = errorText(e)
   } finally {
     saving.value = false
@@ -170,13 +98,16 @@ async function save() {
 }
 
 const enabledSpecs = computed(() => props.specs.filter((s) => s.enabled || s.id === form.value.specId))
-const tail = (t: Target) => (t.tail4 ? ` ·${t.tail4}` : '')
+const enabledTares = computed(() => tares.value.filter((t) => t.enabled || t.id === form.value.tareBoxId))
 </script>
 
 <template>
   <Drawer v-model:open="open" :title="isNew ? '新建规则' : '编辑规则'" :sub="rule ? rule.name : undefined">
     <div class="formgrid">
-      <label class="field"><span>规则名称</span><input ref="nameInput" v-model="form.name" class="in" autocomplete="off" maxlength="100" /></label>
+      <label class="field"><span>规则名称</span>
+        <input ref="nameInput" v-model="form.name" class="in" :class="{ bad: conflict }" autocomplete="off" maxlength="100" />
+      </label>
+      <div v-if="conflict" class="conflict" role="alert" style="margin-top: -8px">已有同名规则「{{ conflict.ruleName }}」，建单时按名称选，换个名称</div>
 
       <div class="setrow">
         <button class="switch" role="switch" :aria-checked="form.enabled" aria-label="启用这条规则" @click="form.enabled = !form.enabled"></button>
@@ -185,8 +116,8 @@ const tail = (t: Target) => (t.tail4 ? ` ·${t.tail4}` : '')
 
       <div class="field"><span>属性</span>
         <div class="seg">
-          <button :aria-pressed="form.kind === 'BUY'" @click="setKind('BUY')">收购规则 · 绑定农户</button>
-          <button :aria-pressed="form.kind === 'SELL'" @click="setKind('SELL')">发货规则 · 绑定客户</button>
+          <button :aria-pressed="form.kind === 'BUY'" @click="form.kind = 'BUY'">收购规则</button>
+          <button :aria-pressed="form.kind === 'SELL'" @click="form.kind = 'SELL'">发货规则</button>
         </div>
       </div>
 
@@ -204,39 +135,31 @@ const tail = (t: Target) => (t.tail4 ? ` ·${t.tail4}` : '')
         <RouterLink v-if="!enabledSpecs.length" class="btn todo" to="/basics" @click="open = false">还没有规格，去添加</RouterLink>
       </div>
 
-      <label class="field"><span>每 kg 尾差（元）</span>
+      <div class="field"><span>包装箱（皮重）</span>
+        <div id="rule-tares" class="seg">
+          <button v-for="t in enabledTares" :key="t.id" :aria-pressed="form.tareBoxId === t.id" @click="form.tareBoxId = t.id">{{ t.name }} <span class="num">{{ t.tareJin }} 斤</span></button>
+        </div>
+        <RouterLink v-if="!enabledTares.length" class="btn todo" to="/basics" @click="open = false">还没有包装箱，去添加</RouterLink>
+      </div>
+
+      <div class="field"><span>每箱损耗（斤）</span>
+        <div class="stepper">
+          <button aria-label="减少损耗" @click="stepLoss(-0.5)">−</button>
+          <input ref="lossInput" v-model="form.lossJin" class="in num" :class="{ bad: form.lossJin !== '' && !lossOk }" inputmode="decimal" autocomplete="off" aria-label="每箱损耗" />
+          <button aria-label="增加损耗" @click="stepLoss(0.5)">+</button>
+        </div>
+      </div>
+
+      <label class="field"><span>每斤尾差（元）</span>
         <input ref="coefInput" v-model="form.coef" class="in numin" :class="{ bad: form.coef !== '' && !coefOk }" inputmode="decimal" autocomplete="off" style="width: 160px" />
       </label>
 
-      <div class="field"><span>绑定{{ form.kind === 'BUY' ? '农户' : '客户' }}</span>
-        <div class="chips">
-          <span v-for="b in form.binds" :key="b.id" class="chip" :class="{ bad: conflictIds.has(b.id) }">
-            {{ b.name }}<small v-if="b.tail4" class="muted num">{{ tail(b) }}</small>
-            <button :aria-label="'移除 ' + b.name" @click="unbind(b.id)">×</button>
-          </span>
-        </div>
-        <input v-model="q" class="in" :placeholder="form.kind === 'BUY' ? '农户姓名或手机号' : '客户名称'" autocomplete="off" style="margin-top: 8px" aria-label="搜索绑定对象" />
-        <div v-if="candidates.length" class="pick">
-          <button v-for="h in candidates" :key="h.id" @click="bind(h)">
-            <span>{{ h.name }}</span>
-            <span class="muted num">{{ h.phones?.length ? fmtPhone(h.phones[0]) : h.hsCode }}</span>
-          </button>
-        </div>
-        <div v-else-if="q.trim() && !hits.length" class="muted" style="font-size: 13px">没有匹配的{{ form.kind === 'BUY' ? '农户' : '客户' }}</div>
-
-        <div ref="conflictBox">
-          <div v-for="c in conflicts" :key="c.vendorId" class="conflict" role="alert">
-            <span>{{ c.vendorName }} 已绑定「{{ c.ruleName }}」</span>
-            <button class="btn sm" @click="resolve(c)">从那条解绑</button>
-          </div>
-        </div>
-      </div>
       <p v-if="saveError" class="inline-err" role="alert">{{ saveError }}</p>
     </div>
 
     <template #foot>
       <button v-if="next" class="btn" :class="next.cls" @click="next.go()">{{ next.text }}</button>
-      <button v-else class="btn primary" :disabled="saving" @click="save()">保存{{ shared }}</button>
+      <button v-else class="btn primary" :disabled="saving" @click="save()">保存</button>
     </template>
   </Drawer>
 </template>
@@ -245,15 +168,5 @@ const tail = (t: Target) => (t.tail4 ? ` ·${t.tail4}` : '')
 /* 规则抽屉（原型“规则抽屉”一段） */
 .formgrid { display: grid; gap: 16px; }
 .setrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--line); font-weight: 600; }
-.chip small { font-size: 12px; font-weight: 600; margin-left: -2px; }
-.chip button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--ink-2); }
-.chip button:hover { background: #e3e6e1; }
-.chip.bad { background: var(--err-bg); border-color: var(--err-ink); color: var(--err-ink); }
-.conflict { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--err-bg); color: var(--err-ink); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.pick { margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; max-height: 260px; overflow-y: auto; background: var(--surface); }
-.pick button { display: flex; justify-content: space-between; gap: 10px; width: 100%; min-height: 40px; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; }
-.pick button:last-child { border-bottom: 0; }
-.pick button:hover { background: var(--sunken); }
+.conflict { padding: 10px 12px; border-radius: 10px; background: var(--err-bg); color: var(--err-ink); font-size: 13px; font-weight: 600; }
 </style>

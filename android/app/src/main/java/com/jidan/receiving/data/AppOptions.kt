@@ -17,11 +17,12 @@ data class AppOptions(
         /** 开发规格 4.3 第一组（APP 生效）+ 第二组 + 业务设置里 APP 会读的几项。 */
         val DEFAULTS: Map<String, String> = mapOf(
             "scale.tare-by" to "scale",
+            "scale.unit" to "kg",
             "scale.reading-is-net" to "true",
             "scale.stable-by" to "sdk",
             "scale.stable-window-ms" to "800",
-            "scale.stable-tolerance-kg" to "0.05",
-            "weigh.empty-below-kg" to "5",
+            "scale.stable-tolerance-jin" to "0.1",
+            "weigh.empty-below-jin" to "10",
             "weigh.merge-tolerance-pct" to "10",
             "weigh.merge-max-k" to "8",
             "print.render" to "text",

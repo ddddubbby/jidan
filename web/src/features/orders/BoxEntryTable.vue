@@ -3,7 +3,7 @@ import { nextTick, ref } from 'vue'
 import Num from '../../ui/Num.vue'
 
 // 逐箱净重录入表（WEB-06，原型 boxTable / addBoxes）：一箱一回车；也可粘贴一整列（Excel 复制来的多行）。
-// 箱序号按录入顺序自动编号，删一箱后后面的往前排。净重是 kg，最多两位小数。
+// 箱序号按录入顺序自动编号，删一箱后后面的往前排。净重单位是斤，最多两位小数。
 const boxes = defineModel<number[]>({ required: true })
 
 const addEl = ref<HTMLInputElement | null>(null)
@@ -19,14 +19,14 @@ const editBad = ref(false)
 const paste = ref(false)
 const pasteText = ref('')
 
-const validKg = (v: string) => /^\d{1,3}(\.\d{1,2})?$/.test(v.trim()) && parseFloat(v) > 0
-const kg = (n: number) => String(Math.round(n * 100) / 100)
+const validJin = (v: string) => /^\d{1,3}(\.\d{1,2})?$/.test(v.trim()) && parseFloat(v) > 0
+const jin = (n: number) => String(Math.round(n * 100) / 100)
 
 /** 一次可以给多箱：按换行、空格、逗号拆开；有一个不合法就一箱都不加，并指出是哪个 */
 function addBoxes(text: string): boolean {
   const parts = text.split(/[\s,，、;；]+/).filter(Boolean)
   if (!parts.length) return false
-  const bad = parts.find((p) => !validKg(p))
+  const bad = parts.find((p) => !validJin(p))
   if (bad) {
     addErr.value = `“${bad}”不是有效的净重`
     return false
@@ -71,7 +71,7 @@ function commitPaste(text: string) {
 
 function startEdit(i: number) {
   editing.value = i
-  editVal.value = kg(boxes.value[i])
+  editVal.value = jin(boxes.value[i])
   editBad.value = false
   nextTick(() => {
     editEl?.focus()
@@ -79,7 +79,7 @@ function startEdit(i: number) {
   })
 }
 function saveEdit() {
-  if (!validKg(editVal.value)) {
+  if (!validJin(editVal.value)) {
     editBad.value = true
     editEl?.focus()
     return
@@ -121,7 +121,7 @@ defineExpose({ focus: () => addEl.value?.focus() })
             @keydown.esc.prevent="cancelEdit"
             @input="editBad = false"
           />
-          <button v-else class="netbtn" :aria-label="`改第 ${i + 1} 箱净重`" @click="startEdit(i)"><Num :value="kg(n)" unit="kg" /></button>
+          <button v-else class="netbtn" :aria-label="`改第 ${i + 1} 箱净重`" @click="startEdit(i)"><Num :value="jin(n)" unit="斤" /></button>
         </td>
         <td class="r nb">
           <button v-if="editing !== i" class="btn sm ghost del" :aria-label="`删除第 ${i + 1} 箱`" @click="remove(i)">删除</button>

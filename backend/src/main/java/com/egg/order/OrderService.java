@@ -10,12 +10,13 @@ import java.util.Set;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.egg.archive.ArchiveService;
 import com.egg.basics.OptionService;
-import com.egg.basics.SpecService;
 import com.egg.common.ApiException;
 import com.egg.common.CurrentUser;
 import com.egg.common.ErrorCode;
 import com.egg.common.Role;
+import com.egg.pricing.PricingRule;
 import com.egg.pricing.PricingService;
+import com.egg.pricing.RuleService;
 import com.egg.pricing.PricingService.Result;
 
 import org.springframework.dao.DuplicateKeyException;
@@ -29,13 +30,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class OrderService {
 
-    /** 提交的一箱。tareKg、tareName、groupNo、groupK 缺省时按“没用皮重、一箱一称”处理（Web 自建单只给净重）。 */
-    public record BoxInput(int seq, BigDecimal netKg, BigDecimal grossKg, BigDecimal tareKg, String tareName,
-            Integer groupNo, Integer groupK, boolean manual, BigDecimal rawKg, boolean printed) {
+    /** 提交的一箱。tareJin、tareName、groupNo、groupK 缺省时按“没用皮重、一箱一称”处理（Web 自建单只给净重）。 */
+    public record BoxInput(int seq, BigDecimal netJin, BigDecimal grossJin, BigDecimal tareJin, String tareName,
+            Integer groupNo, Integer groupK, boolean manual, BigDecimal rawJin, boolean printed) {
     }
 
-    public record Submission(String batchNo, long vendorId, long productId, long specId, long warehouseId,
-            List<BoxInput> boxes) {
+    /** 商品与规格取自所选规则（附录 E R-1 行）。 */
+    public record Submission(String batchNo, long vendorId, long ruleId, long warehouseId, List<BoxInput> boxes) {
     }
 
     /**
@@ -43,7 +44,7 @@ public class OrderService {
      * 重复提交返回的仍是它们。
      */
     public record Submitted(long id, String code, String batchNo, OrderStatus status, OrderSource source,
-            int boxCount, BigDecimal totalNetKg, BigDecimal avgKg, BigDecimal submittedPrice,
+            int boxCount, BigDecimal totalNetJin, BigDecimal avgJin, BigDecimal submittedPrice,
             BigDecimal submittedAmount) {
     }
 
@@ -52,25 +53,29 @@ public class OrderService {
     private final PricingService pricing;
     private final OptionService options;
     private final ArchiveService archive;
-    private final SpecService specs;
+    private final RuleService rules;
     private final TransactionTemplate tx;
 
     public OrderService(PurchaseOrderMapper orders, WeighRecordMapper records, PricingService pricing,
-            OptionService options, ArchiveService archive, SpecService specs, TransactionTemplate tx) {
+            OptionService options, ArchiveService archive, RuleService rules, TransactionTemplate tx) {
         this.orders = orders;
         this.records = records;
         this.pricing = pricing;
         this.options = options;
         this.archive = archive;
-        this.specs = specs;
+        this.rules = rules;
         this.tx = tx;
     }
 
-    /** 计价预览：不写库。APP 汇总页、规则弹层试算与 Web 自建单录入窗口共用。 */
-    public Result quote(long vendorId, long productId, long specId, LocalDate date, List<BigDecimal> boxNetKg,
-            Long trialRuleId, BigDecimal trialCoef) {
-        return pricing.price(new PricingService.Request(vendorId, productId, specId, date, boxNetKg, null,
-                trialRuleId, trialCoef));
+    /**
+     * 计价预览：不写库。APP 汇总页、规则弹层试算与 Web 自建单录入窗口共用。规格取规则的规格。
+     * 换一条规则试算就是换 ruleId；trialCoef、trialLossJin 只换系数、损耗，不改规则本身。
+     */
+    public Result quote(long ruleId, LocalDate date, List<BigDecimal> boxNetJin, BigDecimal trialCoef,
+            BigDecimal trialLossJin) {
+        PricingRule rule = rules.requireBuyRule(ruleId);
+        return pricing.price(new PricingService.Request(ruleId, rule.specId, date, boxNetJin, null, trialCoef,
+                trialLossJin));
     }
 
     public Submitted submit(Submission s, CurrentUser me) {
@@ -89,8 +94,11 @@ public class OrderService {
     // ---------------------------------------------------------------- 插入
 
     private PurchaseOrder insert(Submission s, CurrentUser me) {
-        archive.requireExist(s.vendorId(), s.productId(), s.warehouseId());
-        specs.get(s.specId());
+        PricingRule rule = rules.requireBuyRule(s.ruleId());
+        if (!rule.enabled) {
+            throw ApiException.invalid("规则「" + rule.name + "」已停用，请换一条规则");
+        }
+        archive.requireExist(s.vendorId(), rule.productId, s.warehouseId());
         Set<Integer> seqs = new HashSet<>();
         for (BoxInput b : s.boxes()) {
             if (!seqs.add(b.seq())) {
@@ -99,8 +107,8 @@ public class OrderService {
         }
 
         LocalDate bizDate = BatchNo.dateOf(s.batchNo());
-        Result price = quote(s.vendorId(), s.productId(), s.specId(), bizDate,
-                s.boxes().stream().map(BoxInput::netKg).toList(), null, null);
+        Result price = pricing.price(new PricingService.Request(rule.id, rule.specId, bizDate,
+                s.boxes().stream().map(BoxInput::netJin).toList()));
         if (!price.issues().isEmpty() && "block".equals(options.get("submit.without-price"))) {
             throw new ApiException(ErrorCode.NOT_READY, missing(price));
         }
@@ -113,8 +121,9 @@ public class OrderService {
         o.bizDate = bizDate;
         o.vendorId = s.vendorId();
         o.warehouseId = s.warehouseId();
-        o.productId = s.productId();
-        o.specId = s.specId();
+        o.productId = rule.productId;
+        o.specId = rule.specId;
+        o.ruleId = rule.id;
         o.source = source;
         o.operatorId = me.id();
         o.createdAt = now;
@@ -137,14 +146,14 @@ public class OrderService {
         WeighRecord r = new WeighRecord();
         r.orderId = orderId;
         r.seq = b.seq();
-        r.netKg = b.netKg();
-        r.grossKg = web ? null : b.grossKg();
-        r.tareKg = b.tareKg() == null ? BigDecimal.ZERO : b.tareKg();
+        r.netJin = b.netJin();
+        r.grossJin = web ? null : b.grossJin();
+        r.tareJin = b.tareJin() == null ? BigDecimal.ZERO : b.tareJin();
         r.tareName = b.tareName() == null ? "" : b.tareName();
         r.groupNo = b.groupNo() == null ? b.seq() : b.groupNo();
         r.groupK = b.groupK() == null ? 1 : b.groupK();
         r.manual = !web && b.manual();
-        r.rawKg = web ? null : b.rawKg();
+        r.rawJin = web ? null : b.rawJin();
         r.printed = !web && b.printed();
         return r;
     }
@@ -152,8 +161,8 @@ public class OrderService {
     private static String missing(Result price) {
         boolean noRule = price.issues().contains(PricingService.NO_RULE);
         boolean noBase = price.issues().contains(PricingService.NO_BASE_PRICE);
-        String what = noRule && noBase ? "没有收购规则，当日也没录基准价"
-                : noRule ? "这位农户在该商品规格上没有收购规则" : "当日该规格没录基准价";
+        String what = noRule && noBase ? "没有选定价规则，当日也没录基准价"
+                : noRule ? "没有选定价规则" : "当日该规格没录基准价";
         return what + "，现在不能提交";
     }
 
@@ -165,9 +174,9 @@ public class OrderService {
 
     private Submitted submitted(PurchaseOrder o) {
         List<BigDecimal> nets = records.selectList(new QueryWrapper<WeighRecord>().eq("order_id", o.id).orderByAsc("seq"))
-                .stream().map(r -> r.netKg).toList();
-        Result r = quote(o.vendorId, o.productId, o.specId, o.bizDate, nets, null, null);
-        return new Submitted(o.id, o.code, o.batchNo, o.status, o.source, r.boxCount(), r.totalKg(), r.avgKg(),
+                .stream().map(r -> r.netJin).toList();
+        Result r = pricing.price(new PricingService.Request(o.ruleId, o.specId, o.bizDate, nets));
+        return new Submitted(o.id, o.code, o.batchNo, o.status, o.source, r.boxCount(), r.totalJin(), r.avgJin(),
                 o.submittedPrice, o.submittedAmount);
     }
 }

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 /**
  * 采购入库单。一张单 = 一个批次 = 一个商品行（开发规格 5.1），所以没有明细表。
- * 待审核单不存计价结果，“审核时冻结”那组字段（roundMode 到 amount）审核前一律为 null。
+ * 待审核单不存计价结果，“审核时冻结”那组字段（roundMode 到 amount）审核前一律为 null。重量单位斤。
  */
 public class PurchaseOrder {
     public Long id;
@@ -19,6 +19,8 @@ public class PurchaseOrder {
     public Long warehouseId;
     public Long productId;
     public Long specId;
+    /** 建单时选的定价规则；改版前的旧单可能为空（附录 E R-1 行） */
+    public Long ruleId;
     public OrderSource source;
     public Long operatorId;
     public LocalDateTime createdAt;
@@ -35,13 +37,13 @@ public class PurchaseOrder {
     // 审核时冻结
     public String roundMode;
     public Integer boxCount;
-    public BigDecimal totalNetKg;
-    public BigDecimal avgKg;
-    public BigDecimal stdNetKg;
+    public BigDecimal totalNetJin;
+    public BigDecimal avgJin;
+    public BigDecimal stdNetJin;
     public BigDecimal basePrice;
-    public Long ruleId;
     public String ruleName;
     public BigDecimal ruleCoef;
+    public BigDecimal ruleLossJin;
     public BigDecimal price;
     public BigDecimal amount;
     public Long updatedBy;

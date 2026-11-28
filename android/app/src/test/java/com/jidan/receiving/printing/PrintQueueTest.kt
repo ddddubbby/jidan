@@ -1,6 +1,6 @@
 package com.jidan.receiving.printing
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.Session
 import com.jidan.receiving.core.Tare
@@ -50,9 +50,9 @@ class PrintQueueTest {
         var s = Session(
             batchNo = "SG20261116-1",
             farmer = Pick(1, "李四"), product = Pick(2, "粉蛋"), spec = Pick(3, "360枚/箱"), warehouse = Pick(4, "一号库"),
-            tare = Tare(Kg.of(2.0), "2号箱"),
+            tare = Tare(Jin.of(2.0), "2号箱"),
         )
-        repeat(boxes) { s = s.addManual(Kg.of(46.0 + it)) }
+        repeat(boxes) { s = s.addManual(Jin.of(46.0 + it)) }
         return s
     }
 
@@ -72,7 +72,7 @@ class PrintQueueTest {
 
         q.enqueueNew(listOf(1))
         val first = printer.arrived.receive() // 第 1 张正在打
-        session = session!!.addManual(Kg.of(47.0))
+        session = session!!.addManual(Jin.of(47.0))
         q.enqueueNew(listOf(2)) // 此时入队不能把正在打的第 1 张取消重来
         first.open()
         printer.arrived.receive().open()

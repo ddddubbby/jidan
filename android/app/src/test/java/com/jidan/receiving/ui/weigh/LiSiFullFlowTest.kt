@@ -4,7 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.jidan.receiving.core.EmptyBoxTare
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.WeighPhase
 import com.jidan.receiving.data.ApiClient
@@ -124,21 +124,21 @@ class LiSiFullFlowTest {
     }
 
     /** 回放哪份计价：按请求里的 10 个净重认。认不出就报 400，测试会因此失败。 */
-    private fun quoteFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxNetKg"))) {
+    private fun quoteFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxNetJin"))) {
         LISI_NETS -> QUOTE_LISI
         EDITED_NETS -> QUOTE_EDITED
         ONE_BOX_NETS -> QUOTE_ONE_BOX
-        else -> "ERROR 回放里没有这组净重的计价：${call.json.get("boxNetKg")}"
+        else -> "ERROR 回放里没有这组净重的计价：${call.json.get("boxNetJin")}"
     }
 
-    private fun submittedFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxes").map { it.asJsonObject.get("netKg") })) {
+    private fun submittedFor(call: Call): String = when (netsOf(call.json.getAsJsonArray("boxes").map { it.asJsonObject.get("netJin") })) {
         LISI_NETS -> SUBMITTED_LISI
         EDITED_NETS -> SUBMITTED_EDITED
         ONE_BOX_NETS -> SUBMITTED_ONE_BOX
         else -> "ERROR 回放里没有这组净重的提交结果"
     }
 
-    private fun netsOf(a: Iterable<com.google.gson.JsonElement>): List<Int> = a.map { Kg.of(it.asDouble).cents }
+    private fun netsOf(a: Iterable<com.google.gson.JsonElement>): List<Int> = a.map { Jin.of(it.asDouble).cents }
 
     // ---------------------------------------------------------------- 组装
 
@@ -207,7 +207,10 @@ class LiSiFullFlowTest {
         runCurrent()
     }
 
-    /** 建单：照 `CreateViewModel` 的做法，用 bootstrap 里的商品、规格（含 W0）、仓库和尾号查到的农户写 OrderDraft。 */
+    /**
+     * 建单：照 `CreateViewModel` 的做法写 OrderDraft。规则按名称选（这里的回放计价不看规则号）；
+     * 商品、规格（含 W0）、仓库取自 bootstrap，皮重留给称重页选（这一组算例按 2 号包装箱）。
+     */
     private suspend fun Deps.createOrder(): Pair<Long, Long> {
         val cat = catalog.catalog()
         val farmer = catalog.farmersByTail("1234").first { it.name == "李四" }
@@ -217,14 +220,15 @@ class LiSiFullFlowTest {
         orderDraft.update {
             it.copy(
                 farmer = Pick(farmer.id, farmer.name),
+                rule = Pick(RULE_ID, "粉蛋李四收购定价方案"),
                 product = Pick(product.id, product.name),
                 spec = Pick(spec.id, spec.name),
-                stdNetCents = spec.stdNetKg?.let { kg -> Kg.of(kg).cents },
+                stdNetCents = spec.stdNetJin?.let { jin -> Jin.of(jin).cents },
                 warehouse = Pick(warehouse.id, warehouse.name),
             )
         }
         assertTrue(orderDraft.header.value.ready)
-        assertEquals(4500, orderDraft.header.value.stdNetCents) // 45kg
+        assertEquals(4500, orderDraft.header.value.stdNetCents) // 45斤
         return product.id to spec.id
     }
 
@@ -248,7 +252,7 @@ class LiSiFullFlowTest {
         vm.selectTare(tare2)
         settle(500)
         assertEquals("2号包装箱", vm.ui.value.tare?.name)
-        assertEquals(Kg.of(2.0), vm.ui.value.tare?.unit)
+        assertEquals(Jin.of(2.0), vm.ui.value.tare?.unit)
 
         for (net in FakeScale.CASE_NETS_C) {
             deps.scale.placeOneBox(net)
@@ -297,10 +301,10 @@ class LiSiFullFlowTest {
             ui.boxes.map { it.net.format() },
         )
         assertEquals((1..10).toList(), ui.boxes.map { it.seq })
-        assertTrue(ui.boxes.all { it.tare == Kg.of(2.0) && it.tareName == "2号包装箱" && !it.manual })
+        assertTrue(ui.boxes.all { it.tare == Jin.of(2.0) && it.tareName == "2号包装箱" && !it.manual })
         assertEquals(10, ui.count)
         assertEquals("460.5", ui.totalNet.format())
-        assertEquals(Kg.of(46.0), ui.avg(vm.roundRule))
+        assertEquals(Jin.of(46.0), ui.avg(vm.roundRule))
         assertEquals(4605, ui.totalNet.cents / ui.count) // 原始均重 46.05
         assertTrue(ui.scaleConnected)
         assertEquals("", ui.error)
@@ -313,7 +317,7 @@ class LiSiFullFlowTest {
         assertTrue(ui.boxes.all { it.printed })
         labels.forEachIndexed { i, payload ->
             val text = (payload as PrintPayload.Text).tspl
-            assertTrue("净重：${ui.boxes[i].net.format()}kg" in text, "第 ${i + 1} 张：$text")
+            assertTrue("净重：${ui.boxes[i].net.format()}斤" in text, "第 ${i + 1} 张：$text")
             assertTrue("批次：SG20261116-1" in text, text)
             assertTrue("第${i + 1}箱" in text, text)
             assertFalse("均重" in text, "标签上不该有均重：$text")
@@ -327,17 +331,17 @@ class LiSiFullFlowTest {
         vm.addManual(50.0)
         assertEquals(10, vm.ui.value.boxes.size)
         val quoteReq = calls.last { it.path == "/api/orders/quote" }.json
-        assertEquals(10, quoteReq.getAsJsonArray("boxNetKg").size())
-        assertEquals(LISI_NETS, netsOf(quoteReq.getAsJsonArray("boxNetKg")))
+        assertEquals(10, quoteReq.getAsJsonArray("boxNetJin").size())
+        assertEquals(LISI_NETS, netsOf(quoteReq.getAsJsonArray("boxNetJin")))
         assertEquals("2026-11-16", quoteReq.get("date").asString)
-        assertFalse(quoteReq.has("trialRuleId"))
+        assertEquals(RULE_ID, quoteReq.get("ruleId").asLong)
         assertFalse(quoteReq.has("trialCoef"))
 
         // 回放 181 与 1810：汇总页状态
         val s = vm.summary.value
         val q = assertNotNull(s.quote)
         assertEquals(10, q.boxCount)
-        assertEquals("46", formatNum(q.avgKg))
+        assertEquals("46", formatNum(q.avgJin))
         assertEquals("181", formatNum(q.unitPrice))
         assertEquals("1,810", formatMoney(q.amount))
         assertEquals("李四", s.farmerName)
@@ -354,28 +358,27 @@ class LiSiFullFlowTest {
         val boxes = body.getAsJsonArray("boxes")
         assertEquals(10, boxes.size())
         assertEquals((1..10).toList(), boxes.map { it.asJsonObject.get("seq").asInt })
-        assertEquals(LISI_NETS, netsOf(boxes.map { it.asJsonObject.get("netKg") }))
+        assertEquals(LISI_NETS, netsOf(boxes.map { it.asJsonObject.get("netJin") }))
         boxes.forEach { e ->
             val b = e.asJsonObject
-            assertEquals(2.0, b.get("tareKg").asDouble, 1e-9)
+            assertEquals(2.0, b.get("tareJin").asDouble, 1e-9)
             assertEquals("2号包装箱", b.get("tareName").asString)
             assertEquals(false, b.get("manual").asBoolean)
-            assertTrue(b.get("rawKg") == null || b.get("rawKg").isJsonNull)
+            assertTrue(b.get("rawJin") == null || b.get("rawJin").isJsonNull)
             assertEquals(true, b.get("printed").asBoolean)
-            assertEquals(b.get("netKg").asDouble + 2.0, b.get("grossKg").asDouble, 1e-9)
+            assertEquals(b.get("netJin").asDouble + 2.0, b.get("grossJin").asDouble, 1e-9)
             assertEquals(1, b.get("groupK").asInt)
         }
         assertEquals(11L, body.get("vendorId").asLong)
-        assertEquals(21L, body.get("productId").asLong)
-        assertEquals(31L, body.get("specId").asLong)
+        assertEquals(RULE_ID, body.get("ruleId").asLong)
         assertEquals(41L, body.get("warehouseId").asLong)
 
         // 提交结果回放的 181 与 1810：完成页状态与汇总页一致
         val d = vm.done.value
         assertEquals("李四", d.farmerName)
         assertEquals(10, d.boxCount)
-        assertEquals("460.5", d.totalNetKg?.let { Kg.of(it).format() })
-        assertEquals(formatNum(q.avgKg), formatNum(d.avgKg))
+        assertEquals("460.5", d.totalNetJin?.let { Jin.of(it).format() })
+        assertEquals(formatNum(q.avgJin), formatNum(d.avgJin))
         assertEquals(formatNum(q.unitPrice), formatNum(d.unitPrice))
         assertEquals(formatMoney(q.amount), formatMoney(d.amount))
         assertEquals("181", formatNum(d.unitPrice))
@@ -391,7 +394,7 @@ class LiSiFullFlowTest {
     }
 
     @Test
-    fun manualEditOfLastBoxGoesToSubmitAsManualWithRawKg() = flow { deps, vm, navs ->
+    fun manualEditOfLastBoxGoesToSubmitAsManualWithRawJin() = flow { deps, vm, navs ->
         weighLiSi(deps, vm)
         assertEquals(10, deps.printer.labels.size)
 
@@ -400,17 +403,17 @@ class LiSiFullFlowTest {
         settle(1000)
         val last = vm.ui.value.boxes.last()
         assertEquals(10, last.seq)
-        assertEquals(Kg.of(52.8), last.net)
+        assertEquals(Jin.of(52.8), last.net)
         assertTrue(last.manual)
-        assertEquals(Kg.of(47.8), last.raw)
+        assertEquals(Jin.of(47.8), last.raw)
         assertEquals(11, deps.printer.labels.size)
         val reprint = (deps.printer.labels.last() as PrintPayload.Text).tspl
-        assertTrue("净重：52.8kg" in reprint && "第10箱" in reprint, reprint)
+        assertTrue("净重：52.8斤" in reprint && "第10箱" in reprint, reprint)
 
         vm.onConfirmWeighing()
         until("计价回来") { vm.summary.value.quote != null }
         val quoteReq = calls.last { it.path == "/api/orders/quote" }.json
-        assertEquals(EDITED_NETS, netsOf(quoteReq.getAsJsonArray("boxNetKg")))
+        assertEquals(EDITED_NETS, netsOf(quoteReq.getAsJsonArray("boxNetJin")))
         assertTrue(vm.summary.value.canSubmit)
 
         vm.submitOrder()
@@ -419,14 +422,14 @@ class LiSiFullFlowTest {
         assertEquals(10, boxes.size())
         val b10 = boxes[9].asJsonObject
         assertEquals(10, b10.get("seq").asInt)
-        assertEquals(52.8, b10.get("netKg").asDouble, 1e-9)
+        assertEquals(52.8, b10.get("netJin").asDouble, 1e-9)
         assertEquals(true, b10.get("manual").asBoolean)
-        assertEquals(47.8, b10.get("rawKg").asDouble, 1e-9)
+        assertEquals(47.8, b10.get("rawJin").asDouble, 1e-9)
         assertEquals(true, b10.get("printed").asBoolean)
         // 其余 9 箱没动
         boxes.take(9).forEach {
             assertEquals(false, it.asJsonObject.get("manual").asBoolean)
-            assertTrue(it.asJsonObject.get("rawKg") == null)
+            assertTrue(it.asJsonObject.get("rawJin") == null)
         }
         assertEquals("182", formatNum(vm.done.value.unitPrice))
         assertEquals("1,820", formatMoney(vm.done.value.amount))
@@ -506,51 +509,53 @@ class LiSiFullFlowTest {
 
     @Test
     fun secondOrderOnTheSameScaleStartsFromAnEmptyScaleSoWeighingTheEmptyBoxTaresRight() = flow { deps, vm, navs ->
-        // 第一单：选 2 号包装箱（2kg），放 10 箱，提交。秤里留着第一单下发的 2kg 数字皮
+        // 第一单：选 2 号包装箱（2斤），放 10 箱，提交。秤里留着第一单下发的 2斤 数字皮
         weighLiSi(deps, vm)
         vm.onConfirmWeighing()
         until("计价回来") { vm.summary.value.quote != null }
         vm.submitOrder()
         until("提交完成") { navs.contains(ReceivingNav.ToDone) }
-        assertEquals(Kg(-200), deps.scale.readings.value!!.raw) // 空秤读 -2.0kg：旧皮重还在
+        assertEquals(Jin(-200), deps.scale.readings.value!!.raw) // 空秤读 -2.0斤：旧皮重还在
 
         // 再收一单（完成页点“收下一单”会清掉上一单，再走建单页）：不选皮重。进入称重后，APP 先清掉秤里的旧皮重
         vm.clear()
         deps.createOrder()
         vm.startFromDraft()
         until("第二单进入称重且秤里的旧皮重清掉") {
-            vm.ui.value.ready && deps.scale.readings.value?.raw == Kg(0) && vm.ui.value.displayNet == Kg(0)
+            vm.ui.value.ready && deps.scale.readings.value?.raw == Jin(0) && vm.ui.value.displayNet == Jin(0)
         }
         assertNull(vm.ui.value.tare)
-        assertEquals(Kg(0), deps.scale.readings.value!!.raw)
-        assertEquals(Kg(0), vm.ui.value.displayNet)
+        assertEquals(Jin(0), deps.scale.readings.value!!.raw)
+        assertEquals(Jin(0), vm.ui.value.displayNet)
         assertEquals("", vm.ui.value.tareError)
 
-        // 放一只 2.5kg 的空箱：按钮写的是台面真实读数，不是被旧皮重扣过的 0.5
+        // 放一只 2.5斤 的空箱：按钮写的是台面真实读数，不是被旧皮重扣过的 0.5
         deps.scale.placeEmptyBox(250)
         settle()
         assertTrue(vm.ui.value.emptyBox.available)
-        assertEquals("称空箱 · 按 2.5 kg 去皮", EmptyBoxTare.label(vm.ui.value.emptyBox))
+        assertEquals("称空箱 · 按 2.5 斤 去皮", EmptyBoxTare.label(vm.ui.value.emptyBox))
         vm.weighEmptyBox()
         settle(500)
-        assertEquals(Kg.of(2.5), vm.ui.value.tare?.unit)
+        assertEquals(Jin.of(2.5), vm.ui.value.tare?.unit)
         assertEquals("空箱", vm.ui.value.tare?.name)
 
-        // 拿走空箱，放上一箱蛋（台面 48.5kg）：净重 46，皮重 2.5，毛重 48.5
+        // 拿走空箱，放上一箱蛋（台面 48.5斤）：净重 46，皮重 2.5，毛重 48.5
         deps.scale.removeLoad()
         settle()
         deps.scale.setLoadCenti(4850)
         settle()
         val box = vm.ui.value.boxes.single()
-        assertEquals(Kg.of(46.0), box.net)
-        assertEquals(Kg.of(2.5), box.tare)
-        assertEquals(Kg.of(48.5), box.gross)
+        assertEquals(Jin.of(46.0), box.net)
+        assertEquals(Jin.of(2.5), box.tare)
+        assertEquals(Jin.of(48.5), box.gross)
         assertEquals("", vm.ui.value.error)
         assertEquals(emptyList(), contract.violations.toList())
     }
 
     private companion object {
         const val TOKEN = "test-token"
+        /** 回放用的规则号：计价与提交都带它（商品、规格由后端取自规则） */
+        const val RULE_ID = 61L
 
         val LISI_NETS = listOf(4650, 4580, 4600, 4600, 4600, 4560, 4560, 4560, 4560, 4780)
         val EDITED_NETS = LISI_NETS.dropLast(1) + 5280
@@ -565,38 +570,41 @@ class LiSiFullFlowTest {
         val BOOTSTRAP = """{
             "date":"2026-11-16",
             "products":[{"id":21,"name":"粉蛋"}],
-            "specs":[{"id":31,"name":"360枚/箱","eggCount":360,"stdNetKg":45,"basePrice":180}],
+            "specs":[{"id":31,"name":"360枚/箱","eggCount":360,"stdNetJin":45,"basePrice":180}],
             "warehouses":[{"id":41,"name":"1号仓库"}],
-            "tares":[{"id":51,"name":"2号包装箱","tareKg":2}],
+            "tares":[{"id":51,"name":"2号包装箱","tareJin":2}],
             "settings":{"round.mode":"half","print.timing":"per-box","label.content":"minimal",
                 "label.width-mm":"60","label.height-mm":"40","label.gap-mm":"2"},
             "options":{"scale.tare-by":"scale","scale.reading-is-net":"true","scale.stable-by":"sdk",
-                "weigh.record-by":"auto","weigh.merge-detect":"auto","print.enabled":"on","submit.without-price":"block"}
+                "weigh.record-by":"auto","weigh.merge-detect":"auto","print.enabled":"on","submit.without-price":"block"},
+            "rules":[{"id":61,"name":"粉蛋李四收购定价方案","kind":"BUY","productId":21,"productName":"粉蛋","specId":31,
+                "specName":"360枚/箱","stdNetJin":45,"tareBoxId":51,"tareName":"2号包装箱","tareJin":2,"lossJin":0,
+                "coef":1,"enabled":true}]
         }"""
 
         val BATCH = """{"batchNo":"SG20261116-1","date":"2026-11-16"}"""
 
-        val QUOTE_LISI = """{"boxCount":10,"totalKg":460.5,"rawAvgKg":46.05,"avgKg":46,"standardNetKg":45,
-            "basePrice":180,"ruleId":61,"ruleName":"粉蛋李四收购定价方案","coefficient":1,"tailKg":1,"priceDiff":1,
+        val QUOTE_LISI = """{"boxCount":10,"totalJin":460.5,"rawAvgJin":46.05,"avgJin":46,"standardNetJin":45,
+            "basePrice":180,"ruleId":61,"ruleName":"粉蛋李四收购定价方案","coefficient":1,"tailJin":1,"priceDiff":1,
             "unitPrice":181,"amount":1810,"roundMode":"HALF","issues":[]}"""
 
-        // 第 10 箱手录 52.8 后：合计 465.5、均重 46.55 四舍五入 47，多 2kg，182 元/箱
-        val QUOTE_EDITED = """{"boxCount":10,"totalKg":465.5,"rawAvgKg":46.55,"avgKg":47,"standardNetKg":45,
-            "basePrice":180,"ruleId":61,"ruleName":"粉蛋李四收购定价方案","coefficient":1,"tailKg":2,"priceDiff":2,
+        // 第 10 箱手录 52.8 后：合计 465.5、均重 46.55 四舍五入 47，多 2斤，182 元/箱
+        val QUOTE_EDITED = """{"boxCount":10,"totalJin":465.5,"rawAvgJin":46.55,"avgJin":47,"standardNetJin":45,
+            "basePrice":180,"ruleId":61,"ruleName":"粉蛋李四收购定价方案","coefficient":1,"tailJin":2,"priceDiff":2,
             "unitPrice":182,"amount":1820,"roundMode":"HALF","issues":[]}"""
 
-        // 王秀英只称一箱 46.5：合计 46.5、均重 46.5 取整 47（half），多 2kg，182 元/箱
-        val QUOTE_ONE_BOX = """{"boxCount":1,"totalKg":46.5,"rawAvgKg":46.5,"avgKg":47,"standardNetKg":45,
-            "basePrice":180,"ruleId":62,"ruleName":"粉蛋王秀英收购定价方案","coefficient":1,"tailKg":2,"priceDiff":2,
+        // 王秀英只称一箱 46.5：合计 46.5、均重 46.5 取整 47（half），多 2斤，182 元/箱
+        val QUOTE_ONE_BOX = """{"boxCount":1,"totalJin":46.5,"rawAvgJin":46.5,"avgJin":47,"standardNetJin":45,
+            "basePrice":180,"ruleId":62,"ruleName":"粉蛋王秀英收购定价方案","coefficient":1,"tailJin":2,"priceDiff":2,
             "unitPrice":182,"amount":182,"roundMode":"HALF","issues":[]}"""
 
         val SUBMITTED_ONE_BOX = """{"id":1003,"code":"RK20261116003","batchNo":"SG20261116-1","status":"PENDING","source":"APP",
-            "boxCount":1,"totalNetKg":46.5,"avgKg":47,"submittedPrice":182,"submittedAmount":182}"""
+            "boxCount":1,"totalNetJin":46.5,"avgJin":47,"submittedPrice":182,"submittedAmount":182}"""
 
         val SUBMITTED_LISI = """{"id":1001,"code":"RK20261116001","batchNo":"SG20261116-1","status":"PENDING","source":"APP",
-            "boxCount":10,"totalNetKg":460.5,"avgKg":46,"submittedPrice":181,"submittedAmount":1810}"""
+            "boxCount":10,"totalNetJin":460.5,"avgJin":46,"submittedPrice":181,"submittedAmount":1810}"""
 
         val SUBMITTED_EDITED = """{"id":1002,"code":"RK20261116002","batchNo":"SG20261116-1","status":"PENDING","source":"APP",
-            "boxCount":10,"totalNetKg":465.5,"avgKg":47,"submittedPrice":182,"submittedAmount":1820}"""
+            "boxCount":10,"totalNetJin":465.5,"avgJin":47,"submittedPrice":182,"submittedAmount":1820}"""
     }
 }

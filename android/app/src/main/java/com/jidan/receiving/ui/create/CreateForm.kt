@@ -1,20 +1,22 @@
 package com.jidan.receiving.ui.create
 
-/** 建单四步纯逻辑（对照 lab/app-sim.html STEPS / farmerResults）。 */
+import com.jidan.receiving.data.RuleViewDto
 
-enum class CreateStep { FARMER, PRODUCT, SPEC, WAREHOUSE }
+/**
+ * 建单三步纯逻辑（对照 lab/app-sim.html STEPS / farmerResults）。
+ * 定价规则不绑农户，按名称直接选；选了规则，商品、规格、包装箱与每箱损耗就都定了（附录 E R-1 行）。
+ */
+enum class CreateStep { FARMER, RULE, WAREHOUSE }
 
 data class CreatePicks(
     val farmerId: Long? = null,
-    val productId: Long? = null,
-    val specId: Long? = null,
+    val ruleId: Long? = null,
     val warehouseId: Long? = null,
 )
 
 fun missingSteps(p: CreatePicks): List<CreateStep> = buildList {
     if (p.farmerId == null) add(CreateStep.FARMER)
-    if (p.productId == null) add(CreateStep.PRODUCT)
-    if (p.specId == null) add(CreateStep.SPEC)
+    if (p.ruleId == null) add(CreateStep.RULE)
     if (p.warehouseId == null) add(CreateStep.WAREHOUSE)
 }
 
@@ -23,14 +25,21 @@ fun activeStep(p: CreatePicks, open: CreateStep?): CreateStep? =
 
 fun digitsTail(raw: String): String = raw.filter(Char::isDigit).take(4)
 
-/**
- * 选农户后：仅一条启用收购规则时自动带出商品与规格（原型 ACT.farmer）。
- * 返回 Pair(productId, specId)；多条或没有则两者 null。
- */
-fun autoFillFromRules(rules: List<Pair<Long, Long>>): Pair<Long?, Long?> =
-    if (rules.size == 1) rules[0].first to rules[0].second else null to null
-
-fun autoFillSpecForProduct(rules: List<Pair<Long, Long>>, productId: Long): Long? {
-    val hit = rules.filter { it.first == productId }
-    return if (hit.size == 1) hit[0].second else null
+/** 每箱损耗的写法：+0.5 斤、−1 斤；0 或没有写 null。 */
+fun lossText(loss: Double?): String? {
+    if (loss == null || loss == 0.0) return null
+    val abs = kotlin.math.abs(loss)
+    val n = if (abs % 1.0 == 0.0) abs.toLong().toString() else abs.toString()
+    return (if (loss > 0) "+" else "−") + n + " 斤"
 }
+
+/** 规则一行写清它打包了什么：粉蛋 360枚/箱 · 2号包装箱 4 斤 · 每箱 −1 斤。 */
+fun packText(r: RuleViewDto): String = buildString {
+    append(listOfNotNull(r.productName, r.specName).joinToString(" "))
+    if (r.tareName != null) {
+        append(" · ").append(r.tareName)
+        r.tareJin?.let { t -> append(" ").append(if (t % 1.0 == 0.0) t.toLong().toString() else t.toString()).append(" 斤") }
+    }
+    lossText(r.lossJin)?.let { append(" · 每箱 ").append(it) }
+}
+

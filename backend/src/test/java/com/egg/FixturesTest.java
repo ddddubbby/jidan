@@ -72,17 +72,17 @@ class FixturesTest {
             String p = "pricing.cases[" + i + "]";
             ck.caseHead(c, p);
             ck.object(c, p, "input");
-            ck.nonEmptyArray(c.path("input"), p + ".input", "boxNetKg");
-            for (String f : List.of("standardNetKg", "basePrice", "coefficient")) ck.number(c.path("input"), p + ".input", f);
+            ck.nonEmptyArray(c.path("input"), p + ".input", "boxNetJin");
+            for (String f : List.of("standardNetJin", "basePrice", "coefficient")) ck.number(c.path("input"), p + ".input", f);
             ck.text(c.path("input"), p + ".input", "rounding");
             ck.object(c, p, "expected");
-            for (String f : List.of("totalKg", "rawAvgKg", "avgKg", "tailKg", "priceDiff", "unitPrice", "amount")) {
+            for (String f : List.of("totalJin", "rawAvgJin", "avgJin", "tailJin", "priceDiff", "unitPrice", "amount")) {
                 ck.number(c.path("expected"), p + ".expected", f);
             }
         }
         JsonNode table = ck.nonEmptyArray(root, "pricing", "roundingTable");
         for (int i = 0; i < table.size(); i++) {
-            for (String f : List.of("boxCount", "totalKg", "rawAvgKg", "half", "floor", "ceil")) {
+            for (String f : List.of("boxCount", "totalJin", "rawAvgJin", "half", "floor", "ceil")) {
                 ck.number(table.get(i), "pricing.roundingTable[" + i + "]", f);
             }
         }
@@ -99,10 +99,10 @@ class FixturesTest {
             String p = "detect-k.cases[" + i + "]";
             ck.caseHead(c, p);
             ck.object(c, p, "input");
-            for (String f : List.of("grossKg", "tareKg", "standardNetKg", "tolerancePct", "maxK")) ck.number(c.path("input"), p + ".input", f);
+            for (String f : List.of("grossJin", "tareJin", "standardNetJin", "tolerancePct", "maxK")) ck.number(c.path("input"), p + ".input", f);
             ck.object(c, p, "expected");
             JsonNode e = c.path("expected");
-            for (String f : List.of("k", "tareTotalKg", "netTotalKg")) ck.number(e, p + ".expected", f);
+            for (String f : List.of("k", "tareTotalJin", "netTotalJin")) ck.number(e, p + ".expected", f);
             ck.bool(e, p + ".expected", "ambiguous");
             // 识别不准时给两个候选箱数，否则必须明确为 null
             if (e.path("ambiguous").asBoolean()) {
@@ -124,19 +124,19 @@ class FixturesTest {
             String p = "weighing.cases[" + i + "]";
             ck.caseHead(c, p);
             ck.object(c, p, "setup");
-            ck.number(c.path("setup"), p + ".setup", "tareKg");
-            ck.number(c.path("setup"), p + ".setup", "standardNetKg");
+            ck.number(c.path("setup"), p + ".setup", "tareJin");
+            ck.number(c.path("setup"), p + ".setup", "standardNetJin");
             ck.object(c.path("setup"), p + ".setup", "options");
             JsonNode events = ck.nonEmptyArray(c, p, "events");
             for (int j = 0; j < events.size(); j++) {
-                ck.number(events.get(j), p + ".events[" + j + "]", "grossKg");
+                ck.number(events.get(j), p + ".events[" + j + "]", "grossJin");
                 ck.bool(events.get(j), p + ".events[" + j + "]", "stable");
             }
             ck.object(c, p, "expected");
             JsonNode records = c.path("expected").path("records");
             if (!records.isArray()) ck.problems.add(p + ".expected.records 应为数组");
             for (int j = 0; j < records.size(); j++) {
-                for (String f : List.of("seq", "group", "k", "netKg", "tareKg", "grossKg", "atEvent")) {
+                for (String f : List.of("seq", "group", "k", "netJin", "tareJin", "grossJin", "atEvent")) {
                     ck.number(records.get(j), p + ".expected.records[" + j + "]", f);
                 }
             }
@@ -154,14 +154,14 @@ class FixturesTest {
             String p = "remark.cases[" + i + "]";
             ck.caseHead(c, p);
             ck.object(c, p, "input");
-            ck.nonEmptyArray(c.path("input"), p + ".input", "boxNetKg");
+            ck.nonEmptyArray(c.path("input"), p + ".input", "boxNetJin");
             ck.number(c.path("input"), p + ".input", "maxLength");
             ck.object(c, p, "expected");
             ck.text(c.path("expected"), p + ".expected", "text");
             ck.bool(c.path("expected"), p + ".expected", "truncated");
             JsonNode groups = ck.nonEmptyArray(c.path("expected"), p + ".expected", "groups");
             for (int j = 0; j < groups.size(); j++) {
-                ck.number(groups.get(j), p + ".expected.groups[" + j + "]", "kg");
+                ck.number(groups.get(j), p + ".expected.groups[" + j + "]", "jin");
                 ck.number(groups.get(j), p + ".expected.groups[" + j + "]", "boxes");
             }
         }

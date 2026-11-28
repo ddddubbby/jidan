@@ -11,8 +11,8 @@ android {
         applicationId = "com.jidan.receiving"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.2.0"
     }
 
     // 模拟版与实机版只差 DeviceFactory 和模拟台（开发规格 9.1）

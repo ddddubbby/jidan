@@ -27,7 +27,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 /**
  * P2-3 验收：李四单提交后按箱码查到第 3 箱；改一箱净重后金额变化、该箱为手录并保留原值；改规则系数后详情金额变化
- * 且仍返回提交时金额；非待审核单修改返回 ORDER_LOCKED；Web 自建 10 箱 460.5kg 得数量 10、均重 46。
+ * 且仍返回提交时金额；非待审核单修改返回 ORDER_LOCKED；Web 自建 10 箱 460.5斤 得数量 10、均重 46。
  * 另覆盖列表页签与搜索、导航计数、逐箱流水的同重归类、冻结单读冻结值、下一张待审核。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -35,7 +35,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 @Import(MySqlTestConfig.class)
 class OrderQueryTest {
 
-    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5kg，均重 46，181 元/箱，1810 元 */
+    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5斤，均重 46，181 元/箱，1810 元 */
     private static final List<Double> LI_SI_BOXES = List.of(46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8);
 
     @Autowired
@@ -51,14 +51,14 @@ class OrderQueryTest {
 
     @BeforeEach
     void fixtures() {
-        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule_bind", "pricing_rule",
+        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule",
                 "base_price", "vendor_phone", "vendor", "warehouse", "product", "spec", "tare_box", "`option`")) {
             jdbc.update("DELETE FROM " + t);
         }
         pink = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0001', '粉蛋', '箱')");
         red = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0002', '红蛋', '箱')");
-        s360 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('360枚/箱', 360, 45, 1)");
-        s480 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('480枚/箱', 480, 60, 1)");
+        s360 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('360枚/箱', 360, 45, 1)");
+        s480 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('480枚/箱', 480, 60, 1)");
         liSi = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0001', '李四')");
         wangXiuYing = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0002', '王秀英')");
         jdbc.update("INSERT INTO vendor_phone (vendor_id, phone, tail4) VALUES (?, '13603511234', '1234')", liSi);
@@ -68,7 +68,17 @@ class OrderQueryTest {
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 180)", today, s360);
         rule = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled)"
                 + " VALUES ('粉蛋李四收购定价方案', 'BUY', " + pink + ", " + s360 + ", 1, 1)");
-        jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?, ?)", rule, liSi);
+    }
+
+    /** 规则改为建单时选（附录 E R-1 行）：取这个商品规格上的第一条收购规则，没有就建一条系数 1 的。 */
+    private long ruleOf(long product, long spec) {
+        List<Long> found = jdbc.queryForList("SELECT id FROM pricing_rule WHERE kind = 'BUY' AND product_id = ? AND spec_id = ?"
+                + " ORDER BY id LIMIT 1", Long.class, product, spec);
+        if (!found.isEmpty()) {
+            return found.get(0);
+        }
+        return insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled) VALUES ('测试规则"
+                + product + "-" + spec + "', 'BUY', " + product + ", " + spec + ", 1, 1)");
     }
 
     private long insert(String sql) {
@@ -127,14 +137,14 @@ class OrderQueryTest {
     private static Map<String, Object> box(int seq, double net, boolean manual, Double raw) {
         Map<String, Object> m = new HashMap<>();
         m.put("seq", seq);
-        m.put("netKg", net);
-        m.put("grossKg", net + 2);
-        m.put("tareKg", 2);
+        m.put("netJin", net);
+        m.put("grossJin", net + 2);
+        m.put("tareJin", 2);
         m.put("tareName", "2号包装箱");
         m.put("groupNo", seq);
         m.put("groupK", 1);
         m.put("manual", manual);
-        m.put("rawKg", raw);
+        m.put("rawJin", raw);
         m.put("printed", true);
         return m;
     }
@@ -150,14 +160,13 @@ class OrderQueryTest {
     /** 取批次号并提交，返回单据 id。token 决定来源：磅秤员 APP，管理员 WEB。 */
     private long submit(String token, long vendor, long product, long spec, List<Double> nets) {
         String batchNo = call(HttpMethod.POST, "/api/batches", null, token).getBody().get("batchNo").asText();
-        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", vendor, "productId", product,
-                "specId", spec, "warehouseId", warehouse, "boxes", boxes(nets)), token);
+        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", vendor, "ruleId", ruleOf(product, spec), "warehouseId", warehouse, "boxes", boxes(nets)), token);
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         return res.getBody().get("id").asLong();
     }
 
     private Map<String, Object> replacement(LocalDate date, long vendor, List<Map<String, Object>> boxes) {
-        return Map.of("bizDate", date.toString(), "vendorId", vendor, "productId", pink, "specId", s360,
+        return Map.of("bizDate", date.toString(), "vendorId", vendor, "ruleId", ruleOf(pink, s360),
                 "warehouseId", warehouse, "boxes", boxes);
     }
 
@@ -180,9 +189,9 @@ class OrderQueryTest {
             assertThat(b.get("code").asText()).isEqualTo(batchNo + "#3");
             assertThat(b.get("batchNo").asText()).isEqualTo(batchNo);
             assertThat(b.get("seq").asInt()).isEqualTo(3);
-            assertThat(b.get("netKg").decimalValue()).isEqualByComparingTo("46");
+            assertThat(b.get("netJin").decimalValue()).isEqualByComparingTo("46");
             assertThat(b.get("manual").asBoolean()).isFalse();
-            assertThat(b.get("avgKg").decimalValue()).isEqualByComparingTo("46");
+            assertThat(b.get("avgJin").decimalValue()).isEqualByComparingTo("46");
             assertThat(b.get("price").decimalValue()).isEqualByComparingTo("181");
             assertThat(b.get("vendor").get("name").asText()).isEqualTo("李四");
             assertThat(b.get("product").get("name").asText()).isEqualTo("粉蛋");
@@ -211,14 +220,14 @@ class OrderQueryTest {
         long id = submit(scale(), liSi, pink, s360, LI_SI_BOXES);
         assertThat(get("/api/orders/" + id).get("pricing").get("amount").decimalValue()).isEqualByComparingTo("1810");
 
-        // v7 6.6：第 10 箱秤读数 47.8，现场手录成 57.8，均重 47，金额 1820。前端标手录并把原读数记在 rawKg
+        // v7 6.6：第 10 箱秤读数 47.8，现场手录成 57.8，均重 47，金额 1820。前端标手录并把原读数记在 rawJin
         List<Map<String, Object>> edited = boxes(LI_SI_BOXES);
         edited.set(9, box(10, 57.8, true, 47.8));
         var res = call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, edited), admin());
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         JsonNode d = res.getBody();
-        assertThat(d.get("pricing").get("totalKg").decimalValue()).isEqualByComparingTo("470.5");
-        assertThat(d.get("pricing").get("avgKg").decimalValue()).isEqualByComparingTo("47");
+        assertThat(d.get("pricing").get("totalJin").decimalValue()).isEqualByComparingTo("470.5");
+        assertThat(d.get("pricing").get("avgJin").decimalValue()).isEqualByComparingTo("47");
         assertThat(d.get("pricing").get("unitPrice").decimalValue()).isEqualByComparingTo("182");
         assertThat(d.get("pricing").get("amount").decimalValue()).isEqualByComparingTo("1820");
         assertThat(d.get("manualCount").asInt()).isEqualTo(1);
@@ -229,17 +238,17 @@ class OrderQueryTest {
         JsonNode recs = get("/api/orders/" + id + "/records");
         JsonNode tenth = recs.get("boxes").get(9);
         assertThat(tenth.get("seq").asInt()).isEqualTo(10);
-        assertThat(tenth.get("netKg").decimalValue()).isEqualByComparingTo("57.8");
+        assertThat(tenth.get("netJin").decimalValue()).isEqualByComparingTo("57.8");
         assertThat(tenth.get("manual").asBoolean()).isTrue();
-        assertThat(tenth.get("rawKg").decimalValue()).isEqualByComparingTo("47.8");
+        assertThat(tenth.get("rawJin").decimalValue()).isEqualByComparingTo("47.8");
         assertThat(recs.get("manualCount").asInt()).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM weigh_record WHERE order_id = ?", id)).isEqualTo(10);
 
         // 已经是手录的箱再改：前端保持原读数不变，后端照存
         edited.set(9, box(10, 58.8, true, 47.8));
         var again = call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, edited), admin()).getBody();
-        assertThat(again.get("pricing").get("totalKg").decimalValue()).isEqualByComparingTo("471.5");
-        assertThat(get("/api/orders/" + id + "/records").get("boxes").get(9).get("rawKg").decimalValue())
+        assertThat(again.get("pricing").get("totalJin").decimalValue()).isEqualByComparingTo("471.5");
+        assertThat(get("/api/orders/" + id + "/records").get("boxes").get(9).get("rawJin").decimalValue())
                 .isEqualByComparingTo("47.8");
     }
 
@@ -257,17 +266,17 @@ class OrderQueryTest {
         JsonNode d = res.getBody();
         assertThat(d.get("pricing").get("boxCount").asInt()).isEqualTo(9);
         // 总重 460.5 - 46 = 414.5，箱数 9，均重与金额随之重算
-        assertThat(d.get("pricing").get("totalKg").decimalValue()).isEqualByComparingTo("414.5");
+        assertThat(d.get("pricing").get("totalJin").decimalValue()).isEqualByComparingTo("414.5");
         assertThat(d.get("pricing").get("amount").decimalValue()).isNotEqualByComparingTo("1810");
 
         // 箱贴上的 #4 仍是原第 4 箱（净重 46），#3 已经没有这一箱
         var four = lookup(batchNo + "#4", admin());
         assertThat(four.getStatusCode().value()).isEqualTo(200);
         assertThat(four.getBody().get("seq").asInt()).isEqualTo(4);
-        assertThat(four.getBody().get("netKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(four.getBody().get("netJin").decimalValue()).isEqualByComparingTo("46");
         var ten = lookup(batchNo + "#10", admin());
         assertThat(ten.getStatusCode().value()).isEqualTo(200);
-        assertThat(ten.getBody().get("netKg").decimalValue()).isEqualByComparingTo("47.8");
+        assertThat(ten.getBody().get("netJin").decimalValue()).isEqualByComparingTo("47.8");
         var three = lookup(batchNo + "#3", admin());
         assertThat(three.getStatusCode().value()).isEqualTo(404);
         assertThat(three.getBody().get("code").asText()).isEqualTo("NOT_FOUND");
@@ -281,7 +290,7 @@ class OrderQueryTest {
         var added = call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, kept), admin());
         assertThat(added.getStatusCode().value()).isEqualTo(200);
         assertThat(added.getBody().get("pricing").get("boxCount").asInt()).isEqualTo(10);
-        assertThat(lookup(batchNo + "#11", admin()).getBody().get("netKg").decimalValue()).isEqualByComparingTo("45");
+        assertThat(lookup(batchNo + "#11", admin()).getBody().get("netJin").decimalValue()).isEqualByComparingTo("45");
     }
 
     @Test
@@ -300,8 +309,7 @@ class OrderQueryTest {
         assertThat(d.get("bizDate").asText()).isEqualTo(yesterday.toString());
         assertThat(d.get("vendor").get("name").asText()).isEqualTo("王秀英");
         assertThat(d.get("pricing").get("boxCount").asInt()).isEqualTo(3);
-        assertThat(d.get("pricing").get("issues")).extracting(JsonNode::asText)
-                .containsExactlyInAnyOrder("NO_RULE", "NO_BASE_PRICE");
+        assertThat(d.get("pricing").get("issues")).extracting(JsonNode::asText).containsExactly("NO_BASE_PRICE");
         assertThat(d.get("pricing").get("amount").isNull()).isTrue();
         assertThat(count("SELECT COUNT(*) FROM weigh_record WHERE order_id = ?", id)).isEqualTo(3);
         assertThat(d.get("submittedAmount").decimalValue()).isEqualByComparingTo("1810");
@@ -339,13 +347,13 @@ class OrderQueryTest {
     // ---------------- Web 自建单 ----------------
 
     @Test
-    void webCreatedOrderOf460Point5KgGivesTenBoxesAndAverage46() {
+    void webCreatedOrderOf460Point5JinGivesTenBoxesAndAverage46() {
         long id = submit(admin(), liSi, pink, s360, LI_SI_BOXES);
         JsonNode d = get("/api/orders/" + id);
         assertThat(d.get("source").asText()).isEqualTo("WEB");
         assertThat(d.get("pricing").get("boxCount").asInt()).isEqualTo(10);
-        assertThat(d.get("pricing").get("totalKg").decimalValue()).isEqualByComparingTo("460.5");
-        assertThat(d.get("pricing").get("avgKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(d.get("pricing").get("totalJin").decimalValue()).isEqualByComparingTo("460.5");
+        assertThat(d.get("pricing").get("avgJin").decimalValue()).isEqualByComparingTo("46");
         assertThat(d.get("pricing").get("unitPrice").decimalValue()).isEqualByComparingTo("181");
         assertThat(d.get("pricing").get("amount").decimalValue()).isEqualByComparingTo("1810");
         assertThat(d.get("submittedDiffers").asBoolean()).isFalse();
@@ -360,10 +368,10 @@ class OrderQueryTest {
         edited.set(0, box(1, 50.0, true, 46.5));
         call(HttpMethod.PUT, "/api/orders/" + id, replacement(today, liSi, edited), admin());
         JsonNode first = get("/api/orders/" + id + "/records").get("boxes").get(0);
-        assertThat(first.get("netKg").decimalValue()).isEqualByComparingTo("50");
+        assertThat(first.get("netJin").decimalValue()).isEqualByComparingTo("50");
         assertThat(first.get("manual").asBoolean()).isFalse();
-        assertThat(first.get("rawKg").isNull()).isTrue();
-        assertThat(first.get("grossKg").isNull()).isTrue();
+        assertThat(first.get("rawJin").isNull()).isTrue();
+        assertThat(first.get("grossJin").isNull()).isTrue();
     }
 
     // ---------------- 详情、冻结 ----------------
@@ -384,7 +392,7 @@ class OrderQueryTest {
         assertThat(d.get("pricing").get("ruleName").asText()).isEqualTo("粉蛋李四收购定价方案");
         assertThat(d.get("vendor").get("phones").get(0).asText()).isEqualTo("13603511234");
         assertThat(d.get("warehouse").get("name").asText()).isEqualTo("一号库");
-        assertThat(d.get("spec").get("stdNetKg").decimalValue()).isEqualByComparingTo("45");
+        assertThat(d.get("spec").get("stdNetJin").decimalValue()).isEqualByComparingTo("45");
 
         // 列表里也标出“原金额”
         JsonNode row = get("/api/orders?tab=pending").get("items").get(0);
@@ -398,7 +406,7 @@ class OrderQueryTest {
         long id = submit(scale(), liSi, pink, s360, LI_SI_BOXES);
         // 审核由 P2-4 做；这里直接写入审核时冻结的那组字段，验证读取走冻结值
         jdbc.update("UPDATE purchase_order SET status = 'APPROVED', round_mode = 'HALF', box_count = 10,"
-                + " total_net_kg = 460.5, avg_kg = 46, std_net_kg = 45, base_price = 180, rule_id = ?,"
+                + " total_net_jin = 460.5, avg_jin = 46, std_net_jin = 45, base_price = 180, rule_id = ?,"
                 + " rule_name = '粉蛋李四收购定价方案', rule_coef = 1, price = 181, amount = 1810 WHERE id = ?", rule, id);
         call(HttpMethod.PUT, "/api/rules/" + rule, Map.of("coef", 2), admin());
         jdbc.update("UPDATE base_price SET base_price = 200");
@@ -409,8 +417,8 @@ class OrderQueryTest {
         JsonNode p = d.get("pricing");
         assertThat(p.get("basePrice").decimalValue()).isEqualByComparingTo("180");
         assertThat(p.get("coefficient").decimalValue()).isEqualByComparingTo("1");
-        assertThat(p.get("avgKg").decimalValue()).isEqualByComparingTo("46");
-        assertThat(p.get("tailKg").decimalValue()).isEqualByComparingTo("1");
+        assertThat(p.get("avgJin").decimalValue()).isEqualByComparingTo("46");
+        assertThat(p.get("tailJin").decimalValue()).isEqualByComparingTo("1");
         assertThat(p.get("priceDiff").decimalValue()).isEqualByComparingTo("1");
         assertThat(p.get("unitPrice").decimalValue()).isEqualByComparingTo("181");
         assertThat(p.get("amount").decimalValue()).isEqualByComparingTo("1810");
@@ -436,9 +444,9 @@ class OrderQueryTest {
         assertThat(recs.get("boxes")).hasSize(10);
         assertThat(recs.get("boxes").get(0).get("seq").asInt()).isEqualTo(1);
         assertThat(recs.get("boxes").get(0).get("tareName").asText()).isEqualTo("2号包装箱");
-        // v7 6.3：45.6kg-4箱,46kg-3箱,46.5kg-1箱,45.8kg-1箱,47.8kg-1箱
+        // v7 6.3：45.6斤-4箱,46斤-3箱,46.5斤-1箱,45.8斤-1箱,47.8斤-1箱
         List<String> groups = new ArrayList<>();
-        recs.get("groups").forEach(g -> groups.add(g.get("kg").decimalValue().toPlainString() + "/" + g.get("boxes").asInt()));
+        recs.get("groups").forEach(g -> groups.add(g.get("jin").decimalValue().toPlainString() + "/" + g.get("boxes").asInt()));
         assertThat(groups).containsExactly("45.6/4", "46/3", "46.5/1", "45.8/1", "47.8/1");
 
         jdbc.update("UPDATE purchase_order SET status = 'APPROVED' WHERE id = ?", id);
@@ -450,9 +458,9 @@ class OrderQueryTest {
         var groups = SameWeight.of(List.of(new BigDecimal("46.00"), new BigDecimal("46"), new BigDecimal("100"),
                 new BigDecimal("45.6")));
         assertThat(groups).hasSize(3);
-        assertThat(groups.get(0).kg().toPlainString()).isEqualTo("46");
+        assertThat(groups.get(0).jin().toPlainString()).isEqualTo("46");
         assertThat(groups.get(0).boxes()).isEqualTo(2);
-        assertThat(groups.get(1).kg().toString()).isEqualTo("100");
+        assertThat(groups.get(1).jin().toString()).isEqualTo("100");
     }
 
     // ---------------- 列表与计数 ----------------
@@ -480,18 +488,18 @@ class OrderQueryTest {
         // 最新提交的在前
         assertThat(ids(all)).containsExactly(voided, sent, failed, pendingWang, pendingLiSi);
 
-        // 待审核的一行：缺规则缺价的标出缺项，金额为空
+        // 待审核的一行：缺基准价的标出缺项，金额为空
         JsonNode wang = byId(get("/api/orders?tab=pending"), pendingWang);
         assertThat(wang.get("vendorName").asText()).isEqualTo("王秀英");
         assertThat(wang.get("vendorPhone").asText()).isEqualTo("13903515678");
         assertThat(wang.get("specName").asText()).isEqualTo("480枚/箱");
         assertThat(wang.get("boxCount").asInt()).isEqualTo(2);
-        assertThat(wang.get("issues")).extracting(JsonNode::asText).containsExactlyInAnyOrder("NO_RULE", "NO_BASE_PRICE");
+        assertThat(wang.get("issues")).extracting(JsonNode::asText).containsExactly("NO_BASE_PRICE");
         assertThat(wang.get("amount").isNull()).isTrue();
         assertThat(wang.get("operatorName").asText()).isEqualTo("测试磅秤员");
         JsonNode li = byId(get("/api/orders?tab=pending"), pendingLiSi);
         assertThat(li.get("amount").decimalValue()).isEqualByComparingTo("1810");
-        assertThat(li.get("avgKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(li.get("avgJin").decimalValue()).isEqualByComparingTo("46");
         assertThat(byId(get("/api/orders?tab=failed"), failed).get("pushError").asText()).contains("库存不足");
 
         // 搜索：农户名、手机号（任意一段）、单据编号、批次号

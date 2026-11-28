@@ -74,11 +74,11 @@ class BoxSheet : JidanSheet() {
         val group = vm.groupOf(s)
 
         // 大字净重，旁边是“手录”小标；下面一行小字：皮重、手录时秤的原读数、同一次称的另几箱
-        b.boxBig.text = NumText.big(ctx, box.net.format(), "kg")
+        b.boxBig.text = NumText.big(ctx, box.net.format(), "斤")
         b.boxManual.isVisible = box.manual
         val facts = buildList {
-            add("皮重 ${TextGlue.withUnit(box.tare.format(), "kg")}")
-            if (box.manual && box.raw != null) add("秤原始读数 ${TextGlue.withUnit(box.raw!!.format(), "kg")}")
+            add("皮重 ${TextGlue.withUnit(box.tare.format(), "斤")}")
+            if (box.manual && box.raw != null) add("秤原始读数 ${TextGlue.withUnit(box.raw!!.format(), "斤")}")
             if (group.size > 1) {
                 val others = group.filter { it.seq != s }
                 if (others.isNotEmpty()) {
@@ -136,7 +136,7 @@ class BoxSheet : JidanSheet() {
         if (box != null) {
             // 手录过的箱，秤的读数是当初的原读数；没手录过的，秤的读数就是现在的净重
             val reading = if (box.manual && box.raw != null) box.raw!! else box.net
-            b.editHint.text = "秤的读数 ${TextGlue.withUnit(reading.format(), "kg")}"
+            b.editHint.text = "秤的读数 ${TextGlue.withUnit(reading.format(), "斤")}"
         }
         fun valid(): Boolean = (b.netInput.text?.toString().orEmpty().trim().toDoubleOrNull() ?: 0.0) > 0
         fun refresh() {

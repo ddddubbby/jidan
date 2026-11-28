@@ -39,7 +39,7 @@ object DeviceCardBinder {
         // 连上后显示这台秤的实时读数：按一下自己的秤盘，数字跟着动，就是连对了
         binding.devReading.isVisible = connected
         binding.devStatus.isVisible = !connected
-        if (connected) binding.devReading.text = NumText.row(binding.root.context, reading ?: "--.-", "kg")
+        if (connected) binding.devReading.text = NumText.row(binding.root.context, reading ?: "--.-", "斤")
         binding.devTag.isVisible = connected && batteryLow
         binding.devTag.text = "电量低"
     }

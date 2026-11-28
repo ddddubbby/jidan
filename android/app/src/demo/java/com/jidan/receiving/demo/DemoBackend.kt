@@ -11,9 +11,7 @@ import com.jidan.receiving.data.LoginResult
 import com.jidan.receiving.data.NamedDto
 import com.jidan.receiving.data.QuoteRequest
 import com.jidan.receiving.data.QuoteResult
-import com.jidan.receiving.data.RuleBindTargetDto
-import com.jidan.receiving.data.RuleBindingRequest
-import com.jidan.receiving.data.RuleCoefPatch
+import com.jidan.receiving.data.RulePatch
 import com.jidan.receiving.data.RuleViewDto
 import com.jidan.receiving.data.SpecDto
 import com.jidan.receiving.data.SubmitRequest
@@ -33,7 +31,8 @@ import java.time.format.DateTimeParseException
 /**
  * 【仅演示版】离线假后端：一个 OkHttp 拦截器，把 APP 调的每个接口（见 `EggApi`，形状按 `api/openapi.json`）
  * 在本机内存里回答，不发任何网络请求。数据是 v7 演示数据（同后端 `DemoDataSeeder`）：
- * 农户、商品、三种规格与当日基准价、仓库、三种包装箱、规则（含粉蛋李四收购定价方案，系数 1）。
+ * 农户、商品、三种规格与当日基准价、仓库、三种包装箱、规则（含粉蛋李四收购定价方案，每斤尾差 0.5 元）。
+ * 重量单位斤；规则不绑农户，打包了商品、规格、包装箱与每箱损耗（附录 E R-1 行）。
  *
  * 没有数据库、没有持久化：进程结束或退出登录（[reset]）后回到初始。提交的单只存在内存里，
  * 同一批次号再提交返回原来那张（与后端一致）。计价见 [DemoPricing]。
@@ -54,9 +53,10 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
         val kind: String,
         val productId: Long,
         val specId: Long,
+        val tareId: Long,
+        var lossJin: BigDecimal,
         var coef: BigDecimal,
         val enabled: Boolean,
-        val binds: MutableList<Long>,
     )
 
     private val gson = Gson()
@@ -66,20 +66,19 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
 
     private val products = listOf(NamedDto(1, "粉蛋"), NamedDto(2, "红蛋"))
     private val warehouses = listOf(NamedDto(1, "1号仓库"), NamedDto(2, "2号仓库"))
-    private val customers = listOf(NamedDto(1, "郑州永丰农产品批发市场"), NamedDto(2, "北京新发地蛋品行"))
 
     /** 规格：枚数与标准净含量 W0。 */
     private val specs = listOf(
-        SpecDto(1, "240枚/箱", 240, 30.0),
-        SpecDto(2, "360枚/箱", 360, 45.0),
-        SpecDto(3, "480枚/箱", 480, 60.0),
+        SpecDto(1, "240枚/箱", 240, 60.0),
+        SpecDto(2, "360枚/箱", 360, 90.0),
+        SpecDto(3, "480枚/箱", 480, 120.0),
     )
 
     /** 只下发作热键的皮重（旧款木箱已停用，不在其中）。 */
     private val tares = listOf(
-        TareDto(1, "1号包装箱", 1.5),
-        TareDto(2, "2号包装箱", 2.0),
-        TareDto(3, "3号包装箱", 2.5),
+        TareDto(1, "1号包装箱", 3.0),
+        TareDto(2, "2号包装箱", 4.0),
+        TareDto(3, "3号包装箱", 5.0),
     )
 
     private val farmers = listOf(
@@ -113,13 +112,13 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
     private val roundMode = "half"
 
     private fun seedRules(): MutableList<Rule> = mutableListOf(
-        Rule(1, "粉蛋李四收购定价方案", "BUY", 1, 2, BigDecimal("1"), true, mutableListOf(1)),
-        Rule(2, "红蛋张三收购定价方案", "BUY", 2, 2, BigDecimal("1.5"), true, mutableListOf(3)),
-        Rule(3, "粉蛋360通用收购方案", "BUY", 1, 2, BigDecimal("0.8"), true, mutableListOf()),
-        Rule(4, "粉蛋王秀英收购定价方案", "BUY", 1, 2, BigDecimal("1"), true, mutableListOf(2)),
-        Rule(5, "红蛋王秀英小箱收购方案", "BUY", 2, 1, BigDecimal("0.5"), true, mutableListOf(2)),
-        Rule(6, "粉蛋大箱收购方案", "BUY", 1, 3, BigDecimal("1"), true, mutableListOf(4)),
-        Rule(7, "永丰市场粉蛋发货方案", "SELL", 1, 2, BigDecimal("1.2"), true, mutableListOf(1)),
+        Rule(1, "粉蛋李四收购定价方案", "BUY", 1, 2, 2, BigDecimal.ZERO, BigDecimal("0.5"), true),
+        Rule(2, "红蛋张三收购定价方案", "BUY", 2, 2, 2, BigDecimal.ZERO, BigDecimal("0.75"), true),
+        Rule(3, "粉蛋360通用收购方案", "BUY", 1, 2, 2, BigDecimal("-1"), BigDecimal("0.4"), true),
+        Rule(4, "粉蛋王秀英收购定价方案", "BUY", 1, 2, 2, BigDecimal.ZERO, BigDecimal("0.5"), true),
+        Rule(5, "红蛋王秀英小箱收购方案", "BUY", 2, 1, 1, BigDecimal.ZERO, BigDecimal("0.25"), true),
+        Rule(6, "粉蛋大箱收购方案", "BUY", 1, 3, 3, BigDecimal.ZERO, BigDecimal("0.5"), true),
+        Rule(7, "永丰市场粉蛋发货方案", "SELL", 1, 2, 2, BigDecimal.ZERO, BigDecimal("0.6"), true),
     )
 
     /** 回到刚装好的样子（退出登录时用）。 */
@@ -172,16 +171,8 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             "POST /api/orders" -> return submit(parse(body, SubmitRequest::class.java))
             "GET /api/rules" -> return listRules(query)
         }
-        FARMER_RULES.matchEntire(path)?.takeIf { method == "GET" }?.let {
-            val id = it.groupValues[1].toLong()
-            requireFarmer(id)
-            return farmerRules(id).map(::view)
-        }
-        RULE_BINDING.matchEntire(path)?.takeIf { method == "PUT" }?.let {
-            return bindFarmer(it.groupValues[1].toLong(), parse(body, RuleBindingRequest::class.java))
-        }
         RULE_ID.matchEntire(path)?.takeIf { method == "PUT" }?.let {
-            return updateCoef(it.groupValues[1].toLong(), parse(body, RuleCoefPatch::class.java))
+            return updateRule(it.groupValues[1].toLong(), parse(body, RulePatch::class.java))
         }
         throw Fail(404, "NOT_FOUND", "演示版没有这个接口：$method $path")
     }
@@ -210,6 +201,7 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             tares = tares,
             settings = all.filterKeys { it in settingKeys },
             options = all.filterKeys { it !in settingKeys },
+            rules = rules.filter { it.kind == "BUY" && it.enabled }.sortedBy { it.id }.map(::view),
         )
     }
 
@@ -239,13 +231,8 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
     // ---------------------------------------------------------------- 规则
 
     private fun view(r: Rule): RuleViewDto {
-        val targets = r.binds.sorted().mapNotNull { id ->
-            if (r.kind == "BUY") {
-                farmers.firstOrNull { it.id == id }?.let { RuleBindTargetDto(it.id, it.name, it.phones.firstOrNull()?.takeLast(4)) }
-            } else {
-                customers.firstOrNull { it.id == id }?.let { RuleBindTargetDto(it.id, it.name, null) }
-            }
-        }
+        val spec = specs.first { it.id == r.specId }
+        val tare = tares.first { it.id == r.tareId }
         return RuleViewDto(
             id = r.id,
             name = r.name,
@@ -253,16 +240,16 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             productId = r.productId,
             productName = products.first { it.id == r.productId }.name,
             specId = r.specId,
-            specName = specs.first { it.id == r.specId }.name,
+            specName = spec.name,
+            stdNetJin = spec.stdNetJin,
+            tareBoxId = tare.id,
+            tareName = tare.name,
+            tareJin = tare.tareJin,
+            lossJin = r.lossJin.toDouble(),
             coef = r.coef.toDouble(),
             enabled = r.enabled,
-            binds = targets,
-            bindCount = targets.size,
         )
     }
-
-    /** 该农户绑定的收购规则（含已停用的）。 */
-    private fun farmerRules(farmerId: Long) = rules.filter { it.kind == "BUY" && farmerId in it.binds }.sortedBy { it.id }
 
     private fun listRules(q: Map<String, String?>): List<RuleViewDto> {
         val tokens = q["q"]?.trim()?.split(Regex("\\s+"))?.filter { it.isNotEmpty() }.orEmpty()
@@ -270,36 +257,31 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             .filter { q["kind"].isNullOrBlank() || it.kind == q["kind"] }
             .filter { q["productId"].isNullOrBlank() || it.productId == q["productId"]?.toLongOrNull() }
             .filter { q["specId"].isNullOrBlank() || it.specId == q["specId"]?.toLongOrNull() }
+            .filter { q["enabled"] != "true" || it.enabled }
             .map(::view)
             .filter { v ->
                 tokens.all { t ->
                     v.name.contains(t) || v.productName.orEmpty().contains(t) || v.specName.orEmpty().contains(t) ||
-                        v.binds.any { b -> b.name.orEmpty().contains(t) || b.tail4.orEmpty().contains(t) }
+                        v.tareName.orEmpty().contains(t)
                 }
             }
     }
 
-    private fun updateCoef(id: Long, patch: RuleCoefPatch): RuleViewDto {
+    /** 磅秤员改每斤尾差、每箱损耗；为空的不改。 */
+    private fun updateRule(id: Long, patch: RulePatch): RuleViewDto {
         val r = rules.firstOrNull { it.id == id } ?: throw Fail(404, "NOT_FOUND", "规则不存在")
-        val c = BigDecimal.valueOf(patch.coef).stripTrailingZeros()
-        if (c.signum() < 0) throw Fail(400, "INVALID", "换算系数不能为负数")
-        if (c.scale() > 4 || c.precision() - c.scale() > 4) throw Fail(400, "INVALID", "换算系数最多四位小数")
-        r.coef = BigDecimal.valueOf(patch.coef)
-        return view(r)
-    }
-
-    private fun bindFarmer(farmerId: Long, req: RuleBindingRequest): List<RuleViewDto> {
-        requireFarmer(farmerId)
-        if (req.ruleId != null) {
-            val r = rules.firstOrNull { it.id == req.ruleId } ?: throw Fail(400, "INVALID", "规则不存在")
-            if (r.kind != "BUY") throw Fail(400, "INVALID", "发货规则不能绑给农户")
-            if (r.productId != req.productId || r.specId != req.specId) throw Fail(400, "INVALID", "规则的商品或规格与要绑定的不一致")
-            if (!r.enabled) throw Fail(400, "INVALID", "这条规则已停用，请先启用")
+        patch.coef?.let { v ->
+            val c = BigDecimal.valueOf(v).stripTrailingZeros()
+            if (c.signum() < 0) throw Fail(400, "INVALID", "每斤尾差不能为负数")
+            if (c.scale() > 4 || c.precision() - c.scale() > 4) throw Fail(400, "INVALID", "每斤尾差最多四位小数")
+            r.coef = BigDecimal.valueOf(v)
         }
-        rules.filter { it.kind == "BUY" && it.productId == req.productId && it.specId == req.specId }
-            .forEach { it.binds.remove(farmerId) }
-        req.ruleId?.let { id -> rules.first { it.id == id }.binds.add(farmerId) }
-        return farmerRules(farmerId).map(::view)
+        patch.lossJin?.let { v ->
+            val l = BigDecimal.valueOf(v).stripTrailingZeros()
+            if (l.scale() > 2 || l.precision() - l.scale() > 3) throw Fail(400, "INVALID", "每箱损耗最多两位小数")
+            r.lossJin = BigDecimal.valueOf(v)
+        }
+        return view(r)
     }
 
     // ---------------------------------------------------------------- 批次、计价、提交
@@ -311,37 +293,32 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
         return mapOf("batchNo" to "SG${d.format(DateTimeFormatter.BASIC_ISO_DATE)}-$n", "date" to d.toString())
     }
 
+    /** 按规则计价：商品与规格取自规则；trial* 是改规则前的试算。 */
     private fun price(
-        vendorId: Long,
-        productId: Long,
-        specId: Long,
+        ruleId: Long,
         date: LocalDate,
-        boxNetKg: List<Double>,
-        trialRuleId: Long?,
+        boxNetJin: List<Double>,
         trialCoef: Double?,
+        trialLossJin: Double?,
     ): QuoteResult {
-        val spec = specs.firstOrNull { it.id == specId } ?: throw Fail(400, "INVALID", "规格不存在")
-        val rule = if (trialRuleId != null) {
-            rules.firstOrNull { it.id == trialRuleId && it.kind == "BUY" } ?: throw Fail(400, "INVALID", "规则不存在")
-        } else {
-            rules.filter { it.kind == "BUY" && it.enabled && it.productId == productId && it.specId == specId && vendorId in it.binds }
-                .minByOrNull { it.id }
-        }
-        val coef = rule?.let { trialCoef?.let(BigDecimal::valueOf) ?: it.coef }
+        val rule = rules.firstOrNull { it.id == ruleId } ?: throw Fail(400, "INVALID", "规则不存在")
+        if (rule.kind != "BUY") throw Fail(400, "INVALID", "发货规则不能用于采购入库单")
+        val spec = specs.first { it.id == rule.specId }
         return DemoPricing.compute(
-            boxNetKg = boxNetKg.map(BigDecimal::valueOf),
-            standardNetKg = BigDecimal.valueOf(spec.stdNetKg ?: 0.0),
-            basePrice = basePrice(date, specId),
-            ruleId = rule?.id,
-            ruleName = rule?.name,
-            coef = coef,
+            boxNetJin = boxNetJin.map(BigDecimal::valueOf),
+            standardNetJin = BigDecimal.valueOf(spec.stdNetJin ?: 0.0),
+            basePrice = basePrice(date, spec.id),
+            ruleId = rule.id,
+            ruleName = rule.name,
+            coef = trialCoef?.let(BigDecimal::valueOf) ?: rule.coef,
             roundMode = roundMode,
+            lossJin = trialLossJin?.let(BigDecimal::valueOf) ?: rule.lossJin,
         )
     }
 
     private fun quote(q: QuoteRequest): QuoteResult {
         val date = q.date?.let { parseDate(it) } ?: today()
-        return price(q.vendorId, q.productId, q.specId, date, q.boxNetKg, q.trialRuleId, q.trialCoef)
+        return price(q.ruleId, date, q.boxNetJin, q.trialCoef, q.trialLossJin)
     }
 
     private fun parseDate(s: String): LocalDate = try {
@@ -358,21 +335,13 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
         val seqs = HashSet<Int>()
         for (b in s.boxes) if (!seqs.add(b.seq)) throw Fail(400, "INVALID", "批次序号 ${b.seq} 重复了")
         requireFarmer(s.vendorId)
-        if (products.none { it.id == s.productId }) throw Fail(400, "INVALID", "商品不存在")
+        val rule = rules.firstOrNull { it.id == s.ruleId } ?: throw Fail(400, "INVALID", "规则不存在")
+        if (!rule.enabled) throw Fail(400, "INVALID", "这条规则已停用")
         if (warehouses.none { it.id == s.warehouseId }) throw Fail(400, "INVALID", "仓库不存在")
 
         val date = BatchNo.dateOf(s.batchNo)?.let { parseDate(it) } ?: today()
-        val p = price(s.vendorId, s.productId, s.specId, date, s.boxes.map { it.netKg }, null, null)
-        if (p.issues.isNotEmpty()) {
-            val noRule = p.noRule
-            val noBase = p.noBasePrice
-            val what = when {
-                noRule && noBase -> "没有收购规则，当日也没录基准价"
-                noRule -> "这位农户在该商品规格上没有收购规则"
-                else -> "当日该规格没录基准价"
-            }
-            throw Fail(409, "NOT_READY", "${what}，现在不能提交")
-        }
+        val p = price(s.ruleId, date, s.boxes.map { it.netJin }, null, null)
+        if (p.noBasePrice) throw Fail(409, "NOT_READY", "当日该规格没录基准价，现在不能提交")
         val seq = s.batchNo.substringAfter('-').toInt()
         val out = SubmittedDto(
             id = nextOrderId++,
@@ -381,8 +350,8 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
             status = "PENDING",
             source = "APP",
             boxCount = p.boxCount,
-            totalNetKg = p.totalKg,
-            avgKg = p.avgKg,
+            totalNetJin = p.totalJin,
+            avgJin = p.avgJin,
             submittedPrice = p.unitPrice,
             submittedAmount = p.amount,
         )
@@ -394,8 +363,6 @@ class DemoBackend(private val today: () -> LocalDate = { LocalDate.now() }) : In
     }
 
     private companion object {
-        val FARMER_RULES = Regex("^/api/farmers/(\\d+)/rules$")
-        val RULE_BINDING = Regex("^/api/farmers/(\\d+)/rule-binding$")
         val RULE_ID = Regex("^/api/rules/(\\d+)$")
     }
 }

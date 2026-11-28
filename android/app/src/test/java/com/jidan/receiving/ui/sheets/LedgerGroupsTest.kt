@@ -1,6 +1,6 @@
 package com.jidan.receiving.ui.sheets
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.SameWeight
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class LedgerGroupsTest {
     private fun groupsOf(kinds: Int) =
-        SameWeight.groups((1..kinds).map { Kg.of(44.0 + it * 0.5) })
+        SameWeight.groups((1..kinds).map { Jin.of(44.0 + it * 0.5) })
 
     @Test
     fun twelveKindsFoldToSixThenExpandToAll() {
@@ -39,15 +39,15 @@ class LedgerGroupsTest {
     @Test
     fun foldedHeadKeepsMostBoxesFirst() {
         // 46 有 3 箱、其余各 1 箱：折叠后 46 仍排第一
-        val weights = (listOf(46.0, 46.0, 46.0) + (1..10).map { 50.0 + it }).map { Kg.of(it) }
+        val weights = (listOf(46.0, 46.0, 46.0) + (1..10).map { 50.0 + it }).map { Jin.of(it) }
         val v = ledgerGroupsView(SameWeight.groups(weights), expanded = false)
-        assertEquals("46kg-3箱", v.shown.first().label())
+        assertEquals("46斤-3箱", v.shown.first().label())
     }
 
     @Test
     fun displayLabelOnlyAddsInvisibleJoiners() {
-        val g = SameWeight.groups(listOf(Kg.of(45.6), Kg.of(45.6))).first()
-        assertEquals("45.6kg-2箱", g.label())   // 回传备注用的原文不变
+        val g = SameWeight.groups(listOf(Jin.of(45.6), Jin.of(45.6))).first()
+        assertEquals("45.6斤-2箱", g.label())   // 回传备注用的原文不变
         val shown = g.displayLabel()
         assertEquals(g.label(), shown.replace("\u2060", ""))
         // 能断开的地方都放了连接符：“-”后面、“2”与“箱”之间

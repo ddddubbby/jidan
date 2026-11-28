@@ -13,12 +13,14 @@ class RoundAvgTest {
         for (c in cases.map { it.obj() }) {
             val id = c["id"]!!.str()
             val input = c["input"]!!.obj()
+            // 带每箱损耗的算例只在后端计价里成立：APP 的均重按实称净重算，损耗在后端计价时才加
+            if (input["lossJin"] != null) continue
             val expected = c["expected"]!!.obj()
-            val boxes = input["boxNetKg"]!!.arr().map { it.kg() }
+            val boxes = input["boxNetJin"]!!.arr().map { it.jin() }
             val total = boxes.sum()
-            assertEquals(expected["totalKg"]!!.kg(), total, "$id 总重")
+            assertEquals(expected["totalJin"]!!.jin(), total, "$id 总重")
             val rule = RoundRule.fromWire(input["rounding"]!!.str())
-            assertEquals(expected["avgKg"]!!.kg(), RoundAvg.of(total, boxes.size, rule), "$id 取整均重")
+            assertEquals(expected["avgJin"]!!.jin(), RoundAvg.of(total, boxes.size, rule), "$id 取整均重")
         }
     }
 
@@ -28,31 +30,31 @@ class RoundAvgTest {
         val rows = loadFixture("pricing.json")["roundingTable"]!!.arr()
         assertEquals(3, rows.size)
         for (r in rows.map { it.obj() }) {
-            val total = r["totalKg"]!!.kg()
+            val total = r["totalJin"]!!.jin()
             val n = r["boxCount"]!!.int()
-            val label = "均重 ${r["rawAvgKg"]!!.kg()}"
-            assertEquals(r["half"]!!.kg(), RoundAvg.of(total, n, RoundRule.HALF), "$label 四舍五入")
-            assertEquals(r["floor"]!!.kg(), RoundAvg.of(total, n, RoundRule.FLOOR), "$label 抹零")
-            assertEquals(r["ceil"]!!.kg(), RoundAvg.of(total, n, RoundRule.CEIL), "$label 进位")
+            val label = "均重 ${r["rawAvgJin"]!!.jin()}"
+            assertEquals(r["half"]!!.jin(), RoundAvg.of(total, n, RoundRule.HALF), "$label 四舍五入")
+            assertEquals(r["floor"]!!.jin(), RoundAvg.of(total, n, RoundRule.FLOOR), "$label 抹零")
+            assertEquals(r["ceil"]!!.jin(), RoundAvg.of(total, n, RoundRule.CEIL), "$label 进位")
         }
     }
 
     @Test
     fun exactIntegerAverageIsUnchangedByAnyRule() {
         for (rule in RoundRule.entries) {
-            assertEquals(Kg(4600), RoundAvg.of(Kg(13800), 3, rule), rule.name)
+            assertEquals(Jin(4600), RoundAvg.of(Jin(13800), 3, rule), rule.name)
         }
     }
 
     @Test
     fun halfRoundsExactlyPointFiveUp() {
-        assertEquals(Kg(4700), RoundAvg.of(Kg(9300), 2, RoundRule.HALF))   // 46.5
-        assertEquals(Kg(4600), RoundAvg.of(Kg(9298), 2, RoundRule.HALF))   // 46.49
+        assertEquals(Jin(4700), RoundAvg.of(Jin(9300), 2, RoundRule.HALF))   // 46.5
+        assertEquals(Jin(4600), RoundAvg.of(Jin(9298), 2, RoundRule.HALF))   // 46.49
     }
 
     @Test
     fun defaultRuleIsHalf() {
-        assertEquals(Kg(4700), RoundAvg.of(Kg(4650), 1))
+        assertEquals(Jin(4700), RoundAvg.of(Jin(4650), 1))
         assertEquals(RoundRule.HALF, RoundRule.DEFAULT)
     }
 

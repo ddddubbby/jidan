@@ -47,14 +47,14 @@ object LabelRenderer {
 
     fun lines(data: LabelData, content: LabelContent): List<Pair<String, String>> = when (content) {
         LabelContent.MINIMAL -> listOf(
-            "net" to "净重：${data.net.format()}kg",
+            "net" to "净重：${data.net.format()}斤",
             "batch" to "批次：${data.batchNo}",
             "seq" to "第${data.seq}箱",
         )
         LabelContent.FULL -> listOf(
             "product" to data.productName,
             "spec" to data.specName,
-            "net" to "净重：${data.net.format()}kg",
+            "net" to "净重：${data.net.format()}斤",
             "farmer" to "农户：${data.farmerName}",
             "date" to "收购日期：${data.buyDate}",
             "warehouse" to "收购仓库：${data.warehouseName}",

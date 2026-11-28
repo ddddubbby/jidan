@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 皮重选项（原型 .seg button）：名称 16 号，下一行 12 号绿字“1.5 kg”；三个排一行 -->
+<!-- 皮重选项（原型 .seg button）：名称 16 号，下一行 12 号绿字“1.5 斤”；三个排一行 -->
 <com.google.android.material.button.MaterialButton xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/Widget.Jidan.Button.Outlined.Choice"
     android:layout_width="0dp"

@@ -31,15 +31,15 @@ class RemarkTest {
         assertThat(file.get("cases")).isNotEmpty();
         for (JsonNode c : file.get("cases")) {
             String id = c.get("id").asText();
-            Remark.Result r = Remark.build(weights(c.get("input").get("boxNetKg")), c.get("input").get("maxLength").asInt());
+            Remark.Result r = Remark.build(weights(c.get("input").get("boxNetJin")), c.get("input").get("maxLength").asInt());
             JsonNode want = c.get("expected");
 
             assertThat(r.text()).as(id + " text").isEqualTo(want.get("text").asText());
             assertThat(r.truncated()).as(id + " truncated").isEqualTo(want.get("truncated").asBoolean());
             assertThat(r.groups()).as(id + " groups").hasSize(want.get("groups").size());
             for (int i = 0; i < r.groups().size(); i++) {
-                assertThat(r.groups().get(i).kg()).as(id + " groups[" + i + "].kg")
-                        .isEqualByComparingTo(new BigDecimal(want.get("groups").get(i).get("kg").asText()));
+                assertThat(r.groups().get(i).jin()).as(id + " groups[" + i + "].jin")
+                        .isEqualByComparingTo(new BigDecimal(want.get("groups").get(i).get("jin").asText()));
                 assertThat(r.groups().get(i).boxes()).as(id + " groups[" + i + "].boxes")
                         .isEqualTo(want.get("groups").get(i).get("boxes").asInt());
             }
@@ -50,14 +50,14 @@ class RemarkTest {
     void summaryAlwaysDropsTheEachBoxPart() {
         List<BigDecimal> nets = List.of(new BigDecimal("46.50"), new BigDecimal("46.00"), new BigDecimal("46"));
         Remark.Result r = Remark.summary(nets);
-        assertThat(r.text()).isEqualTo("共3箱；归类：46kg-2箱,46.5kg-1箱");
+        assertThat(r.text()).isEqualTo("共3箱；归类：46斤-2箱,46.5斤-1箱");
         assertThat(r.truncated()).isFalse();
     }
 
     @Test
     void weightsFromTheDatabaseKeepNoTrailingZeros() {
-        // 库里的重量是两位小数：46.00 与 46 归为同一组，写成 46kg；460 不写成科学计数法
+        // 库里的重量是两位小数：46.00 与 46 归为同一组，写成 46斤；460 不写成科学计数法
         Remark.Result r = Remark.build(List.of(new BigDecimal("46.00"), new BigDecimal("460.00")), 0);
-        assertThat(r.text()).isEqualTo("共2箱；逐箱：46,460；归类：46kg-1箱,460kg-1箱");
+        assertThat(r.text()).isEqualTo("共2箱；逐箱：46,460；归类：46斤-1箱,460斤-1箱");
     }
 }

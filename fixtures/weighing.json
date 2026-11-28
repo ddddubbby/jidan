@@ -1,66 +1,66 @@
 {
-  "说明": "称重状态机的读数事件序列。events 按时间顺序，grossKg 是秤台上的总重（含每箱皮重，空秤为 0），stable 是秤给出的稳定标志；与 scale.tare-by、scale.reading-is-net 无关，测试里再按各选项组合换算成秤的读数。记录条件：读数稳定、净重（grossKg − tareKg）不小于 weigh.empty-below-kg，且上一次记录后秤面已稳定清空。expected.records 是依次记出的流水：atEvent 为触发记录的事件下标（从 0 数），group 为称重组号（一次称重一个，合并称重的各箱共用），k 为该次称重箱数，netKg、tareKg、grossKg 为该箱净重、皮重、毛重。",
+  "说明": "称重状态机的读数事件序列。events 按时间顺序，grossJin 是秤台上的总重（含每箱皮重，空秤为 0），stable 是秤给出的稳定标志；与 scale.tare-by、scale.reading-is-net 无关，测试里再按各选项组合换算成秤的读数。记录条件：读数稳定、净重（grossJin − tareJin）不小于 weigh.empty-below-jin，且上一次记录后秤面已稳定清空。expected.records 是依次记出的流水：atEvent 为触发记录的事件下标（从 0 数），group 为称重组号（一次称重一个，合并称重的各箱共用），k 为该次称重箱数，netJin、tareJin、grossJin 为该箱净重、皮重、毛重。",
   "cases": [
     {
       "id": "v7-6.2-ten-boxes",
       "source": "v7 6.2",
       "desc": "10 箱逐箱称重：每箱先空秤，再放上，读数稳定后记录",
       "setup": {
-        "tareKg": 2,
-        "standardNetKg": 45,
+        "tareJin": 4,
+        "standardNetJin": 90,
         "options": {
           "scale.stable-by": "sdk",
           "weigh.record-by": "auto",
           "weigh.merge-detect": "auto",
-          "weigh.empty-below-kg": 5,
+          "weigh.empty-below-jin": 10,
           "weigh.merge-tolerance-pct": 10,
           "weigh.merge-max-k": 8
         }
       },
       "events": [
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 48.5, "stable": false },
-        { "grossKg": 48.5, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.8, "stable": false },
-        { "grossKg": 47.8, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 48, "stable": false },
-        { "grossKg": 48, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 48, "stable": false },
-        { "grossKg": 48, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 48, "stable": false },
-        { "grossKg": 48, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.6, "stable": false },
-        { "grossKg": 47.6, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.6, "stable": false },
-        { "grossKg": 47.6, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.6, "stable": false },
-        { "grossKg": 47.6, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.6, "stable": false },
-        { "grossKg": 47.6, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 49.8, "stable": false },
-        { "grossKg": 49.8, "stable": true }
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 97, "stable": false},
+        {"grossJin": 97, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.6, "stable": false},
+        {"grossJin": 95.6, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 96, "stable": false},
+        {"grossJin": 96, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 96, "stable": false},
+        {"grossJin": 96, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 96, "stable": false},
+        {"grossJin": 96, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.2, "stable": false},
+        {"grossJin": 95.2, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.2, "stable": false},
+        {"grossJin": 95.2, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.2, "stable": false},
+        {"grossJin": 95.2, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.2, "stable": false},
+        {"grossJin": 95.2, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 99.6, "stable": false},
+        {"grossJin": 99.6, "stable": true}
       ],
       "expected": {
         "records": [
-          { "seq": 1, "group": 1, "k": 1, "netKg": 46.5, "tareKg": 2, "grossKg": 48.5, "atEvent": 2 },
-          { "seq": 2, "group": 2, "k": 1, "netKg": 45.8, "tareKg": 2, "grossKg": 47.8, "atEvent": 5 },
-          { "seq": 3, "group": 3, "k": 1, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 8 },
-          { "seq": 4, "group": 4, "k": 1, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 11 },
-          { "seq": 5, "group": 5, "k": 1, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 14 },
-          { "seq": 6, "group": 6, "k": 1, "netKg": 45.6, "tareKg": 2, "grossKg": 47.6, "atEvent": 17 },
-          { "seq": 7, "group": 7, "k": 1, "netKg": 45.6, "tareKg": 2, "grossKg": 47.6, "atEvent": 20 },
-          { "seq": 8, "group": 8, "k": 1, "netKg": 45.6, "tareKg": 2, "grossKg": 47.6, "atEvent": 23 },
-          { "seq": 9, "group": 9, "k": 1, "netKg": 45.6, "tareKg": 2, "grossKg": 47.6, "atEvent": 26 },
-          { "seq": 10, "group": 10, "k": 1, "netKg": 47.8, "tareKg": 2, "grossKg": 49.8, "atEvent": 29 }
+          {"seq": 1, "group": 1, "k": 1, "netJin": 93, "tareJin": 4, "grossJin": 97, "atEvent": 2},
+          {"seq": 2, "group": 2, "k": 1, "netJin": 91.6, "tareJin": 4, "grossJin": 95.6, "atEvent": 5},
+          {"seq": 3, "group": 3, "k": 1, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 8},
+          {"seq": 4, "group": 4, "k": 1, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 11},
+          {"seq": 5, "group": 5, "k": 1, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 14},
+          {"seq": 6, "group": 6, "k": 1, "netJin": 91.2, "tareJin": 4, "grossJin": 95.2, "atEvent": 17},
+          {"seq": 7, "group": 7, "k": 1, "netJin": 91.2, "tareJin": 4, "grossJin": 95.2, "atEvent": 20},
+          {"seq": 8, "group": 8, "k": 1, "netJin": 91.2, "tareJin": 4, "grossJin": 95.2, "atEvent": 23},
+          {"seq": 9, "group": 9, "k": 1, "netJin": 91.2, "tareJin": 4, "grossJin": 95.2, "atEvent": 26},
+          {"seq": 10, "group": 10, "k": 1, "netJin": 95.6, "tareJin": 4, "grossJin": 99.6, "atEvent": 29}
         ]
       }
     },
@@ -69,61 +69,61 @@
       "source": "开发规格 5.3",
       "desc": "不拿走箱子不记第二次：读数抖动、再次稳定都不重复记；拿走（稳定空秤）后放上下一箱才记",
       "setup": {
-        "tareKg": 2,
-        "standardNetKg": 45,
+        "tareJin": 4,
+        "standardNetJin": 90,
         "options": {
           "scale.stable-by": "sdk",
           "weigh.record-by": "auto",
           "weigh.merge-detect": "auto",
-          "weigh.empty-below-kg": 5,
+          "weigh.empty-below-jin": 10,
           "weigh.merge-tolerance-pct": 10,
           "weigh.merge-max-k": 8
         }
       },
       "events": [
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 48.5, "stable": false },
-        { "grossKg": 48.5, "stable": true },
-        { "grossKg": 48.6, "stable": false },
-        { "grossKg": 48.5, "stable": true },
-        { "grossKg": 48.7, "stable": true },
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 47.8, "stable": false },
-        { "grossKg": 47.8, "stable": true }
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 97, "stable": false},
+        {"grossJin": 97, "stable": true},
+        {"grossJin": 97.2, "stable": false},
+        {"grossJin": 97, "stable": true},
+        {"grossJin": 97.4, "stable": true},
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 95.6, "stable": false},
+        {"grossJin": 95.6, "stable": true}
       ],
       "expected": {
         "records": [
-          { "seq": 1, "group": 1, "k": 1, "netKg": 46.5, "tareKg": 2, "grossKg": 48.5, "atEvent": 2 },
-          { "seq": 2, "group": 2, "k": 1, "netKg": 45.8, "tareKg": 2, "grossKg": 47.8, "atEvent": 8 }
+          {"seq": 1, "group": 1, "k": 1, "netJin": 93, "tareJin": 4, "grossJin": 97, "atEvent": 2},
+          {"seq": 2, "group": 2, "k": 1, "netJin": 91.6, "tareJin": 4, "grossJin": 95.6, "atEvent": 8}
         ]
       }
     },
     {
       "id": "merge-three-boxes",
       "source": "v7 6.7",
-      "desc": "一次放 3 箱：记出 3 条 46kg，共用一个称重组号",
+      "desc": "一次放 3 箱：记出 3 条 92斤，共用一个称重组号",
       "setup": {
-        "tareKg": 2,
-        "standardNetKg": 45,
+        "tareJin": 4,
+        "standardNetJin": 90,
         "options": {
           "scale.stable-by": "sdk",
           "weigh.record-by": "auto",
           "weigh.merge-detect": "auto",
-          "weigh.empty-below-kg": 5,
+          "weigh.empty-below-jin": 10,
           "weigh.merge-tolerance-pct": 10,
           "weigh.merge-max-k": 8
         }
       },
       "events": [
-        { "grossKg": 0, "stable": true },
-        { "grossKg": 144.3, "stable": false },
-        { "grossKg": 144, "stable": true }
+        {"grossJin": 0, "stable": true},
+        {"grossJin": 288.6, "stable": false},
+        {"grossJin": 288, "stable": true}
       ],
       "expected": {
         "records": [
-          { "seq": 1, "group": 1, "k": 3, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 2 },
-          { "seq": 2, "group": 1, "k": 3, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 2 },
-          { "seq": 3, "group": 1, "k": 3, "netKg": 46, "tareKg": 2, "grossKg": 48, "atEvent": 2 }
+          {"seq": 1, "group": 1, "k": 3, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 2},
+          {"seq": 2, "group": 1, "k": 3, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 2},
+          {"seq": 3, "group": 1, "k": 3, "netJin": 92, "tareJin": 4, "grossJin": 96, "atEvent": 2}
         ]
       }
     }

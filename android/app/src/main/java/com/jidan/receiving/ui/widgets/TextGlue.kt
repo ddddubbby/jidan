@@ -12,8 +12,8 @@ object TextGlue {
     const val WJ = '\u2060'
 
     /**
-     * 整段不许断：在可能断开的两个字符之间放一个 WORD JOINER。只用于“45.6kg-4箱”这种短词。
-     * 数字、小数点、英文字母之间，以及“-”“/”之前，本来就不会断，不加（免得把 kg 之类的字形切开）。
+     * 整段不许断：在可能断开的两个字符之间放一个 WORD JOINER。只用于“45.6斤-4箱”这种短词。
+     * 数字、小数点、英文字母之间，以及“-”“/”之前，本来就不会断，不加。
      */
     fun noBreak(s: String): String =
         if (s.length < 2) s else buildString(s.length * 2) {

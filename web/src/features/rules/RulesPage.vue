@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { errorText } from '../../api/http'
-import { kindText, listRules, listSpecs, searchArchive, type ArchiveRow, type Kind, type RuleView, type Spec } from '../../api/rules'
+import { kindText, listRules, lossText, listSpecs, searchArchive, type ArchiveRow, type Kind, type RuleView, type Spec } from '../../api/rules'
 import RuleEditDrawer from './RuleEditDrawer.vue'
 
 // 定价规则列表（原型 pageRules，WEB-05）：按属性、商品、规格、关键词筛选，点一行打开编辑抽屉。
+// 规则不绑农户或客户，每行写清它打包的商品规格、包装箱与每箱损耗（附录 E R-1 行）。
 const kind = ref<'all' | Kind>('all')
 const productId = ref<'all' | number>('all')
 const specId = ref<'all' | number>('all')
@@ -55,8 +56,6 @@ function edit(r: RuleView | null) {
   editing.value = r
   drawer.value = true
 }
-const bindText = (r: RuleView) => r.binds.map((b) => b.name).join('、')
-const bindTitle = (r: RuleView) => r.binds.map((b) => b.name + (b.tail4 ? `（尾号 ${b.tail4}）` : '')).join('、')
 </script>
 
 <template>
@@ -76,25 +75,23 @@ const bindTitle = (r: RuleView) => r.binds.map((b) => b.name + (b.tail4 ? `（�
       <button :aria-pressed="specId === 'all'" @click="specId = 'all'">全部规格</button>
       <button v-for="s in specs" :key="s.id" :aria-pressed="specId === s.id" @click="specId = s.id">{{ s.name }}</button>
     </div>
-    <input v-model="q" class="search" placeholder="规则、农户或客户" aria-label="搜索规则" style="width: 240px" />
+    <input v-model="q" class="search" placeholder="规则、商品、规格或包装箱" aria-label="搜索规则" style="width: 240px" />
   </div>
 
   <p v-if="error" class="inline-err" role="alert">{{ error }}<button class="btn sm" style="margin-left: 10px" @click="load()">重试</button></p>
 
   <div v-if="rules.length" class="twrap">
     <table class="t">
-      <thead><tr><th>规则名称</th><th>属性</th><th>商品规格</th><th class="r">每 kg 尾差</th><th>绑定</th><th>状态</th></tr></thead>
+      <thead><tr><th>规则名称</th><th>属性</th><th>商品规格</th><th>包装箱</th><th class="r">每箱损耗</th><th class="r">每斤尾差</th><th>状态</th></tr></thead>
       <tbody>
         <tr v-for="r in rules" :key="r.id" class="go" tabindex="0" @click="edit(r)" @keydown.enter="edit(r)">
           <td class="name" :title="r.name"><span class="nm">{{ r.name }}</span></td>
           <td><span class="pill plain">{{ kindText(r.kind) }}</span></td>
           <td class="nb">{{ r.productName }} {{ r.specName }}</td>
-          <td class="r">{{ r.coef }} 元</td>
-          <td class="fill">
-            <span v-if="r.binds.length" class="clip" :title="bindTitle(r)">{{ r.binds.length > 2 ? `${r.bindCount} 户：` : '' }}{{ bindText(r) }}</span>
-            <span v-else class="tag">未绑定</span>
-          </td>
-          <td class="nb"><span v-if="!r.enabled" class="tag">已停用</span><span v-else class="muted">启用</span></td>
+          <td class="nb"><template v-if="r.tareName">{{ r.tareName }} <span class="muted num">{{ r.tareJin }} 斤</span></template><span v-else class="muted">—</span></td>
+          <td class="r nb">{{ lossText(r.lossJin) }}</td>
+          <td class="r nb">{{ r.coef }} 元</td>
+          <td class="nb"><span v-if="!r.enabled" class="muted">已停用</span></td>
         </tr>
       </tbody>
     </table>

@@ -14,6 +14,9 @@ import com.egg.basics.Options.Group;
 import com.egg.basics.SpecService;
 import com.egg.basics.TareBoxService;
 
+import com.egg.pricing.RuleService;
+import com.egg.pricing.RuleService.RuleView;
+
 import org.springframework.stereotype.Service;
 
 /** APP 一次拉齐建单要用的东西（开发规格 5.2）。下发的值下一次建单生效；APP 缺哪一项就用自己的默认值。 */
@@ -24,18 +27,19 @@ public class BootstrapService {
     }
 
     /** basePrice 是当日基准价，没录为 null：APP 在规格上标“无基准价”（v7 APP-02）。 */
-    public record SpecItem(long id, String name, int eggCount, BigDecimal stdNetKg, BigDecimal basePrice) {
+    public record SpecItem(long id, String name, int eggCount, BigDecimal stdNetJin, BigDecimal basePrice) {
     }
 
-    public record Tare(long id, String name, BigDecimal tareKg) {
+    public record Tare(long id, String name, BigDecimal tareJin) {
     }
 
     /**
      * @param settings 业务设置（打印时机、标签内容、取整方式、两个设备型号……），键是选项键
      * @param options  APP 端的选项（秤、称重、打印、提交），键是选项键
+     * @param rules    启用的收购规则，建单时按名称选；选了规则，商品、规格、包装箱与每箱损耗就都定了（附录 E R-1 行）
      */
     public record Bootstrap(LocalDate date, List<Named> products, List<SpecItem> specs, List<Named> warehouses,
-            List<Tare> tares, Map<String, String> settings, Map<String, String> options) {
+            List<Tare> tares, Map<String, String> settings, Map<String, String> options, List<RuleView> rules) {
     }
 
     /** 高级选项里只有后端自己用的那几项（回传好生意）不下发。 */
@@ -46,14 +50,16 @@ public class BootstrapService {
     private final BasePriceService basePrices;
     private final TareBoxService tares;
     private final OptionService options;
+    private final RuleService rules;
 
     public BootstrapService(ArchiveService archive, SpecService specs, BasePriceService basePrices,
-            TareBoxService tares, OptionService options) {
+            TareBoxService tares, OptionService options, RuleService rules) {
         this.archive = archive;
         this.specs = specs;
         this.basePrices = basePrices;
         this.tares = tares;
         this.options = options;
+        this.rules = rules;
     }
 
     public Bootstrap load() {
@@ -70,9 +76,9 @@ public class BootstrapService {
         return new Bootstrap(today,
                 archive.allProducts().stream().map(p -> new Named(p.id, p.name)).toList(),
                 specs.listEnabled().stream()
-                        .map(s -> new SpecItem(s.id, s.name, s.eggCount, s.stdNetKg, priceOf.get(s.id))).toList(),
+                        .map(s -> new SpecItem(s.id, s.name, s.eggCount, s.stdNetJin, priceOf.get(s.id))).toList(),
                 archive.allWarehouses().stream().map(w -> new Named(w.id, w.name)).toList(),
-                tares.listHotkeys().stream().map(t -> new Tare(t.id, t.name, t.tareKg)).toList(),
-                options.values(Group.SETTING), appOptions);
+                tares.listHotkeys().stream().map(t -> new Tare(t.id, t.name, t.tareJin)).toList(),
+                options.values(Group.SETTING), appOptions, rules.list("BUY", null, null, true, null));
     }
 }

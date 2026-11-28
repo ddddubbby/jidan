@@ -1,6 +1,6 @@
 package com.jidan.receiving.data
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.Session
 import com.jidan.receiving.core.Tare
@@ -18,13 +18,13 @@ class SessionStoreRoundTripTest {
             product = Pick(2, "粉蛋"),
             spec = Pick(3, "360枚/箱"),
             warehouse = Pick(4, "一号库"),
-            tare = Tare(Kg.of(2.0), "2号箱"),
+            tare = Tare(Jin.of(2.0), "2号箱"),
         )
-        s = s.addManual(Kg.of(46.0)).editManual(1, Kg.of(52.8))
+        s = s.addManual(Jin.of(46.0)).editManual(1, Jin.of(52.8))
         val again = Session.fromJson(s.toJson())
         assertEquals(s, again)
         assertTrue(again.boxes[0].manual)
-        assertEquals(Kg.of(52.8), again.boxes[0].net)
+        assertEquals(Jin.of(52.8), again.boxes[0].net)
     }
 
     @Test
@@ -32,11 +32,11 @@ class SessionStoreRoundTripTest {
         val s = Session(
             batchNo = "SG20261116-1",
             farmer = Pick(1, "李四"), product = Pick(2, "粉蛋"), spec = Pick(3, "360枚/箱"), warehouse = Pick(4, "一号库"),
-            tare = Tare(Kg.of(2.0), "2号箱"), stdNet = Kg.of(45.0),
-        ).addManual(Kg.of(46.0))
+            tare = Tare(Jin.of(2.0), "2号箱"), stdNet = Jin.of(45.0),
+        ).addManual(Jin.of(46.0))
         val text = s.toJson()
         assertEquals(s, Session.fromJson(text))
-        assertEquals(Kg.of(45.0), Session.fromJson(text).stdNet)
+        assertEquals(Jin.of(45.0), Session.fromJson(text).stdNet)
 
         // 旧版本写的草稿没有 stdNet 键
         val old = text.replace(Regex(",\"stdNet\":\\d+"), "")

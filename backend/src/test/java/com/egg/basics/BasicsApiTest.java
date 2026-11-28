@@ -87,34 +87,34 @@ class BasicsApiTest {
 
     @Test
     void specCanBeCreatedEditedAndSwitched() {
-        // v7 WEB-02 验收：把 360枚/箱 的标准净含量设为 45kg
+        // v7 WEB-02 验收：把 360枚/箱 的标准净含量设为 45斤
         var created = http.postForEntity("/api/specs",
-                Map.of("name", "360枚/箱", "eggCount", 360, "stdNetKg", 46), JsonNode.class);
+                Map.of("name", "360枚/箱", "eggCount", 360, "stdNetJin", 46), JsonNode.class);
         assertThat(created.getStatusCode().value()).isEqualTo(200);
         long id = created.getBody().get("id").asLong();
         assertThat(created.getBody().get("enabled").asBoolean()).isTrue();
 
-        var edited = put("/api/specs/" + id, Map.of("stdNetKg", 45));
-        assertThat(edited.getBody().get("stdNetKg").decimalValue()).isEqualByComparingTo("45");
+        var edited = put("/api/specs/" + id, Map.of("stdNetJin", 45));
+        assertThat(edited.getBody().get("stdNetJin").decimalValue()).isEqualByComparingTo("45");
         assertThat(edited.getBody().get("name").asText()).isEqualTo("360枚/箱");
 
         put("/api/specs/" + id, Map.of("enabled", false));
         JsonNode list = get("/api/specs");
         assertThat(list).hasSize(1);
         assertThat(list.get(0).get("enabled").asBoolean()).isFalse();
-        assertThat(list.get(0).get("stdNetKg").decimalValue()).isEqualByComparingTo("45");
+        assertThat(list.get(0).get("stdNetJin").decimalValue()).isEqualByComparingTo("45");
         assertThat(list.get(0).get("eggCount").asInt()).isEqualTo(360);
     }
 
     @Test
     void specInputIsValidated() {
-        assertInvalid(http.postForEntity("/api/specs", Map.of("name", " ", "eggCount", 300, "stdNetKg", 37.5),
+        assertInvalid(http.postForEntity("/api/specs", Map.of("name", " ", "eggCount", 300, "stdNetJin", 37.5),
                 JsonNode.class), "名称");
-        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 0, "stdNetKg", 37.5),
+        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 0, "stdNetJin", 37.5),
                 JsonNode.class), "每箱枚数");
-        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 300, "stdNetKg", 0),
+        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 300, "stdNetJin", 0),
                 JsonNode.class), "标准净含量");
-        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 300, "stdNetKg", 37.555),
+        assertInvalid(http.postForEntity("/api/specs", Map.of("name", "300枚/箱", "eggCount", 300, "stdNetJin", 37.555),
                 JsonNode.class), "两位小数");
         assertInvalid(put("/api/specs/999999", Map.of("enabled", true)), "不存在");
         assertThat(get("/api/specs")).isEmpty();
@@ -124,17 +124,17 @@ class BasicsApiTest {
 
     @Test
     void tareCanBeCreatedEditedAndSwitched() {
-        // v7 WEB-03 验收：配置“2号包装箱 = 2kg”后出现在 APP 皮重选项（热键）中
-        var created = http.postForEntity("/api/tares", Map.of("name", "2号包装箱", "tareKg", 2), JsonNode.class);
+        // v7 WEB-03 验收：配置“2号包装箱 = 2斤”后出现在 APP 皮重选项（热键）中
+        var created = http.postForEntity("/api/tares", Map.of("name", "2号包装箱", "tareJin", 2), JsonNode.class);
         long id = created.getBody().get("id").asLong();
         assertThat(created.getBody().get("hotkey").asBoolean()).as("新增默认是热键").isTrue();
         assertThat(created.getBody().get("enabled").asBoolean()).isTrue();
 
-        put("/api/tares/" + id, Map.of("tareKg", 2.2));
+        put("/api/tares/" + id, Map.of("tareJin", 2.2));
         put("/api/tares/" + id, Map.of("hotkey", false));
         JsonNode t = get("/api/tares").get(0);
         assertThat(t.get("name").asText()).isEqualTo("2号包装箱");
-        assertThat(t.get("tareKg").decimalValue()).isEqualByComparingTo("2.2");
+        assertThat(t.get("tareJin").decimalValue()).isEqualByComparingTo("2.2");
         assertThat(t.get("hotkey").asBoolean()).isFalse();
 
         put("/api/tares/" + id, Map.of("enabled", false, "hotkey", true));
@@ -142,7 +142,7 @@ class BasicsApiTest {
         assertThat(t.get("enabled").asBoolean()).isFalse();
         assertThat(t.get("hotkey").asBoolean()).isTrue();
 
-        assertInvalid(http.postForEntity("/api/tares", Map.of("name", "坏箱", "tareKg", -1), JsonNode.class), "皮重");
+        assertInvalid(http.postForEntity("/api/tares", Map.of("name", "坏箱", "tareJin", -1), JsonNode.class), "皮重");
         assertInvalid(put("/api/tares/999999", Map.of("enabled", true)), "不存在");
     }
 
@@ -182,7 +182,7 @@ class BasicsApiTest {
         assertThat(items.get(0).get("specId").asLong()).isEqualTo(s360);
         assertThat(items.get(0).get("price").decimalValue()).isEqualByComparingTo("180");
         assertThat(items.get(0).get("prevPrice").decimalValue()).isEqualByComparingTo("178");
-        assertThat(items.get(0).get("stdNetKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(items.get(0).get("stdNetJin").decimalValue()).isEqualByComparingTo("46");
         assertThat(items.get(1).get("specId").asLong()).isEqualTo(s480);
         assertThat(items.get(1).get("price").isNull()).as("没录就是 null").isTrue();
         assertThat(items.get(1).get("prevPrice").isNull()).isTrue();
@@ -204,8 +204,8 @@ class BasicsApiTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM base_price", Integer.class)).isZero();
     }
 
-    private long specId(String name, int eggCount, Object stdNetKg) {
-        return http.postForEntity("/api/specs", Map.of("name", name, "eggCount", eggCount, "stdNetKg", stdNetKg),
+    private long specId(String name, int eggCount, Object stdNetJin) {
+        return http.postForEntity("/api/specs", Map.of("name", name, "eggCount", eggCount, "stdNetJin", stdNetJin),
                 JsonNode.class).getBody().get("id").asLong();
     }
 
@@ -297,7 +297,7 @@ class BasicsApiTest {
     @Test
     void optionsReturnDefinitionsAndDefaultsWhenNothingStored() {
         JsonNode o = get("/api/options");
-        assertThat(o.get("items")).hasSize(20);
+        assertThat(o.get("items")).hasSize(21);
         JsonNode dpi = item(o, "print.dpi");
         assertThat(dpi.get("value").asText()).isEqualTo("203");
         assertThat(dpi.get("defaultValue").asText()).isEqualTo("203");
@@ -323,7 +323,7 @@ class BasicsApiTest {
 
         // 数值既可以传字符串也可以传 JSON 数字
         var res = put("/api/options", Map.of("values", Map.of(
-                "push.on-approve", "manual", "scale.stable-window-ms", 1200, "scale.stable-tolerance-kg", "0.1",
+                "push.on-approve", "manual", "scale.stable-window-ms", 1200, "scale.stable-tolerance-jin", "0.2",
                 "weigh.record-by", "button")));
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         assertThat(options.get("push.on-approve")).as("改后立即生效，不用重启").isEqualTo("manual");
@@ -370,7 +370,7 @@ class BasicsApiTest {
         assertInvalid(put("/api/options", Map.of("values", Map.of("print.dpi", "abc"))), "分辨率");
         assertInvalid(put("/api/options", Map.of("values", Map.of("print.dpi", "203.5"))), "整数");
         assertInvalid(put("/api/options", Map.of("values", Map.of("weigh.merge-max-k", "0"))), "合并称重最多箱数");
-        assertInvalid(put("/api/options", Map.of("values", Map.of("scale.stable-tolerance-kg", "-0.1"))), "稳定容差");
+        assertInvalid(put("/api/options", Map.of("values", Map.of("scale.stable-tolerance-jin", "-0.1"))), "稳定容差");
         assertThat(options.get("print.dpi")).isEqualTo("203");
     }
 }

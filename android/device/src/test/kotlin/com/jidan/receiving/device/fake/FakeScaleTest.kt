@@ -62,7 +62,7 @@ class FakeScaleTest {
     fun lostThenReconnectedHasNoDigitalTareUntilSentAgain() = runTest {
         val scale = FakeScale(backgroundScope, FakeScale.MINE_ID)
         connected(scale)
-        scale.setDigitalTare(com.jidan.receiving.core.Kg(200))
+        scale.setDigitalTare(com.jidan.receiving.core.Jin(200))
         scale.placeOneBox(4650)
         assertEquals(4650, settle(scale)) // 台面 48.5，已扣皮 2.0
 
@@ -73,7 +73,7 @@ class FakeScaleTest {
         scale.placeOneBox(4650)
         assertEquals(4850, settle(scale)) // 断开再连上：皮重没了，读数是台面总重
 
-        scale.setDigitalTare(com.jidan.receiving.core.Kg(200))
+        scale.setDigitalTare(com.jidan.receiving.core.Jin(200))
         assertEquals(4650, scale.readings.value!!.raw.cents)
     }
 
@@ -81,7 +81,7 @@ class FakeScaleTest {
     fun disconnectClearsDigitalTare() = runTest {
         val scale = FakeScale(backgroundScope, FakeScale.MINE_ID)
         connected(scale)
-        scale.setDigitalTare(com.jidan.receiving.core.Kg(200))
+        scale.setDigitalTare(com.jidan.receiving.core.Jin(200))
         scale.disconnect()
         assertEquals(LinkStatus.DISCONNECTED, scale.linkStatus.value)
         connected(scale)

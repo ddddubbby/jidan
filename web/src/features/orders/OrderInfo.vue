@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
-import { getSpecs } from '../../api/basics'
 import { errorText } from '../../api/http'
 import { listArchive, type HeadPatch, type OrderDetail } from '../../api/orders'
 import DateField from '../../ui/DateField.vue'
@@ -10,7 +9,7 @@ import { dot } from '../../ui/date'
 import { fmtPhone } from '../../ui/phone'
 
 // 单据表头与商品行（WEB-07、WEB-08，原型 pageOrder 的 info 与商品行表格）。
-// 待审核时农户、仓库、收购日期、商品、规格都是就地编辑（v7 4.5-2）：点开在值下方的浮层里选，选中即保存；
+// 待审核时农户、仓库、收购日期是就地编辑；商品、规格取自定价规则，在定价规则抽屉里换规则（v7 4.5-2）：点开在值下方的浮层里选，选中即保存；
 // 保存由页面做（整单覆盖，见 api/orders.ts 的 saveHead），失败时页面给提示，这里的浮层保持打开。
 // 审核后（含回传失败）整块锁定，没有下划线。
 const props = defineProps<{ d: OrderDetail; editable: boolean; save: (p: HeadPatch) => Promise<boolean> }>()
@@ -18,16 +17,12 @@ const emit = defineEmits<{ bindRule: []; fixPrice: [] }>()
 
 type Opt = { id: number; name: string; phones?: string[] }
 const warehouses = ref<Opt[]>([])
-const products = ref<Opt[]>([])
-const specs = ref<Opt[]>([])
 const loadErr = ref('')
 
-async function ensure(kind: 'warehouse' | 'product' | 'spec') {
+async function ensure() {
   loadErr.value = ''
   try {
-    if (kind === 'warehouse') warehouses.value = (await listArchive('warehouses')) as Opt[]
-    else if (kind === 'product') products.value = (await listArchive('products')) as Opt[]
-    else specs.value = (await getSpecs()).filter((s) => s.enabled)
+    warehouses.value = (await listArchive('warehouses')) as Opt[]
   } catch (e) {
     loadErr.value = errorText(e)
   }
@@ -101,7 +96,7 @@ async function commitDate(iso: string, close: () => void) {
     <div class="cell">
       <span class="k">收购仓库</span>
       <span class="v">
-        <InlineEdit label="收购仓库" :locked="!editable" @update:open="(o: boolean) => o && ensure('warehouse')">
+        <InlineEdit label="收购仓库" :locked="!editable" @update:open="(o: boolean) => o && ensure()">
           {{ d.warehouse?.name }}
           <template #editor="{ close }">
             <div class="seg sm">
@@ -137,36 +132,17 @@ async function commitDate(iso: string, close: () => void) {
       </thead>
       <tbody>
         <tr>
-          <td>
-            <InlineEdit label="商品" :locked="!editable" @update:open="(o: boolean) => o && ensure('product')">
-              {{ d.product?.name }}
-              <template #editor="{ close }">
-                <div class="seg sm">
-                  <button v-for="p in products" :key="p.id" :aria-pressed="p.id === d.product?.id" @click="pick({ productId: p.id }, close)">{{ p.name }}</button>
-                </div>
-                <div v-if="loadErr" class="inline-err pnote">{{ loadErr }}</div>
-              </template>
-            </InlineEdit>
-          </td>
-          <td>
-            <InlineEdit label="规格" :locked="!editable" @update:open="(o: boolean) => o && ensure('spec')">
-              <span class="nb">{{ d.spec?.name }}</span>
-              <template #editor="{ close }">
-                <div class="seg sm">
-                  <button v-for="s in specs" :key="s.id" :aria-pressed="s.id === d.spec?.id" @click="pick({ specId: s.id }, close)">{{ s.name }}</button>
-                </div>
-                <div v-if="loadErr" class="inline-err pnote">{{ loadErr }}</div>
-              </template>
-            </InlineEdit>
-          </td>
+          <!-- 商品、规格取自定价规则，换规则才换（附录 E R-1 行），这里只读 -->
+          <td>{{ d.product?.name }}</td>
+          <td><span class="nb">{{ d.spec?.name }}</span></td>
           <td>箱</td>
           <td class="r">{{ d.pricing?.boxCount }}</td>
-          <td>kg</td>
-          <td class="r">{{ d.pricing?.avgKg }}</td>
+          <td>斤</td>
+          <td class="r">{{ d.pricing?.avgJin }}</td>
           <td class="r">
             <template v-if="d.pricing?.unitPrice != null">{{ d.pricing.unitPrice }}</template>
             <!-- 缺项：直接给能补上的那个按钮，不写“请先…” -->
-            <button v-else-if="d.pricing?.issues?.includes('NO_RULE') && !d.pricing?.issues?.includes('NO_BASE_PRICE')" class="fixlink" @click="emit('bindRule')">绑定规则</button>
+            <button v-else-if="d.pricing?.issues?.includes('NO_RULE') && !d.pricing?.issues?.includes('NO_BASE_PRICE')" class="fixlink" @click="emit('bindRule')">选择规则</button>
             <button v-else-if="editable" class="fixlink" @click="emit('fixPrice')">录入基准价</button>
             <span v-else class="tag warn">缺基准价</span>
           </td>

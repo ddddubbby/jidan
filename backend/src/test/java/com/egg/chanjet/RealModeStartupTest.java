@@ -78,27 +78,26 @@ class RealModeStartupTest {
                 "CHANJET_BOOK_ID", "CHANJET_OPEN_TOKEN");
 
         // 审核：审核本身成功，回传失败，单据留在 APPROVED，push_error 写明原因
-        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule_bind", "pricing_rule",
+        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule",
                 "base_price", "vendor_phone", "vendor", "warehouse", "product", "spec", "tare_box", "`option`")) {
             jdbc.update("DELETE FROM " + t);
         }
         long product = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0001', '粉蛋', '箱')");
-        long spec = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('360枚/箱', 360, 45, 1)");
+        long spec = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('360枚/箱', 360, 45, 1)");
         long vendor = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0001', '李四')");
         long warehouse = insert("INSERT INTO warehouse (hs_code, name) VALUES ('CK0001', '一号库')");
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 180)", java.time.LocalDate.now(), spec);
         long rule = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled)"
                 + " VALUES ('粉蛋李四收购定价方案', 'BUY', " + product + ", " + spec + ", 1, 1)");
-        jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?, ?)", rule, vendor);
 
         String batchNo = call(HttpMethod.POST, "/api/batches", null, admin).getBody().get("batchNo").asText();
         List<Map<String, Object>> boxes = new ArrayList<>();
         for (int i = 1; i <= 3; i++) {
             Map<String, Object> b = new HashMap<>();
             b.put("seq", i);
-            b.put("netKg", 46.0);
-            b.put("grossKg", 48.0);
-            b.put("tareKg", 2);
+            b.put("netJin", 46.0);
+            b.put("grossJin", 48.0);
+            b.put("tareJin", 2);
             b.put("tareName", "2号包装箱");
             b.put("groupNo", i);
             b.put("groupK", 1);
@@ -107,7 +106,7 @@ class RealModeStartupTest {
             boxes.add(b);
         }
         ResponseEntity<JsonNode> created = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", vendor,
-                "productId", product, "specId", spec, "warehouseId", warehouse, "boxes", boxes), admin);
+                "ruleId", rule, "warehouseId", warehouse, "boxes", boxes), admin);
         assertThat(created.getStatusCode().is2xxSuccessful()).as(String.valueOf(created.getBody())).isTrue();
         long id = created.getBody().get("id").asLong();
 

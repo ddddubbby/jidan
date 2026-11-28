@@ -54,7 +54,7 @@ public class OrderQueryService {
     public record VendorRef(long id, String name, String hsCode, List<String> phones) {
     }
 
-    public record SpecRef(long id, String name, BigDecimal stdNetKg) {
+    public record SpecRef(long id, String name, BigDecimal stdNetJin) {
     }
 
     /**
@@ -63,7 +63,7 @@ public class OrderQueryService {
      */
     public record OrderRow(long id, String code, String batchNo, LocalDate bizDate, LocalDateTime createdAt,
             OrderStatus status, OrderSource source, String vendorName, String vendorPhone, String productName,
-            String specName, int boxCount, BigDecimal avgKg, BigDecimal price, BigDecimal amount,
+            String specName, int boxCount, BigDecimal avgJin, BigDecimal price, BigDecimal amount,
             BigDecimal submittedAmount, boolean amountChanged, String operatorName, String pushError, int manualCount,
             List<String> issues) {
     }
@@ -79,8 +79,8 @@ public class OrderQueryService {
             int manualCount, Result pricing) {
     }
 
-    public record Box(int seq, BigDecimal netKg, BigDecimal grossKg, BigDecimal tareKg, String tareName,
-            Integer groupNo, Integer groupK, boolean manual, BigDecimal rawKg, boolean printed) {
+    public record Box(int seq, BigDecimal netJin, BigDecimal grossJin, BigDecimal tareJin, String tareName,
+            Integer groupNo, Integer groupK, boolean manual, BigDecimal rawJin, boolean printed) {
     }
 
     /** 逐箱流水与同重归类。editable 即待审核。 */
@@ -99,10 +99,10 @@ public class OrderQueryService {
     public record NextPending(Long id, String code, String vendorName) {
     }
 
-    /** 箱码查询的结果。netKg 是这一箱记录的净重，manual 时 rawKg 是秤最初的读数；avgKg、price 待审核时实时算，其余为冻结值。 */
-    public record BoxLookup(String code, String batchNo, int seq, BigDecimal netKg, boolean manual, BigDecimal rawKg,
+    /** 箱码查询的结果。netJin 是这一箱记录的净重，manual 时 rawJin 是秤最初的读数；avgJin、price 待审核时实时算，其余为冻结值。 */
+    public record BoxLookup(String code, String batchNo, int seq, BigDecimal netJin, boolean manual, BigDecimal rawJin,
             Ref vendor, Ref product, SpecRef spec, long orderId, String orderCode, OrderStatus status,
-            BigDecimal avgKg, BigDecimal price) {
+            BigDecimal avgJin, BigDecimal price) {
     }
 
     private final PurchaseOrderMapper orders;
@@ -168,7 +168,7 @@ public class OrderQueryService {
             Farmer v = vendors.get(o.vendorId);
             out.add(new OrderRow(o.id, o.code, o.batchNo, o.bizDate, o.createdAt, o.status, o.source, v.name(),
                     v.phones().isEmpty() ? null : v.phones().get(0), products.get(o.productId),
-                    specById.get(o.specId).name, r.boxCount(), r.avgKg(), r.unitPrice(), r.amount(),
+                    specById.get(o.specId).name, r.boxCount(), r.avgJin(), r.unitPrice(), r.amount(),
                     o.submittedAmount, differs(o, r), operators.get(o.operatorId), o.pushError, manualCount(recs),
                     r.issues()));
         }
@@ -206,17 +206,17 @@ public class OrderQueryService {
                 new VendorRef(f.id(), f.name(), f.hsCode(), f.phones()),
                 new Ref(o.warehouseId, archive.warehouseNames(List.of(o.warehouseId)).get(o.warehouseId)),
                 new Ref(o.productId, archive.productNames(List.of(o.productId)).get(o.productId)),
-                new SpecRef(s.id, s.name, s.stdNetKg), o.hsId, o.pushError, o.submittedPrice, o.submittedAmount,
+                new SpecRef(s.id, s.name, s.stdNetJin), o.hsId, o.pushError, o.submittedPrice, o.submittedAmount,
                 differs(o, r), isFrozen(o), manualCount(recs), r);
     }
 
     public Records records(long id) {
         PurchaseOrder o = get(id);
         List<WeighRecord> recs = boxesOf(List.of(id)).getOrDefault(id, List.of());
-        List<Box> boxes = recs.stream().map(r -> new Box(r.seq, r.netKg, r.grossKg, r.tareKg, r.tareName, r.groupNo,
-                r.groupK, r.manual, r.rawKg, r.printed)).toList();
+        List<Box> boxes = recs.stream().map(r -> new Box(r.seq, r.netJin, r.grossJin, r.tareJin, r.tareName, r.groupNo,
+                r.groupK, r.manual, r.rawJin, r.printed)).toList();
         return new Records(o.id, o.batchNo, o.status == OrderStatus.PENDING, boxes,
-                SameWeight.of(recs.stream().map(r -> r.netKg).toList()), manualCount(recs));
+                SameWeight.of(recs.stream().map(r -> r.netJin).toList()), manualCount(recs));
     }
 
     // ---------------------------------------------------------------- 下一张待审核
@@ -259,10 +259,10 @@ public class OrderQueryService {
         Result r = resultOf(o, boxesOf(List.of(o.id)).getOrDefault(o.id, List.of()));
         Farmer f = archive.farmersByIds(List.of(o.vendorId)).get(o.vendorId);
         Spec s = specs.get(o.specId);
-        return new BoxLookup(batchNo + "#" + seq, batchNo, seq, box.netKg, box.manual, box.rawKg,
+        return new BoxLookup(batchNo + "#" + seq, batchNo, seq, box.netJin, box.manual, box.rawJin,
                 new Ref(f.id(), f.name()),
                 new Ref(o.productId, archive.productNames(List.of(o.productId)).get(o.productId)),
-                new SpecRef(s.id, s.name, s.stdNetKg), o.id, o.code, o.status, r.avgKg(), r.unitPrice());
+                new SpecRef(s.id, s.name, s.stdNetJin), o.id, o.code, o.status, r.avgJin(), r.unitPrice());
     }
 
     private static ApiException notFoundBox() {
@@ -285,12 +285,12 @@ public class OrderQueryService {
     }
 
     private Result resultOf(PurchaseOrder o, List<WeighRecord> recs) {
-        List<BigDecimal> nets = recs.stream().map(r -> r.netKg).toList();
+        List<BigDecimal> nets = recs.stream().map(r -> r.netJin).toList();
         if (isFrozen(o)) {
-            return PricingService.compute(nets, o.stdNetKg, o.basePrice, o.ruleId, o.ruleName, o.ruleCoef,
-                    RoundMode.parse(o.roundMode));
+            return PricingService.compute(nets, o.stdNetJin, o.basePrice, o.ruleId, o.ruleName, o.ruleCoef,
+                    o.ruleLossJin, RoundMode.parse(o.roundMode));
         }
-        return pricing.price(new PricingService.Request(o.vendorId, o.productId, o.specId, o.bizDate, nets));
+        return pricing.price(new PricingService.Request(o.ruleId, o.specId, o.bizDate, nets));
     }
 
     /** APP 提交时算出了价、现在的价或金额与它不同。提交时没算出价（缺规则、缺基准价而放行）的不算“变了”。 */

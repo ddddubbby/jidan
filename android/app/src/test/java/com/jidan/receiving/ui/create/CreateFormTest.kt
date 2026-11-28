@@ -1,5 +1,6 @@
 package com.jidan.receiving.ui.create
 
+import com.jidan.receiving.data.RuleViewDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -16,34 +17,30 @@ class CreateFormTest {
     @Test
     fun missingAndActiveOrder() {
         val empty = CreatePicks()
-        assertEquals(
-            listOf(CreateStep.FARMER, CreateStep.PRODUCT, CreateStep.SPEC, CreateStep.WAREHOUSE),
-            missingSteps(empty),
-        )
+        assertEquals(listOf(CreateStep.FARMER, CreateStep.RULE, CreateStep.WAREHOUSE), missingSteps(empty))
         assertEquals(CreateStep.FARMER, activeStep(empty, null))
 
-        val mid = CreatePicks(farmerId = 1, productId = 2)
-        assertEquals(listOf(CreateStep.SPEC, CreateStep.WAREHOUSE), missingSteps(mid))
-        assertEquals(CreateStep.SPEC, activeStep(mid, null))
-        assertEquals(CreateStep.PRODUCT, activeStep(mid, CreateStep.PRODUCT))
+        val mid = CreatePicks(farmerId = 1)
+        assertEquals(listOf(CreateStep.RULE, CreateStep.WAREHOUSE), missingSteps(mid))
+        assertEquals(CreateStep.RULE, activeStep(mid, null))
+        assertEquals(CreateStep.FARMER, activeStep(mid, CreateStep.FARMER))
 
-        val full = CreatePicks(1, 2, 3, 4)
+        val full = CreatePicks(1, 2, 3)
         assertTrue(missingSteps(full).isEmpty())
         assertNull(activeStep(full, null))
     }
 
-    @Test
-    fun autoFillSingleRule() {
-        assertEquals(10L to 20L, autoFillFromRules(listOf(10L to 20L)))
-        assertEquals(null to null, autoFillFromRules(listOf(10L to 20L, 11L to 21L)))
-        assertEquals(null to null, autoFillFromRules(emptyList()))
-    }
+    private fun rule(id: Long, name: String, loss: Double? = 0.0) = RuleViewDto(
+        id = id, name = name, kind = "BUY", productId = 1, productName = "粉蛋", specId = 2, specName = "360枚/箱",
+        tareBoxId = 3, tareName = "2号包装箱", tareJin = 4.0, lossJin = loss, coef = 0.5,
+    )
 
     @Test
-    fun autoFillSpecForProduct() {
-        val rules = listOf(1L to 10L, 1L to 11L, 2L to 20L)
-        assertNull(autoFillSpecForProduct(rules, 1L))
-        assertEquals(20L, autoFillSpecForProduct(rules, 2L))
-        assertNull(autoFillSpecForProduct(rules, 9L))
+    fun packTextAndLoss() {
+        assertEquals("粉蛋 360枚/箱 · 2号包装箱 4 斤", packText(rule(1, "a")))
+        assertEquals("粉蛋 360枚/箱 · 2号包装箱 4 斤 · 每箱 −1 斤", packText(rule(1, "a", -1.0)))
+        assertEquals("+0.5 斤", lossText(0.5))
+        assertNull(lossText(0.0))
     }
+
 }

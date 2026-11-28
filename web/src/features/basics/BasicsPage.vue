@@ -79,7 +79,7 @@ async function flip(run: () => Promise<void>) {
             <CellEdit label="每箱枚数" kind="int" :raw="String(s.eggCount)" :save="(v) => saveSpec(s, { eggCount: Number(v) })">{{ s.eggCount }}</CellEdit>
           </td>
           <td class="r">
-            <CellEdit label="标准净含量" kind="dec" :raw="String(s.stdNetKg)" :save="(v) => saveSpec(s, { stdNetKg: Number(v) })">{{ s.stdNetKg }} kg</CellEdit>
+            <CellEdit label="标准净含量" kind="dec" :raw="String(s.stdNetJin)" :save="(v) => saveSpec(s, { stdNetJin: Number(v) })">{{ s.stdNetJin }}斤</CellEdit>
           </td>
           <td class="muted nb">{{ ruleCount[s.id] ?? 0 }} 条</td>
           <td>
@@ -99,7 +99,7 @@ async function flip(run: () => Promise<void>) {
             <CellEdit label="包装箱名称" kind="text" :raw="t.name" :save="(v) => saveTare(t, { name: v })"><b>{{ t.name }}</b></CellEdit>
           </td>
           <td class="r">
-            <CellEdit label="皮重" kind="dec" :raw="String(t.tareKg)" :save="(v) => saveTare(t, { tareKg: Number(v) })">{{ t.tareKg }} kg</CellEdit>
+            <CellEdit label="皮重" kind="dec" :raw="String(t.tareJin)" :save="(v) => saveTare(t, { tareJin: Number(v) })">{{ t.tareJin }}斤</CellEdit>
           </td>
           <td>
             <button class="switch" role="switch" :aria-checked="t.enabled" :aria-label="'启用 ' + t.name" @click="flip(() => saveTare(t, { enabled: !t.enabled }))"></button>

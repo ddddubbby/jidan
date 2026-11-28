@@ -37,7 +37,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 @Import(MySqlTestConfig.class)
 class OrderSubmitTest {
 
-    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5kg，均重 46，181 元/箱，1810 元 */
+    /** v7 6.1、6.4：李四 10 箱粉蛋，合计 460.5斤，均重 46，181 元/箱，1810 元 */
     private static final List<Double> LI_SI_BOXES = List.of(46.5, 45.8, 46.0, 46.0, 46.0, 45.6, 45.6, 45.6, 45.6, 47.8);
 
     @Autowired
@@ -53,24 +53,34 @@ class OrderSubmitTest {
 
     @BeforeEach
     void fixtures() {
-        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule_bind", "pricing_rule",
+        for (String t : List.of("weigh_record", "purchase_order", "batch_seq", "pricing_rule",
                 "base_price", "vendor_phone", "vendor", "warehouse", "product", "spec", "tare_box", "`option`")) {
             jdbc.update("DELETE FROM " + t);
         }
         pink = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0001', '粉蛋', '箱')");
         red = insert("INSERT INTO product (hs_code, name, unit_name) VALUES ('SP0002', '红蛋', '箱')");
-        s360 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('360枚/箱', 360, 45, 1)");
-        s480 = insert("INSERT INTO spec (name, egg_count, std_net_kg, enabled) VALUES ('480枚/箱', 480, 60, 1)");
+        s360 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('360枚/箱', 360, 45, 1)");
+        s480 = insert("INSERT INTO spec (name, egg_count, std_net_jin, enabled) VALUES ('480枚/箱', 480, 60, 1)");
         liSi = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0001', '李四')");
         wangXiuYing = insert("INSERT INTO vendor (hs_code, name) VALUES ('GYS0002', '王秀英')");
         warehouse = insert("INSERT INTO warehouse (hs_code, name) VALUES ('CK0001', '一号库')");
-        jdbc.update("INSERT INTO tare_box (name, tare_kg, hotkey, enabled) VALUES ('2号包装箱', 2, 1, 1)");
-        jdbc.update("INSERT INTO tare_box (name, tare_kg, hotkey, enabled) VALUES ('不常用箱', 3, 0, 1)");
+        jdbc.update("INSERT INTO tare_box (name, tare_jin, hotkey, enabled) VALUES ('2号包装箱', 2, 1, 1)");
+        jdbc.update("INSERT INTO tare_box (name, tare_jin, hotkey, enabled) VALUES ('不常用箱', 3, 0, 1)");
         // 360 当日有基准价、480 没有
         jdbc.update("INSERT INTO base_price (price_date, spec_id, base_price) VALUES (?, ?, 180)", today, s360);
         long rule = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled)"
                 + " VALUES ('粉蛋李四收购定价方案', 'BUY', " + pink + ", " + s360 + ", 1, 1)");
-        jdbc.update("INSERT INTO pricing_rule_bind (rule_id, target_id) VALUES (?, ?)", rule, liSi);
+    }
+
+    /** 规则改为建单时选（附录 E R-1 行）：取这个商品规格上的第一条收购规则，没有就建一条系数 1 的。 */
+    private long ruleOf(long product, long spec) {
+        List<Long> found = jdbc.queryForList("SELECT id FROM pricing_rule WHERE kind = 'BUY' AND product_id = ? AND spec_id = ?"
+                + " ORDER BY id LIMIT 1", Long.class, product, spec);
+        if (!found.isEmpty()) {
+            return found.get(0);
+        }
+        return insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled) VALUES ('测试规则"
+                + product + "-" + spec + "', 'BUY', " + product + ", " + spec + ", 1, 1)");
     }
 
     private long insert(String sql) {
@@ -111,9 +121,9 @@ class OrderSubmitTest {
     private Map<String, Object> box(int seq, double net) {
         Map<String, Object> m = new java.util.HashMap<>();
         m.put("seq", seq);
-        m.put("netKg", net);
-        m.put("grossKg", net + 2);
-        m.put("tareKg", 2);
+        m.put("netJin", net);
+        m.put("grossJin", net + 2);
+        m.put("tareJin", 2);
         m.put("tareName", "2号包装箱");
         m.put("groupNo", seq);
         m.put("groupK", 1);
@@ -131,7 +141,7 @@ class OrderSubmitTest {
     }
 
     private Map<String, Object> submission(String batchNo, long vendor, long product, long spec, List<Double> nets) {
-        return Map.of("batchNo", batchNo, "vendorId", vendor, "productId", product, "specId", spec,
+        return Map.of("batchNo", batchNo, "vendorId", vendor, "ruleId", ruleOf(product, spec),
                 "warehouseId", warehouse, "boxes", boxes(nets));
     }
 
@@ -155,12 +165,12 @@ class OrderSubmitTest {
         assertThat(b.get("warehouses").get(0).get("name").asText()).isEqualTo("一号库");
         // 只下发热键皮重
         assertThat(b.get("tares")).hasSize(1);
-        assertThat(b.get("tares").get(0).get("tareKg").decimalValue()).isEqualByComparingTo("2");
+        assertThat(b.get("tares").get(0).get("tareJin").decimalValue()).isEqualByComparingTo("2");
 
         // 当日基准价与标准净含量；没录的规格为 null，APP 标“无基准价”
         JsonNode specs = b.get("specs");
         assertThat(specs).hasSize(2);
-        assertThat(specs.get(0).get("stdNetKg").decimalValue()).isEqualByComparingTo("45");
+        assertThat(specs.get(0).get("stdNetJin").decimalValue()).isEqualByComparingTo("45");
         assertThat(specs.get(0).get("basePrice").decimalValue()).isEqualByComparingTo("180");
         assertThat(specs.get(1).get("name").asText()).isEqualTo("480枚/箱");
         assertThat(specs.get(1).get("basePrice").isNull()).isTrue();
@@ -248,12 +258,12 @@ class OrderSubmitTest {
 
     @Test
     void quotePricesLiSiExampleWithoutWriting() {
-        var res = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "productId", pink, "specId", s360,
-                "boxNetKg", LI_SI_BOXES), scale());
+        var res = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "ruleId", ruleOf(pink, s360),
+                "boxNetJin", LI_SI_BOXES), scale());
         JsonNode q = res.getBody();
         assertThat(q.get("boxCount").asInt()).isEqualTo(10);
-        assertThat(q.get("totalKg").decimalValue()).isEqualByComparingTo("460.5");
-        assertThat(q.get("avgKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(q.get("totalJin").decimalValue()).isEqualByComparingTo("460.5");
+        assertThat(q.get("avgJin").decimalValue()).isEqualByComparingTo("46");
         assertThat(q.get("unitPrice").decimalValue()).isEqualByComparingTo("181");
         assertThat(q.get("amount").decimalValue()).isEqualByComparingTo("1810");
         assertThat(q.get("issues")).isEmpty();
@@ -263,24 +273,28 @@ class OrderSubmitTest {
 
     @Test
     void quoteTrialCoefficientChangesPriceOnly() {
-        var q = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "productId", pink, "specId", s360,
-                "boxNetKg", LI_SI_BOXES, "trialCoef", 2), scale()).getBody();
+        var q = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "ruleId", ruleOf(pink, s360),
+                "boxNetJin", LI_SI_BOXES, "trialCoef", 2), scale()).getBody();
         assertThat(q.get("unitPrice").decimalValue()).isEqualByComparingTo("182");
         assertThat(q.get("amount").decimalValue()).isEqualByComparingTo("1820");
         // 规则本身没变
-        var again = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "productId", pink, "specId", s360,
-                "boxNetKg", LI_SI_BOXES), scale()).getBody();
+        var again = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "ruleId", ruleOf(pink, s360),
+                "boxNetJin", LI_SI_BOXES), scale()).getBody();
         assertThat(again.get("amount").decimalValue()).isEqualByComparingTo("1810");
     }
 
     @Test
-    void quoteReportsMissingRuleAndBasePrice() {
-        var q = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", wangXiuYing, "productId", pink,
-                "specId", s480, "boxNetKg", List.of(60.1, 59.9)), scale()).getBody();
+    void quoteReportsMissingBasePriceAndRequiresARule() {
+        var q = call(HttpMethod.POST, "/api/orders/quote", Map.of("ruleId", ruleOf(pink, s480),
+                "boxNetJin", List.of(60.1, 59.9)), scale()).getBody();
         assertThat(q.get("boxCount").asInt()).isEqualTo(2);
-        assertThat(q.get("issues")).extracting(JsonNode::asText).containsExactlyInAnyOrder("NO_RULE", "NO_BASE_PRICE");
+        assertThat(q.get("issues")).extracting(JsonNode::asText).containsExactly("NO_BASE_PRICE");
         assertThat(q.get("unitPrice").isNull()).isTrue();
         assertThat(q.get("amount").isNull()).isTrue();
+        // 规则改为建单时选（附录 E R-1 行）：不选规则不能试算
+        var none = call(HttpMethod.POST, "/api/orders/quote", Map.of("boxNetJin", List.of(60.1)), scale());
+        assertThat(none.getStatusCode().value()).isEqualTo(400);
+        assertThat(none.getBody().get("message").asText()).contains("定价规则");
     }
 
     // ---------------- 提交 ----------------
@@ -298,8 +312,8 @@ class OrderSubmitTest {
         assertThat(a.get("status").asText()).isEqualTo("PENDING");
         assertThat(a.get("source").asText()).isEqualTo("APP");
         assertThat(a.get("boxCount").asInt()).isEqualTo(10);
-        assertThat(a.get("totalNetKg").decimalValue()).isEqualByComparingTo("460.5");
-        assertThat(a.get("avgKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(a.get("totalNetJin").decimalValue()).isEqualByComparingTo("460.5");
+        assertThat(a.get("avgJin").decimalValue()).isEqualByComparingTo("46");
         assertThat(a.get("submittedPrice").decimalValue()).isEqualByComparingTo("181");
         assertThat(a.get("submittedAmount").decimalValue()).isEqualByComparingTo("1810");
 
@@ -322,8 +336,8 @@ class OrderSubmitTest {
         assertThat(row.get("amount")).isNull();
         assertThat(row.get("price")).isNull();
         var third = jdbc.queryForMap("SELECT * FROM weigh_record WHERE seq = 3");
-        assertThat((BigDecimal) third.get("net_kg")).isEqualByComparingTo("46");
-        assertThat((BigDecimal) third.get("gross_kg")).isEqualByComparingTo("48");
+        assertThat((BigDecimal) third.get("net_jin")).isEqualByComparingTo("46");
+        assertThat((BigDecimal) third.get("gross_jin")).isEqualByComparingTo("48");
         assertThat(third.get("tare_name")).isEqualTo("2号包装箱");
         assertThat(third.get("printed")).isEqualTo(true);
     }
@@ -333,15 +347,14 @@ class OrderSubmitTest {
         String batchNo = newBatch(scale());
         var boxes = boxes(List.of(30.0, 29.2));
         boxes.get(1).put("manual", true);
-        boxes.get(1).put("rawKg", 30.4);
-        boxes.get(1).remove("grossKg");
-        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSi, "productId", pink,
-                "specId", s360, "warehouseId", warehouse, "boxes", boxes), scale());
+        boxes.get(1).put("rawJin", 30.4);
+        boxes.get(1).remove("grossJin");
+        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", liSi, "ruleId", ruleOf(pink, s360), "warehouseId", warehouse, "boxes", boxes), scale());
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         var r = jdbc.queryForMap("SELECT * FROM weigh_record WHERE seq = 2");
         assertThat(r.get("manual")).isEqualTo(true);
-        assertThat((BigDecimal) r.get("raw_kg")).isEqualByComparingTo("30.4");
-        assertThat(r.get("gross_kg")).isNull();
+        assertThat((BigDecimal) r.get("raw_jin")).isEqualByComparingTo("30.4");
+        assertThat(r.get("gross_jin")).isNull();
     }
 
     @Test
@@ -354,17 +367,17 @@ class OrderSubmitTest {
         var webBoxes = new ArrayList<Map<String, Object>>();
         List<Double> nets = List.of(46.5, 45.5, 46.0, 46.0, 46.0, 46.0, 46.0, 46.0, 46.0, 46.5);
         for (int i = 0; i < nets.size(); i++) {
-            webBoxes.add(new java.util.HashMap<>(Map.of("seq", i + 1, "netKg", nets.get(i), "manual", true, "rawKg", 1)));
+            webBoxes.add(new java.util.HashMap<>(Map.of("seq", i + 1, "netJin", nets.get(i), "manual", true, "rawJin", 1)));
         }
-        var body = Map.of("batchNo", batchNo, "vendorId", liSi, "productId", pink, "specId", s360,
+        var body = Map.of("batchNo", batchNo, "vendorId", liSi, "ruleId", ruleOf(pink, s360),
                 "warehouseId", warehouse, "boxes", webBoxes);
 
         JsonNode a = call(HttpMethod.POST, "/api/orders", body, admin()).getBody();
-        // 10 箱合计 460.5kg：数量 10、均重 46（v7 WEB-06 验收）
+        // 10 箱合计 460.5斤：数量 10、均重 46（v7 WEB-06 验收）
         assertThat(a.get("source").asText()).isEqualTo("WEB");
         assertThat(a.get("boxCount").asInt()).isEqualTo(10);
-        assertThat(a.get("totalNetKg").decimalValue()).isEqualByComparingTo("460.5");
-        assertThat(a.get("avgKg").decimalValue()).isEqualByComparingTo("46");
+        assertThat(a.get("totalNetJin").decimalValue()).isEqualByComparingTo("460.5");
+        assertThat(a.get("avgJin").decimalValue()).isEqualByComparingTo("46");
         // 价格按收购日期当天的基准价（昨天 178）
         assertThat(a.get("submittedPrice").decimalValue()).isEqualByComparingTo("179");
 
@@ -372,7 +385,7 @@ class OrderSubmitTest {
         assertThat(b.get("id").asLong()).isEqualTo(a.get("id").asLong());
         assertThat(count("SELECT COUNT(*) FROM purchase_order")).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM weigh_record")).isEqualTo(10);
-        assertThat(count("SELECT COUNT(*) FROM weigh_record WHERE manual = 1 OR raw_kg IS NOT NULL")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM weigh_record WHERE manual = 1 OR raw_jin IS NOT NULL")).isZero();
         assertThat(jdbc.queryForObject("SELECT biz_date FROM purchase_order", java.sql.Date.class).toString())
                 .isEqualTo(today.minusDays(1).toString());
     }
@@ -459,10 +472,28 @@ class OrderSubmitTest {
     }
 
     @Test
-    void redIsAlsoAProductButHasNoRuleForLiSi() {
-        // 规则按“商品 + 规格”区分：李四只有粉蛋的规则，红蛋缺规则，默认不能提交
-        var q = call(HttpMethod.POST, "/api/orders/quote", Map.of("vendorId", liSi, "productId", red, "specId", s360,
-                "boxNetKg", List.of(46.0)), scale()).getBody();
-        assertThat(q.get("issues")).extracting(JsonNode::asText).containsExactly("NO_RULE");
+    void submitTakesProductAndSpecFromTheChosenRule() {
+        // 红蛋 360 的规则：选了它，单据的商品就是红蛋；同一农户可以用任何一条规则
+        long redRule = ruleOf(red, s360);
+        String batchNo = newBatch(scale());
+        var res = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", batchNo, "vendorId", wangXiuYing, "ruleId", redRule,
+                "warehouseId", warehouse, "boxes", boxes(List.of(46.0))), scale());
+        assertThat(res.getStatusCode().value()).as(String.valueOf(res.getBody())).isEqualTo(200);
+        var o = jdbc.queryForMap("SELECT product_id, spec_id, rule_id FROM purchase_order WHERE batch_no = ?", batchNo);
+        assertThat(((Number) o.get("product_id")).longValue()).isEqualTo(red);
+        assertThat(((Number) o.get("spec_id")).longValue()).isEqualTo(s360);
+        assertThat(((Number) o.get("rule_id")).longValue()).isEqualTo(redRule);
+
+        // 停用的规则不能用来新建单；发货规则不能用于采购
+        jdbc.update("UPDATE pricing_rule SET enabled = 0 WHERE id = ?", redRule);
+        var off = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", newBatch(scale()), "vendorId", liSi,
+                "ruleId", redRule, "warehouseId", warehouse, "boxes", boxes(List.of(46.0))), scale());
+        assertThat(off.getStatusCode().value()).isEqualTo(400);
+        assertThat(off.getBody().get("message").asText()).contains("停用");
+        long sell = insert("INSERT INTO pricing_rule (name, kind, product_id, spec_id, coef, enabled) VALUES ('发货', 'SELL', "
+                + pink + ", " + s360 + ", 1, 1)");
+        var sold = call(HttpMethod.POST, "/api/orders", Map.of("batchNo", newBatch(scale()), "vendorId", liSi,
+                "ruleId", sell, "warehouseId", warehouse, "boxes", boxes(List.of(46.0))), scale());
+        assertThat(sold.getStatusCode().value()).isEqualTo(400);
     }
 }

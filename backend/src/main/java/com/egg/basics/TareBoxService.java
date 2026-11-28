@@ -28,10 +28,10 @@ public class TareBoxService {
         return mapper.selectList(new QueryWrapper<TareBox>().eq("enabled", true).eq("hotkey", true).orderByAsc("id"));
     }
 
-    public TareBox create(String name, BigDecimal tareKg, Boolean hotkey, Long operatorId) {
+    public TareBox create(String name, BigDecimal tareJin, Boolean hotkey, Long operatorId) {
         TareBox t = new TareBox();
         t.name = name.trim();
-        t.tareKg = tareKg;
+        t.tareJin = tareJin;
         t.hotkey = hotkey == null || hotkey; // 新增的包装箱默认就是热键（原型 basicSave）
         t.enabled = true;
         t.updatedBy = operatorId;
@@ -41,7 +41,7 @@ public class TareBoxService {
     }
 
     /** 只改传了的字段。 */
-    public TareBox update(long id, String name, BigDecimal tareKg, Boolean hotkey, Boolean enabled, Long operatorId) {
+    public TareBox update(long id, String name, BigDecimal tareJin, Boolean hotkey, Boolean enabled, Long operatorId) {
         TareBox t = mapper.selectById(id);
         if (t == null) {
             throw ApiException.invalid("包装箱不存在");
@@ -49,8 +49,8 @@ public class TareBoxService {
         if (name != null) {
             t.name = name.trim();
         }
-        if (tareKg != null) {
-            t.tareKg = tareKg;
+        if (tareJin != null) {
+            t.tareJin = tareJin;
         }
         if (hotkey != null) {
             t.hotkey = hotkey;

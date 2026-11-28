@@ -1,10 +1,10 @@
 package com.jidan.receiving.core
 
 /** 秤回调的读数：重量原值（不做扣皮换算）与秤给的稳定标志（`scale.stable-by = app` 时不看它）。 */
-data class ScaleReading(val raw: Kg, val stable: Boolean)
+data class ScaleReading(val raw: Jin, val stable: Boolean)
 
 /** 每箱皮重。未设皮重时状态机的 `tare` 为 null。 */
-data class Tare(val unit: Kg, val name: String)
+data class Tare(val unit: Jin, val name: String)
 
 /** 称重框的状态（v7 `APP-03`）：灰色＝空秤或未设皮重，跳动＝读数未稳定，绿色＝已记录，琥珀色＝待拿下。 */
 enum class WeighPhase {
@@ -28,10 +28,10 @@ enum class WeighPhase {
 data class Weighing(
     val k: Int,
     /** 秤台总重，含 k 箱皮重。 */
-    val platform: Kg,
-    val tareUnit: Kg,
-    val tareTotal: Kg,
-    val net: Kg,
+    val platform: Jin,
+    val tareUnit: Jin,
+    val tareTotal: Jin,
+    val net: Jin,
 ) {
     /** 新增一次称重的 k 条流水，序号由 [SplitBoxes.append] 编。[group] 由调用方给（手工加的箱也共用同一个计数）。 */
     fun toBoxes(group: Int, tareName: String): List<Box> =
@@ -58,7 +58,7 @@ sealed interface WeighOutcome {
 
 /**
  * 称重状态机（开发规格 9.2，原型 `canRecord`、`record`、`tick`）：
- * 未设皮重不记；读数稳定且净重达到 `weigh.empty-below-kg` 才记（`weigh.record-by = button` 时改为等按钮）；
+ * 未设皮重不记；读数稳定且净重达到 `weigh.empty-below-jin` 才记（`weigh.record-by = button` 时改为等按钮）；
  * 记完须等秤面稳定清空才记下一次；识别不准时暂停；重称替换指定箱。
  *
  * 纯逻辑：不碰设备、不持有流水。读数与时间由调用方喂进来，记下的结果由返回值交出，
@@ -70,8 +70,8 @@ sealed interface WeighOutcome {
  */
 class WeighingMachine(
     private val options: WeighOptions,
-    private val standardNet: Kg,
-    private val detect: (gross: Kg, tareUnit: Kg, standardNet: Kg, tolerancePct: Int, maxK: Int) -> DetectResult =
+    private val standardNet: Jin,
+    private val detect: (gross: Jin, tareUnit: Jin, standardNet: Jin, tolerancePct: Int, maxK: Int) -> DetectResult =
         DetectK::detect,
 ) {
     var tare: Tare? = null
@@ -97,7 +97,7 @@ class WeighingMachine(
     private var armed = false
     private var recorded = false
 
-    private val tareUnit get() = tare?.unit ?: Kg.ZERO
+    private val tareUnit get() = tare?.unit ?: Jin.ZERO
     private val platform get() = reading?.let { NetWeight.platform(it.raw, tareUnit, options) }
     private val loaded get() = platform?.let { it - tareUnit >= options.emptyBelow } ?: false
 
@@ -116,14 +116,14 @@ class WeighingMachine(
         }
 
     /** 此刻台面总重（未扣皮，按当前皮重还原）；没有读数（刚换皮重、秤断开）时为 null。称空箱按它去皮。 */
-    val platformNow: Kg? get() = platform
+    val platformNow: Jin? get() = platform
 
     /** 此刻读数是否稳定。 */
     val isStable: Boolean get() = stable
 
     /** 称重框显示的净重（k 箱）；没有读数时为 null。 */
-    val displayNet: Kg?
-        get() = platform?.let { it - Kg(tareUnit.cents * k) }
+    val displayNet: Jin?
+        get() = platform?.let { it - Jin(tareUnit.cents * k) }
 
     /** `weigh.record-by = button` 时，“记录”按钮可按。 */
     val canPress get() = options.recordBy == RecordBy.BUTTON && canRecord

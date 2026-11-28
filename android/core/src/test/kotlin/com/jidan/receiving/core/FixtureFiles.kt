@@ -21,4 +21,4 @@ internal fun JsonElement.obj() = this as JsonObject
 internal fun JsonElement.arr() = this as JsonArray
 internal fun JsonElement.str() = (this as JsonPrimitive).content
 internal fun JsonElement.int() = (this as JsonPrimitive).intOrNull ?: error("不是整数：$this")
-internal fun JsonElement.kg() = Kg.of((this as JsonPrimitive).doubleOrNull ?: error("不是数字：$this"))
+internal fun JsonElement.jin() = Jin.of((this as JsonPrimitive).doubleOrNull ?: error("不是数字：$this"))

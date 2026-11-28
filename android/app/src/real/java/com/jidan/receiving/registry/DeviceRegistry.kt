@@ -5,6 +5,7 @@ import android.content.Context
 import com.jidan.receiving.device.LabelPrinter
 import com.jidan.receiving.device.LanstarScale
 import com.jidan.receiving.device.Scale
+import com.jidan.receiving.device.ScaleUnit
 import com.jidan.receiving.device.gainscha.GainschaPrinter
 import com.jidan.receiving.device.gainscha.SdkGainschaSdk
 import kotlinx.coroutines.CoroutineScope
@@ -24,11 +25,12 @@ object DeviceRegistry {
         application: Application,
         pairedId: String?,
         companyKey: String,
+        unit: () -> ScaleUnit,
     ): Scale {
         val key = model?.takeIf { it.isNotBlank() } ?: DEFAULT_SCALE
         return when (key) {
-            "lanstar-ble" -> LanstarScale(application, companyKey, pairedId)
-            else -> LanstarScale(application, companyKey, pairedId) // 不认识的型号用默认型号
+            "lanstar-ble" -> LanstarScale(application, companyKey, pairedId, unit)
+            else -> LanstarScale(application, companyKey, pairedId, unit) // 不认识的型号用默认型号
         }
     }
 

@@ -1,6 +1,6 @@
 package com.jidan.receiving.device
 
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 
 /** 与原型 link.status 对齐：未连接 / 连接中 / 已连接 / 丢失 */
 enum class LinkStatus { DISCONNECTED, CONNECTING, CONNECTED, LOST }
@@ -9,9 +9,23 @@ enum class LinkStatus { DISCONNECTED, CONNECTING, CONNECTED, LOST }
 data class DiscoveredDevice(val id: String, val model: String, val rssiBars: Int)
 
 /**
- * 秤回调原值（0.01kg）与是否稳定。不做扣皮（开发规格 9.3）。
+ * 秤回调原值（0.01斤，已按 [ScaleUnit] 换成斤）与是否稳定。不做扣皮（开发规格 9.3）。
  */
-data class DeviceScaleReading(val raw: Kg, val stable: Boolean)
+data class DeviceScaleReading(val raw: Jin, val stable: Boolean)
+
+/**
+ * 秤本身显示和回传的单位（选项 `scale.unit`）。系统里的重量一律是斤，秤按公斤计时读数 ×2、下发皮重 ÷2，
+ * 只在秤适配器里换算（附录 E R-1 行）。默认 kg：蓝石秤出厂按公斤计，未经实物验证。
+ */
+enum class ScaleUnit(val jinPerUnit: Int) {
+    KG(2),
+    JIN(1);
+
+    companion object {
+        /** 选项值 `kg` / `jin`；认不出时按 kg。 */
+        fun of(v: String?): ScaleUnit = if (v?.trim().equals("jin", ignoreCase = true)) JIN else KG
+    }
+}
 
 enum class PrinterIssue { OK, NO_PAPER, OPEN_COVER, OVERHEAT }
 

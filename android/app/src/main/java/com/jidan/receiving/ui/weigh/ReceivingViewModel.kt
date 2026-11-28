@@ -8,7 +8,7 @@ import com.jidan.receiving.data.AppOptions
 import com.jidan.receiving.core.Box
 import com.jidan.receiving.core.EmptyBoxState
 import com.jidan.receiving.core.EmptyBoxTare
-import com.jidan.receiving.core.Kg
+import com.jidan.receiving.core.Jin
 import com.jidan.receiving.core.Pick
 import com.jidan.receiving.core.RecordBy
 import com.jidan.receiving.core.RoundAvg
@@ -59,20 +59,24 @@ data class RuleCandidate(
     val unitPrice: Double? = null,
 )
 
-/** 定价规则弹层（APP-09 / P7-3）。 */
+/**
+ * 定价规则弹层（APP-09 / P7-3）。规则不绑农户：这里看这张单选的规则、改每斤尾差与每箱损耗、
+ * 换成同商品规格的另一条（换了不动已称的箱，附录 E R-1 行）。
+ */
 data class RuleSheetState(
     val loading: Boolean = false,
     val busy: Boolean = false,
     val error: String = "",
     val productName: String = "",
     val specName: String = "",
-    val standardNetKg: Double? = null,
+    val standardNetJin: Double? = null,
     val basePrice: Double? = null,
     val boundRuleId: Long? = null,
     val boundRuleName: String? = null,
     val boundCoef: Double? = null,
-    val bindCount: Int = 0,
+    val boundLoss: Double? = null,
     val draftCoef: Double? = null,
+    val draftLoss: Double? = null,
     val trialUnitPrice: Double? = null,
     val boundUnitPrice: Double? = null,
     val changing: Boolean = false,
@@ -80,11 +84,12 @@ data class RuleSheetState(
 ) {
     val unbound: Boolean get() = boundRuleId == null
     val displayCoef: Double? get() = draftCoef ?: boundCoef
+    val displayLoss: Double get() = draftLoss ?: boundLoss ?: 0.0
     val dirty: Boolean
         get() {
-            val d = draftCoef ?: return false
-            val b = boundCoef ?: return false
-            return abs(d - b) > 1e-9
+            val coefChanged = draftCoef != null && boundCoef != null && abs(draftCoef - boundCoef) > 1e-9
+            val lossChanged = draftLoss != null && abs(draftLoss - (boundLoss ?: 0.0)) > 1e-9
+            return coefChanged || lossChanged
         }
 }
 
@@ -119,7 +124,9 @@ data class SummaryUiState(
         get() {
             val q = quote ?: return false
             if (submitting || loading || refreshing) return false
-            return allowWithoutPrice || !(q.noBasePrice || q.noRule)
+            // 提交要带规则：没选规则一律不能提交；缺基准价时看 submit.without-price
+            if (q.noRule) return false
+            return allowWithoutPrice || !q.noBasePrice
         }
 }
 
@@ -129,8 +136,8 @@ data class DoneUiState(
     val specName: String = "",
     val batchNo: String = "",
     val boxCount: Int = 0,
-    val totalNetKg: Double? = null,
-    val avgKg: Double? = null,
+    val totalNetJin: Double? = null,
+    val avgJin: Double? = null,
     val unitPrice: Double? = null,
     val amount: Double? = null,
     val pendingPrice: Boolean = false,
@@ -151,7 +158,7 @@ data class WeighUiState(
     val batchNo: String = "",
     val warehouseName: String = "",
     val phase: WeighPhase = WeighPhase.LOCKED,
-    val displayNet: Kg? = null,
+    val displayNet: Jin? = null,
     val k: Int = 1,
     val candidates: Pair<Int, Int>? = null,
     val tare: Tare? = null,
@@ -198,8 +205,8 @@ data class WeighUiState(
 
     /** “手工加一箱”入口（连接卡片与流水弹层共用）：秤不可用时的最后兜底，0 箱也能用（APP-11）。 */
     val showManualAdd: Boolean get() = manualEntry && !locked
-    val totalNet: Kg get() = boxes.map { it.net }.sum()
-    fun avg(rule: RoundRule): Kg? =
+    val totalNet: Jin get() = boxes.map { it.net }.sum()
+    fun avg(rule: RoundRule): Jin? =
         if (count == 0) null else RoundAvg.of(totalNet, count, rule)
     val recent: List<Box>
         get() {
@@ -398,21 +405,21 @@ class ReceivingViewModel(
 
     fun hasBoxes(): Boolean = (session?.boxes?.isNotEmpty() == true)
 
-    fun editManual(seq: Int, netKg: Double) {
+    fun editManual(seq: Int, netJin: Double) {
         if (locked || !manualEntryOn(container.options.value)) return
         val s = session ?: return
-        session = s.editManual(seq, Kg.of(netKg))
+        session = s.editManual(seq, Jin.of(netJin))
         flash("第 $seq 箱已手录", ok = true)
         persist()
         publish()
         printQueue.enqueueReprint(seq)
     }
 
-    fun addManual(netKg: Double) {
+    fun addManual(netJin: Double) {
         if (locked || !manualEntryOn(container.options.value)) return
         val before = session?.boxes?.map { it.seq }.orEmpty().toSet()
         val s = session ?: return
-        session = s.addManual(Kg.of(netKg))
+        session = s.addManual(Jin.of(netJin))
         flash("已手工加一箱", ok = true)
         persist()
         publish()
@@ -455,7 +462,7 @@ class ReceivingViewModel(
         if (count <= s.boxes.size) return
         val need = count - s.boxes.size
         repeat(need) { i ->
-            s = s.addManual(Kg.of(AdaptFixtures.netKgForIndex(s.boxes.size + i)))
+            s = s.addManual(Jin.of(AdaptFixtures.netJinForIndex(s.boxes.size + i)))
         }
         session = s
         persist()
@@ -499,6 +506,7 @@ class ReceivingViewModel(
         if (submitted || _summary.value.submitting) return
         val q = _summary.value.quote
         if (!_summary.value.canSubmit) return
+        val ruleId = s.rule?.id ?: return
         viewModelScope.launch {
             _summary.update { it.copy(submitting = true, submitError = false, error = "") }
             try {
@@ -507,20 +515,19 @@ class ReceivingViewModel(
                     SubmitRequest(
                         batchNo = s.batchNo,
                         vendorId = s.farmer.id,
-                        productId = s.product.id,
-                        specId = s.spec.id,
+                        ruleId = ruleId,
                         warehouseId = s.warehouse.id,
                         boxes = s.boxes.map { b ->
                             SubmitBoxRequest(
                                 seq = b.seq,
-                                netKg = b.net.toDouble(),
-                                grossKg = b.gross?.toDouble(),
-                                tareKg = b.tare.toDouble(),
+                                netJin = b.net.toDouble(),
+                                grossJin = b.gross?.toDouble(),
+                                tareJin = b.tare.toDouble(),
                                 tareName = b.tareName.ifBlank { null },
                                 groupNo = b.group,
                                 groupK = groups[b.group],
                                 manual = b.manual,
-                                rawKg = b.raw?.toDouble(),
+                                rawJin = b.raw?.toDouble(),
                                 printed = b.printed,
                             )
                         },
@@ -574,8 +581,8 @@ class ReceivingViewModel(
             specName = s.spec.name,
             batchNo = submitted.batchNo ?: s.batchNo,
             boxCount = submitted.boxCount.takeIf { it > 0 } ?: s.boxes.size,
-            totalNetKg = submitted.totalNetKg ?: quote?.totalKg,
-            avgKg = submitted.avgKg ?: quote?.avgKg,
+            totalNetJin = submitted.totalNetJin ?: quote?.totalJin,
+            avgJin = submitted.avgJin ?: quote?.avgJin,
             unitPrice = submitted.submittedPrice ?: quote?.unitPrice,
             amount = submitted.submittedAmount ?: quote?.amount,
             pendingPrice = pending,
@@ -619,25 +626,34 @@ class ReceivingViewModel(
 
     fun adjustDraftCoef(delta: Double) {
         val cur = _ruleSheet.value.displayCoef ?: return
-        val next = max(0.0, ((cur + delta) * 10).roundToInt() / 10.0)
+        val next = max(0.0, ((cur + delta) * 100).roundToInt() / 100.0)
         _ruleSheet.update { it.copy(draftCoef = next, error = "") }
-        viewModelScope.launch { previewTrialCoef(next) }
+        viewModelScope.launch { previewTrial() }
+    }
+
+    /** 每箱损耗 ±0.5 斤一步，可以减到负数（正数加、负数减）。 */
+    fun adjustDraftLoss(delta: Double) {
+        if (_ruleSheet.value.unbound) return
+        val next = ((_ruleSheet.value.displayLoss + delta) * 100).roundToInt() / 100.0
+        _ruleSheet.update { it.copy(draftLoss = next, error = "") }
+        viewModelScope.launch { previewTrial() }
     }
 
     fun revertDraftCoef() {
         _ruleSheet.update {
-            it.copy(draftCoef = null, trialUnitPrice = it.boundUnitPrice, error = "")
+            it.copy(draftCoef = null, draftLoss = null, trialUnitPrice = it.boundUnitPrice, error = "")
         }
     }
 
+    /** 改动保存到规则：用这条规则的单都按新值算。 */
     fun saveDraftCoef() {
         val state = _ruleSheet.value
         val ruleId = state.boundRuleId ?: return
-        val coef = state.draftCoef ?: return
+        if (!state.dirty) return
         viewModelScope.launch {
             _ruleSheet.update { it.copy(busy = true, error = "") }
             try {
-                container.catalog.updateRuleCoef(ruleId, coef)
+                container.catalog.updateRule(ruleId, state.draftCoef, state.draftLoss)
                 refreshQuote(resetM0Retried = false)
                 refreshRuleSheet(keepChanging = false)
             } catch (e: Throwable) {
@@ -646,43 +662,28 @@ class ReceivingViewModel(
         }
     }
 
-    fun unbindRule() {
+    /** 这张单换成另一条规则（同商品规格）：只改草稿里的规则，提交时带上。 */
+    fun chooseRule(ruleId: Long) {
         val s = session ?: return
+        val r = _ruleSheet.value.candidates.firstOrNull { it.rule.id == ruleId }?.rule ?: return
+        session = s.copy(rule = Pick(r.id, r.name))
+        persist()
         viewModelScope.launch {
             _ruleSheet.update { it.copy(busy = true, error = "") }
-            try {
-                container.catalog.bindFarmerRule(s.farmer.id, s.product.id, s.spec.id, null)
-                refreshQuote(resetM0Retried = false)
-                refreshRuleSheet(keepChanging = false)
-            } catch (e: Throwable) {
-                _ruleSheet.update { it.copy(busy = false, error = e.userMessage()) }
-            }
+            refreshQuote(resetM0Retried = false)
+            refreshRuleSheet(keepChanging = false)
         }
     }
 
-    fun bindRule(ruleId: Long) {
+    private suspend fun previewTrial() {
         val s = session ?: return
-        viewModelScope.launch {
-            _ruleSheet.update { it.copy(busy = true, error = "") }
-            try {
-                container.catalog.bindFarmerRule(s.farmer.id, s.product.id, s.spec.id, ruleId)
-                refreshQuote(resetM0Retried = false)
-                refreshRuleSheet(keepChanging = false)
-            } catch (e: Throwable) {
-                _ruleSheet.update { it.copy(busy = false, error = e.userMessage()) }
-            }
-        }
-    }
-
-    private suspend fun previewTrialCoef(coef: Double) {
-        val s = session ?: return
+        val st = _ruleSheet.value
+        val req = quoteRequestOf(s, trialCoef = st.draftCoef, trialLossJin = st.draftLoss) ?: return
         try {
-            val q = container.orders.quote(
-                quoteRequestOf(s, trialCoef = coef),
-            )
+            val q = container.orders.quote(req)
             _ruleSheet.update { it.copy(trialUnitPrice = q.unitPrice) }
         } catch (_: Throwable) {
-            // 预览失败不挡改系数；保存时再报错
+            // 预览失败不挡改规则；保存时再报错
         }
     }
 
@@ -696,6 +697,7 @@ class ReceivingViewModel(
                 error = "",
                 changing = changing,
                 draftCoef = null,
+                draftLoss = null,
                 productName = s.product.name,
                 specName = s.spec.name,
             )
@@ -705,16 +707,14 @@ class ReceivingViewModel(
                 refreshQuote(resetM0Retried = false)
             }
             val quote = _summary.value.quote
+            // 只列同商品规格的规则：换了规则也不动已称的箱与标准净含量
             val rules = container.catalog.buyRules(s.product.id, s.spec.id)
-            val boundId = quote?.ruleId
+            val boundId = s.rule?.id
             val bound = rules.firstOrNull { it.id == boundId }
-                ?: rules.firstOrNull { it.id == quote?.ruleId }
             val others = rules.filter { it.id != boundId }
             val priced = others.map { r ->
                 val unit = runCatching {
-                    container.orders.quote(
-                        quoteRequestOf(s, trialRuleId = r.id),
-                    ).unitPrice
+                    quoteRequestOf(s, ruleId = r.id)?.let { container.orders.quote(it).unitPrice }
                 }.getOrNull()
                 RuleCandidate(r, unit)
             }
@@ -722,13 +722,14 @@ class ReceivingViewModel(
                 it.copy(
                     loading = false,
                     busy = false,
-                    standardNetKg = quote?.standardNetKg,
+                    standardNetJin = quote?.standardNetJin,
                     basePrice = quote?.basePrice,
-                    boundRuleId = bound?.id ?: boundId,
-                    boundRuleName = bound?.name ?: quote?.ruleName,
+                    boundRuleId = boundId,
+                    boundRuleName = bound?.name ?: quote?.ruleName ?: s.rule?.name,
                     boundCoef = bound?.coef ?: quote?.coefficient,
-                    bindCount = bound?.bindCount ?: 0,
+                    boundLoss = bound?.lossJin ?: quote?.lossJin,
                     draftCoef = null,
+                    draftLoss = null,
                     trialUnitPrice = quote?.unitPrice,
                     boundUnitPrice = quote?.unitPrice,
                     candidates = priced,
@@ -763,7 +764,13 @@ class ReceivingViewModel(
             )
         }
         try {
-            val quote = container.orders.quote(quoteRequestOf(s))
+            // 改版前的草稿没有规则：不调后端，直接按“没选规则”显示，主按钮去选规则
+            val req = quoteRequestOf(s)
+            val quote = if (req == null) {
+                QuoteResult(boxCount = s.boxes.size, issues = listOf("NO_RULE"))
+            } else {
+                container.orders.quote(req)
+            }
             _summary.update {
                 it.copy(
                     loading = false,
@@ -826,7 +833,7 @@ class ReceivingViewModel(
 
     fun selectTare(dto: TareDto) {
         viewModelScope.launch {
-            ctl.chooseTare(Tare(Kg.of(dto.tareKg), dto.name), dto.id)
+            ctl.chooseTare(Tare(Jin.of(dto.tareJin), dto.name), dto.id)
             _ui.update { it.copy(showTarePicker = false) }
             persist()
             publish()

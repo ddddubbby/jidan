@@ -8,12 +8,13 @@ import java.util.Set;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.egg.archive.ArchiveService;
-import com.egg.basics.SpecService;
 import com.egg.common.ApiException;
 import com.egg.common.CurrentUser;
 import com.egg.common.ErrorCode;
 import com.egg.order.OrderQueryService.OrderDetail;
 import com.egg.order.OrderService.BoxInput;
+import com.egg.pricing.PricingRule;
+import com.egg.pricing.RuleService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,23 +27,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class OrderEditService {
 
     /** 整单覆盖的内容。批次号、单据编号、来源、提交时的金额都不变，收购日期可以改。 */
-    public record Replacement(LocalDate bizDate, long vendorId, long productId, long specId, long warehouseId,
-            List<BoxInput> boxes) {
+    public record Replacement(LocalDate bizDate, long vendorId, long ruleId, long warehouseId, List<BoxInput> boxes) {
     }
 
     private final PurchaseOrderMapper orders;
     private final WeighRecordMapper records;
     private final ArchiveService archive;
-    private final SpecService specs;
+    private final RuleService rules;
     private final OrderQueryService query;
     private final TransactionTemplate tx;
 
     public OrderEditService(PurchaseOrderMapper orders, WeighRecordMapper records, ArchiveService archive,
-            SpecService specs, OrderQueryService query, TransactionTemplate tx) {
+            RuleService rules, OrderQueryService query, TransactionTemplate tx) {
         this.orders = orders;
         this.records = records;
         this.archive = archive;
-        this.specs = specs;
+        this.rules = rules;
         this.query = query;
         this.tx = tx;
     }
@@ -60,8 +60,11 @@ public class OrderEditService {
             if (o.status != OrderStatus.PENDING) {
                 throw new ApiException(ErrorCode.ORDER_LOCKED, lockedMessage(o.status));
             }
-            archive.requireExist(r.vendorId(), r.productId(), r.warehouseId());
-            specs.get(r.specId());
+            PricingRule rule = rules.requireBuyRule(r.ruleId());
+            if (!rule.enabled && !rule.id.equals(o.ruleId)) {
+                throw ApiException.invalid("规则「" + rule.name + "」已停用，请换一条规则");
+            }
+            archive.requireExist(r.vendorId(), rule.productId, r.warehouseId());
             Set<Integer> seqs = new HashSet<>();
             for (BoxInput b : r.boxes()) {
                 if (!seqs.add(b.seq())) {
@@ -71,8 +74,9 @@ public class OrderEditService {
 
             o.bizDate = r.bizDate();
             o.vendorId = r.vendorId();
-            o.productId = r.productId();
-            o.specId = r.specId();
+            o.ruleId = rule.id;
+            o.productId = rule.productId;
+            o.specId = rule.specId;
             o.warehouseId = r.warehouseId();
             o.updatedBy = me.id();
             o.updatedAt = LocalDateTime.now();

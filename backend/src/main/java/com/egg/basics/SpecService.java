@@ -36,11 +36,11 @@ public class SpecService {
         return s;
     }
 
-    public Spec create(String name, int eggCount, BigDecimal stdNetKg, Long operatorId) {
+    public Spec create(String name, int eggCount, BigDecimal stdNetJin, Long operatorId) {
         Spec s = new Spec();
         s.name = name.trim();
         s.eggCount = eggCount;
-        s.stdNetKg = stdNetKg;
+        s.stdNetJin = stdNetJin;
         s.enabled = true;
         s.updatedBy = operatorId;
         s.updatedAt = LocalDateTime.now();
@@ -49,7 +49,7 @@ public class SpecService {
     }
 
     /** 只改传了的字段。 */
-    public Spec update(long id, String name, Integer eggCount, BigDecimal stdNetKg, Boolean enabled, Long operatorId) {
+    public Spec update(long id, String name, Integer eggCount, BigDecimal stdNetJin, Boolean enabled, Long operatorId) {
         Spec s = get(id);
         if (name != null) {
             s.name = name.trim();
@@ -57,8 +57,8 @@ public class SpecService {
         if (eggCount != null) {
             s.eggCount = eggCount;
         }
-        if (stdNetKg != null) {
-            s.stdNetKg = stdNetKg;
+        if (stdNetJin != null) {
+            s.stdNetJin = stdNetJin;
         }
         if (enabled != null) {
             s.enabled = enabled;
